@@ -29,7 +29,7 @@ pnpm --filter @fondo/db db:generate
 pnpm dev
 ```
 
-The web app is available at `http://localhost:5173`. The API health endpoint is available at `http://localhost:3000/api/v1/health`.
+The web app is available at `http://localhost:5173`. The API health endpoint is available at `http://localhost:3000/api/v1/health`. Postgres is exposed on host port `5433` to avoid conflicts with other local PostgreSQL instances on `5432`.
 
 ## Commands
 
