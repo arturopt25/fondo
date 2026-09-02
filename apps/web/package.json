@@ -1,0 +1,47 @@
+{
+  "name": "@fondo/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "dev": "vite",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit --pretty false"
+  },
+  "dependencies": {
+    "@fondo/i18n": "workspace:*",
+    "@fondo/shared-types": "workspace:*",
+    "@fondo/ui": "workspace:*",
+    "@mantine/charts": "catalog:",
+    "@mantine/core": "catalog:",
+    "@mantine/dates": "catalog:",
+    "@mantine/hooks": "catalog:",
+    "@mantine/notifications": "catalog:",
+    "@tabler/icons-react": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "@tanstack/react-query-devtools": "catalog:",
+    "@hookform/resolvers": "catalog:",
+    "i18next": "catalog:",
+    "i18next-browser-languagedetector": "catalog:",
+    "ky": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-hook-form": "catalog:",
+    "react-i18next": "catalog:",
+    "react-router-dom": "catalog:",
+    "recharts": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}
