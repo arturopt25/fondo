@@ -561,3 +561,35 @@ a {
     transition-duration: 0.01ms !important;
   }
 }
+
+.auth-page {
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-page__glow {
+  position: absolute;
+  top: -160px;
+  right: -80px;
+  width: 460px;
+  height: 460px;
+  border-radius: 50%;
+  background: rgba(42, 214, 215, 0.12);
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.auth-card-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-card {
+  border-color: var(--fondo-border-strong) !important;
+  background: color-mix(
+    in srgb,
+    var(--fondo-surface) 92%,
+    transparent
+  ) !important;
+  backdrop-filter: blur(14px);
+}

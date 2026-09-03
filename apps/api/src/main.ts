@@ -1,13 +1,14 @@
 import "reflect-metadata";
 
 import { NestFactory } from "@nestjs/core";
+import type { NestFastifyApplication } from "@nestjs/platform-fastify";
+import { FastifyAdapter } from "@nestjs/platform-fastify";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import {
-  FastifyAdapter,
-  type NestFastifyApplication,
-} from "@nestjs/platform-fastify";
 
 import { AppModule } from "./app.module.js";
+import { registerBetterAuth } from "./core/auth/fastify-auth.js";
+import type { BetterAuthInstance } from "./core/auth/better-auth.config.js";
+import { ApiErrorFilter } from "./core/errors/api-error.filter.js";
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -20,6 +21,10 @@ async function bootstrap(): Promise<void> {
     credentials: true,
     origin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
   });
+  app.useGlobalFilters(new ApiErrorFilter());
+
+  const auth = app.get<BetterAuthInstance>("BETTER_AUTH");
+  await registerBetterAuth(app.getHttpAdapter().getInstance(), auth);
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle("Fondo API")
@@ -32,4 +37,4 @@ async function bootstrap(): Promise<void> {
   await app.listen(Number(process.env.PORT ?? 3000), "0.0.0.0");
 }
 
-await bootstrap();
+void bootstrap();

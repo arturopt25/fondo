@@ -2,6 +2,37 @@
   "common": {
     "loading": "Loading"
   },
+  "auth": {
+    "signInTitle": "Welcome back",
+    "signUpTitle": "Create your space",
+    "signInSubtitle": "Sign in to your personal space and pick up where you left off.",
+    "signUpSubtitle": "Your space is created automatically. Start tracking today.",
+    "signIn": "Sign in",
+    "signUp": "Create account",
+    "signingIn": "Signing in...",
+    "creatingAccount": "Creating account...",
+    "email": "Email",
+    "password": "Password",
+    "name": "Display name",
+    "emailPlaceholder": "you@example.com",
+    "passwordPlaceholder": "Your password",
+    "namePlaceholder": "Your name",
+    "invalidCredentials": "The email or password is incorrect.",
+    "registrationFailed": "Unable to create the account. Try again.",
+    "loadingSession": "Checking your session",
+    "haveAccount": "Already have an account?",
+    "noAccount": "New to Fondo?",
+    "goToLogin": "Sign in",
+    "goToRegister": "Create account"
+  },
+  "notifications": {
+    "settingsSavedTitle": "Preferences updated",
+    "settingsSavedMessage": "Your preferences were saved.",
+    "settingsErrorTitle": "Something went wrong",
+    "settingsErrorMessage": "Your preferences could not be saved.",
+    "profileSavedTitle": "Profile updated",
+    "profileSavedMessage": "Your profile was saved."
+  },
   "brand": {
     "name": "Fondo",
     "version": "MVP"
@@ -143,6 +174,7 @@
       "title": "Profile",
       "description": "The information that identifies your personal space.",
       "owner": "Owner",
+      "member": "Member",
       "name": "Display name",
       "email": "Email"
     },

@@ -2,6 +2,37 @@
   "common": {
     "loading": "Cargando"
   },
+  "auth": {
+    "signInTitle": "Bienvenido de nuevo",
+    "signUpTitle": "Crea tu espacio",
+    "signInSubtitle": "Accede a tu espacio personal y continua donde lo dejaste.",
+    "signUpSubtitle": "Tu espacio se crea automaticamente. Empieza hoy.",
+    "signIn": "Iniciar sesion",
+    "signUp": "Crear cuenta",
+    "signingIn": "Iniciando sesion...",
+    "creatingAccount": "Creando cuenta...",
+    "email": "Email",
+    "password": "Contrasena",
+    "name": "Nombre",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "passwordPlaceholder": "Tu contrasena",
+    "namePlaceholder": "Tu nombre",
+    "invalidCredentials": "El email o la contrasena son incorrectos.",
+    "registrationFailed": "No se pudo crear la cuenta. Intentalo de nuevo.",
+    "loadingSession": "Comprobando tu sesion",
+    "haveAccount": "Ya tienes una cuenta?",
+    "noAccount": "Nuevo en Fondo?",
+    "goToLogin": "Iniciar sesion",
+    "goToRegister": "Crear cuenta"
+  },
+  "notifications": {
+    "settingsSavedTitle": "Preferencias actualizadas",
+    "settingsSavedMessage": "Tus preferencias se guardaron.",
+    "settingsErrorTitle": "Algo salio mal",
+    "settingsErrorMessage": "No se pudieron guardar tus preferencias.",
+    "profileSavedTitle": "Perfil actualizado",
+    "profileSavedMessage": "Tu perfil se guardo."
+  },
   "brand": {
     "name": "Fondo",
     "version": "MVP"
@@ -143,6 +174,7 @@
       "title": "Perfil",
       "description": "La informacion que identifica tu espacio personal.",
       "owner": "Propietario",
+      "member": "Miembro",
       "name": "Nombre visible",
       "email": "Email"
     },

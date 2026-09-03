@@ -29,10 +29,16 @@ import {
   IconStack2,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
+import {
+  Link as RouterLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import type { JSX } from "react";
 
 import { FondoBrand } from "@fondo/ui";
+import { useAuth } from "../../modules/auth/auth-context";
 
 const navigation = [
   {
@@ -51,7 +57,23 @@ const navigation = [
 export function AppLayout(): JSX.Element {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [opened, { toggle, close }] = useDisclosure(false);
+  const { session, signOut } = useAuth();
+
+  const userName = session?.user.name ?? "Fondo";
+  const userInitials = userName
+    .split(" ")
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  async function handleSignOut(): Promise<void> {
+    await signOut();
+    navigate("/login", { replace: true });
+  }
 
   return (
     <AppShell
@@ -98,19 +120,30 @@ export function AppLayout(): JSX.Element {
             </ActionIcon>
             <Menu shadow="md" width={190} position="bottom-end">
               <Menu.Target>
-                <UnstyledUserButton label={t("shell.userMenu")} />
+                <UnstyledUserButton
+                  label={t("shell.userMenu")}
+                  initials={userInitials}
+                  image={session?.user.image ?? null}
+                />
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Label>{t("shell.personalSpace")}</Menu.Label>
+                <Menu.Label>
+                  {session?.user.email ?? t("shell.personalSpace")}
+                </Menu.Label>
                 <Menu.Item
                   leftSection={<IconSettings size={15} />}
                   component={RouterLink}
                   to="/app/settings"
+                  onClick={close}
                 >
                   {t("navigation.settings")}
                 </Menu.Item>
                 <Menu.Divider />
-                <Menu.Item color="red" leftSection={<IconLogout size={15} />}>
+                <Menu.Item
+                  color="red"
+                  leftSection={<IconLogout size={15} />}
+                  onClick={() => void handleSignOut()}
+                >
                   {t("shell.signOut")}
                 </Menu.Item>
               </Menu.Dropdown>
@@ -189,11 +222,11 @@ export function AppLayout(): JSX.Element {
         <AppShell.Section>
           <Group className="sidebar-account" gap="sm" wrap="nowrap">
             <Avatar color="signal" radius="md" size="md">
-              AR
+              {userInitials || "F"}
             </Avatar>
             <Stack gap={1} style={{ flex: 1 }}>
               <Text size="sm" fw={700} truncate>
-                {t("shell.demoUser")}
+                {userName}
               </Text>
               <Text size="xs" c="dimmed">
                 {t("shell.demoPlan")}
@@ -221,8 +254,12 @@ export function AppLayout(): JSX.Element {
 
 function UnstyledUserButton({
   label,
+  initials,
+  image,
 }: {
   readonly label: string;
+  readonly initials: string;
+  readonly image: string | null;
 }): JSX.Element {
   return (
     <Button
@@ -232,8 +269,13 @@ function UnstyledUserButton({
       p={4}
       aria-label={label}
     >
-      <Avatar color="signal" radius="md" size={34}>
-        AR
+      <Avatar
+        color="signal"
+        radius="md"
+        size={34}
+        {...(image ? { src: image } : {})}
+      >
+        {initials || "F"}
       </Avatar>
     </Button>
   );
