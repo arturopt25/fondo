@@ -1,7 +1,245 @@
 {
-  "app": {
-    "title": "Fondo",
-    "description": "La base de tu plataforma de finanzas personales.",
-    "foundation": "Base del proyecto"
+  "common": {
+    "loading": "Cargando"
+  },
+  "brand": {
+    "name": "Fondo",
+    "version": "MVP"
+  },
+  "navigation": {
+    "dashboard": "Resumen",
+    "reports": "Informes",
+    "settings": "Configuracion",
+    "workspace": "Espacio personal"
+  },
+  "shell": {
+    "overview": "Vista general",
+    "yourServices": "Tus servicios",
+    "personalSpace": "Espacio personal",
+    "plan": "Plan",
+    "freePlan": "Plan gratuito",
+    "promoTitle": "Haz que tu dinero avance",
+    "promoDescription": "Activa nuevos espacios cuando estes listo para ampliar tu panorama.",
+    "exploreServices": "Explorar servicios",
+    "demoUser": "Arturo R.",
+    "demoPlan": "Espacio personal",
+    "notifications": "Notificaciones",
+    "userMenu": "Abrir menu de usuario",
+    "signOut": "Cerrar sesion",
+    "toggleNavigation": "Alternar navegacion",
+    "searchComingSoon": "La busqueda estara disponible pronto"
+  },
+  "period": {
+    "currentMonth": "Este mes",
+    "previousMonth": "Mes anterior",
+    "currentYear": "Este ano",
+    "custom": "Personalizado"
+  },
+  "dashboard": {
+    "eyebrow": "Espacio financiero / 01",
+    "title": "Tu dinero, en perspectiva.",
+    "description": "Una lectura clara de tus movimientos, objetivos y ritmo financiero.",
+    "newTransaction": "Nueva transaccion",
+    "totalBalance": "Balance total",
+    "upFromLastMonth": "+6.8% vs. mes anterior",
+    "asOfToday": "Actualizado hoy",
+    "balanceCaption": "Tu balance combina todas las cuentas activas en tu espacio personal.",
+    "exchangeRate": "Tasa de cambio",
+    "mockRate": "Referencia visual · mock",
+    "viewReport": "Ver informe",
+    "viewAll": "Ver todo",
+    "moreTransactions": "Mas acciones para transacciones",
+    "mockNoticeTitle": "Modo visual activo",
+    "mockNoticeDescription": "Esta accion se conectara a la API en la siguiente fase.",
+    "metrics": {
+      "income": "Ingresos",
+      "expenses": "Gastos",
+      "savings": "Ahorro neto",
+      "savingsRate": "Tasa de ahorro",
+      "vsLastPeriod": "vs. periodo anterior",
+      "netFlow": "flujo del periodo",
+      "ofIncome": "de tus ingresos",
+      "healthy": "ritmo saludable"
+    },
+    "cashFlow": {
+      "eyebrow": "Ultimos seis meses",
+      "title": "Flujo de efectivo"
+    },
+    "chart": {
+      "income": "Ingresos",
+      "expenses": "Gastos"
+    },
+    "spending": {
+      "eyebrow": "Periodo actual",
+      "title": "Donde se va tu dinero"
+    },
+    "budgets": {
+      "eyebrow": "Control mensual",
+      "title": "Presupuestos",
+      "remaining": "{percentage}% disponible",
+      "over": "{percentage}% sobre el limite"
+    },
+    "recent": {
+      "eyebrow": "Actividad reciente",
+      "title": "Ultimos movimientos"
+    },
+    "insight": {
+      "title": "Tu ahorro va por delante del ritmo anterior.",
+      "description": "Mantener este ritmo te deja margen para tus objetivos del siguiente mes.",
+      "badge": "Senal positiva"
+    }
+  },
+  "reports": {
+    "eyebrow": "Inteligencia financiera / 02",
+    "title": "Informes que explican el movimiento.",
+    "description": "Convierte tus movimientos en senales simples para tomar mejores decisiones personales.",
+    "export": "Exportar",
+    "periodTitle": "Lectura del periodo actual",
+    "periodDescription": "Los datos estan preparados para conectarse al ledger real de Fondo.",
+    "mockData": "Datos de muestra",
+    "metrics": {
+      "income": "Ingresos del periodo",
+      "expenses": "Gastos del periodo",
+      "savings": "Ahorro neto",
+      "savingsRate": "Tasa de ahorro",
+      "period": "periodo seleccionado",
+      "netFlow": "flujo neto",
+      "ofIncome": "de los ingresos"
+    },
+    "cashFlow": {
+      "eyebrow": "Ingresos vs. gastos",
+      "title": "Ritmo mensual"
+    },
+    "chart": {
+      "income": "Ingresos",
+      "expenses": "Gastos"
+    },
+    "category": {
+      "eyebrow": "Distribucion",
+      "title": "Gasto por categoria",
+      "spent": "Gasto"
+    },
+    "future": {
+      "eyebrow": "Extensiones previstas",
+      "title": "Mas informes, cuando hagan falta",
+      "emptyTitle": "Los servicios futuros tendran sus propios informes",
+      "emptyDescription": "Vehicle, Home, Insurance y Entrepreneurship se conectaran aqui cuando sus modulos esten activos."
+    }
+  },
+  "settings": {
+    "eyebrow": "Preferencias / 03",
+    "title": "Configura tu espacio.",
+    "description": "Ajusta la experiencia de Fondo a tu forma de leer y organizar tus finanzas.",
+    "preferences": "Preferencias",
+    "saveChanges": "Guardar cambios",
+    "sections": {
+      "profile": "Perfil",
+      "appearance": "Apariencia",
+      "languageRegion": "Idioma y region",
+      "security": "Seguridad",
+      "data": "Datos"
+    },
+    "profile": {
+      "title": "Perfil",
+      "description": "La informacion que identifica tu espacio personal.",
+      "owner": "Propietario",
+      "name": "Nombre visible",
+      "email": "Email"
+    },
+    "appearance": {
+      "title": "Apariencia",
+      "description": "Elige como se siente Fondo durante cada sesion.",
+      "theme": "Tema",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
+    },
+    "language": {
+      "title": "Idioma y region",
+      "description": "Idioma, moneda de lectura y zona horaria son preferencias independientes.",
+      "language": "Idioma",
+      "spanish": "Espanol",
+      "english": "English",
+      "currency": "Moneda de lectura",
+      "usd": "USD · Dolar estadounidense",
+      "eur": "EUR · Euro",
+      "timezone": "Zona horaria",
+      "mockNote": "La conversion EUR usa una tasa mock durante esta fase visual."
+    },
+    "security": {
+      "title": "Seguridad",
+      "description": "Gestiona tu acceso y manten tus sesiones bajo control.",
+      "currentPassword": "Contrasena actual",
+      "newPassword": "Nueva contrasena",
+      "confirmPassword": "Confirmar contrasena",
+      "passwordPlaceholder": "Introduce una contrasena segura",
+      "sessions": "Sesiones activas",
+      "sessionsDescription": "Cierra sesiones antiguas desde este espacio.",
+      "sessionToggle": "Activas",
+      "updatePassword": "Actualizar contrasena"
+    },
+    "data": {
+      "title": "Tus datos",
+      "description": "La exportacion y eliminacion segura de datos estaran disponibles cuando el flujo de confirmacion este listo.",
+      "export": "Exportar datos",
+      "delete": "Eliminar espacio"
+    }
+  },
+  "services": {
+    "eyebrow": "Modulos / 04",
+    "title": "Servicios activos",
+    "pageTitle": "Construye tu propio sistema financiero.",
+    "pageDescription": "Empieza con una base personal y activa nuevos espacios solo cuando aporten valor.",
+    "activeCount": "1 activo",
+    "introEyebrow": "Catalogo de Fondo",
+    "introDescription": "Cada servicio tendra sus propios limites de dominio. Por ahora, Personal Finance es el unico modulo operativo.",
+    "cards": {
+      "personalFinance": {
+        "name": "Personal Finance",
+        "description": "Cuentas, movimientos, presupuestos y una lectura completa de tu balance.",
+        "active": "Activo",
+        "open": "Abrir modulo"
+      },
+      "vehicle": {
+        "name": "Vehicle",
+        "description": "Combustible, mantenimiento, documentos y recordatorios de tu vehiculo.",
+        "comingSoon": "Proximamente",
+        "notify": "Aviseame"
+      },
+      "home": {
+        "name": "Home",
+        "description": "Gastos del hogar, pagos, mantenimiento y tareas recurrentes.",
+        "comingSoon": "Proximamente",
+        "notify": "Aviseame"
+      },
+      "insurance": {
+        "name": "Insurance",
+        "description": "Polizas, cobertura, pagos y fechas importantes en un solo lugar.",
+        "comingSoon": "Proximamente",
+        "notify": "Aviseame"
+      },
+      "entrepreneurship": {
+        "name": "Entrepreneurship",
+        "description": "Ingresos, gastos y metricas para la parte financiera de tu negocio.",
+        "comingSoon": "Proximamente",
+        "notify": "Aviseame"
+      }
+    }
+  },
+  "finance": {
+    "categories": {
+      "housing": "Vivienda",
+      "food": "Alimentacion",
+      "transport": "Transporte",
+      "leisure": "Ocio",
+      "other": "Otros",
+      "income": "Ingresos"
+    },
+    "merchants": {
+      "coffeeLab": "Coffee Lab",
+      "northwindSalary": "Northwind salary",
+      "metroPass": "Metro pass",
+      "streamingService": "Streaming service"
+    }
   }
 }

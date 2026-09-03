@@ -19,4 +19,4 @@ Private requests resolve a user session and an authorized membership before a mo
 
 ## Money
 
-The MVP uses USD and integer minor units. Every financial record keeps an ISO currency code so a future exchange-rate provider can convert report values without rewriting historical amounts.
+The MVP uses USD as its canonical ledger currency and stores integer minor units. The web application supports USD and EUR as display currencies through an exchange-rate provider. Historical reports use the rate effective for the report period; current balances use the latest valid rate. Stored transactions are never rewritten during conversion.

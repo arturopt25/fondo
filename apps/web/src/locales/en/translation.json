@@ -1,7 +1,245 @@
 {
-  "app": {
-    "title": "Fondo",
-    "description": "The foundation of your personal finance platform.",
-    "foundation": "Project foundation"
+  "common": {
+    "loading": "Loading"
+  },
+  "brand": {
+    "name": "Fondo",
+    "version": "MVP"
+  },
+  "navigation": {
+    "dashboard": "Overview",
+    "reports": "Reports",
+    "settings": "Settings",
+    "workspace": "Personal space"
+  },
+  "shell": {
+    "overview": "Overview",
+    "yourServices": "Your services",
+    "personalSpace": "Personal space",
+    "plan": "Plan",
+    "freePlan": "Free plan",
+    "promoTitle": "Make your money move",
+    "promoDescription": "Activate new spaces when you are ready to widen your financial view.",
+    "exploreServices": "Explore services",
+    "demoUser": "Arturo R.",
+    "demoPlan": "Personal space",
+    "notifications": "Notifications",
+    "userMenu": "Open user menu",
+    "signOut": "Sign out",
+    "toggleNavigation": "Toggle navigation",
+    "searchComingSoon": "Search will be available soon"
+  },
+  "period": {
+    "currentMonth": "This month",
+    "previousMonth": "Previous month",
+    "currentYear": "This year",
+    "custom": "Custom"
+  },
+  "dashboard": {
+    "eyebrow": "Financial space / 01",
+    "title": "Your money, in perspective.",
+    "description": "A clear read on your movement, goals and financial rhythm.",
+    "newTransaction": "New transaction",
+    "totalBalance": "Total balance",
+    "upFromLastMonth": "+6.8% vs. last month",
+    "asOfToday": "Updated today",
+    "balanceCaption": "Your balance combines every active account in your personal space.",
+    "exchangeRate": "Exchange rate",
+    "mockRate": "Visual reference · mock",
+    "viewReport": "View report",
+    "viewAll": "View all",
+    "moreTransactions": "More transaction actions",
+    "mockNoticeTitle": "Visual mode is active",
+    "mockNoticeDescription": "This action will connect to the API in the next phase.",
+    "metrics": {
+      "income": "Income",
+      "expenses": "Expenses",
+      "savings": "Net savings",
+      "savingsRate": "Savings rate",
+      "vsLastPeriod": "vs. previous period",
+      "netFlow": "period flow",
+      "ofIncome": "of your income",
+      "healthy": "healthy pace"
+    },
+    "cashFlow": {
+      "eyebrow": "Last six months",
+      "title": "Cash flow"
+    },
+    "chart": {
+      "income": "Income",
+      "expenses": "Expenses"
+    },
+    "spending": {
+      "eyebrow": "Current period",
+      "title": "Where your money goes"
+    },
+    "budgets": {
+      "eyebrow": "Monthly control",
+      "title": "Budgets",
+      "remaining": "{percentage}% available",
+      "over": "{percentage}% over limit"
+    },
+    "recent": {
+      "eyebrow": "Recent activity",
+      "title": "Latest movement"
+    },
+    "insight": {
+      "title": "Your savings are ahead of the previous pace.",
+      "description": "Keeping this rhythm leaves room for next month's goals.",
+      "badge": "Positive signal"
+    }
+  },
+  "reports": {
+    "eyebrow": "Financial intelligence / 02",
+    "title": "Reports that explain the movement.",
+    "description": "Turn movement into simple signals for better personal decisions.",
+    "export": "Export",
+    "periodTitle": "Current period read",
+    "periodDescription": "The data is ready to connect to Fondo's real ledger.",
+    "mockData": "Sample data",
+    "metrics": {
+      "income": "Period income",
+      "expenses": "Period expenses",
+      "savings": "Net savings",
+      "savingsRate": "Savings rate",
+      "period": "selected period",
+      "netFlow": "net flow",
+      "ofIncome": "of income"
+    },
+    "cashFlow": {
+      "eyebrow": "Income vs. expenses",
+      "title": "Monthly rhythm"
+    },
+    "chart": {
+      "income": "Income",
+      "expenses": "Expenses"
+    },
+    "category": {
+      "eyebrow": "Distribution",
+      "title": "Spend by category",
+      "spent": "Spent"
+    },
+    "future": {
+      "eyebrow": "Planned extensions",
+      "title": "More reports, when they matter",
+      "emptyTitle": "Future services will bring their own reports",
+      "emptyDescription": "Vehicle, Home, Insurance and Entrepreneurship will connect here when their modules are active."
+    }
+  },
+  "settings": {
+    "eyebrow": "Preferences / 03",
+    "title": "Configure your space.",
+    "description": "Tune Fondo to the way you read and organize your finances.",
+    "preferences": "Preferences",
+    "saveChanges": "Save changes",
+    "sections": {
+      "profile": "Profile",
+      "appearance": "Appearance",
+      "languageRegion": "Language & region",
+      "security": "Security",
+      "data": "Data"
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "The information that identifies your personal space.",
+      "owner": "Owner",
+      "name": "Display name",
+      "email": "Email"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Choose how Fondo feels throughout each session.",
+      "theme": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "language": {
+      "title": "Language & region",
+      "description": "Language, display currency and timezone are independent preferences.",
+      "language": "Language",
+      "spanish": "Espanol",
+      "english": "English",
+      "currency": "Display currency",
+      "usd": "USD · US Dollar",
+      "eur": "EUR · Euro",
+      "timezone": "Timezone",
+      "mockNote": "EUR conversion uses a mock rate during this visual phase."
+    },
+    "security": {
+      "title": "Security",
+      "description": "Manage access and keep your sessions under control.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "passwordPlaceholder": "Enter a secure password",
+      "sessions": "Active sessions",
+      "sessionsDescription": "Close older sessions from this space.",
+      "sessionToggle": "Active",
+      "updatePassword": "Update password"
+    },
+    "data": {
+      "title": "Your data",
+      "description": "Safe data export and deletion will be available when the confirmation flow is ready.",
+      "export": "Export data",
+      "delete": "Delete space"
+    }
+  },
+  "services": {
+    "eyebrow": "Modules / 04",
+    "title": "Active services",
+    "pageTitle": "Build your own financial system.",
+    "pageDescription": "Start with a personal foundation and activate new spaces only when they add value.",
+    "activeCount": "1 active",
+    "introEyebrow": "Fondo catalog",
+    "introDescription": "Each service has its own domain boundaries. For now, Personal Finance is the only operational module.",
+    "cards": {
+      "personalFinance": {
+        "name": "Personal Finance",
+        "description": "Accounts, movement, budgets and a complete read on your balance.",
+        "active": "Active",
+        "open": "Open module"
+      },
+      "vehicle": {
+        "name": "Vehicle",
+        "description": "Fuel, maintenance, documents and reminders for your vehicle.",
+        "comingSoon": "Coming soon",
+        "notify": "Notify me"
+      },
+      "home": {
+        "name": "Home",
+        "description": "Home expenses, payments, maintenance and recurring tasks.",
+        "comingSoon": "Coming soon",
+        "notify": "Notify me"
+      },
+      "insurance": {
+        "name": "Insurance",
+        "description": "Policies, coverage, payments and important dates in one place.",
+        "comingSoon": "Coming soon",
+        "notify": "Notify me"
+      },
+      "entrepreneurship": {
+        "name": "Entrepreneurship",
+        "description": "Income, expenses and metrics for your business finances.",
+        "comingSoon": "Coming soon",
+        "notify": "Notify me"
+      }
+    }
+  },
+  "finance": {
+    "categories": {
+      "housing": "Housing",
+      "food": "Food",
+      "transport": "Transport",
+      "leisure": "Leisure",
+      "other": "Other",
+      "income": "Income"
+    },
+    "merchants": {
+      "coffeeLab": "Coffee Lab",
+      "northwindSalary": "Northwind salary",
+      "metroPass": "Metro pass",
+      "streamingService": "Streaming service"
+    }
   }
 }

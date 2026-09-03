@@ -1,44 +1,99 @@
-import {
-  AppShell,
-  Container,
-  Group,
-  MantineProvider,
-  Text,
-} from "@mantine/core";
+import { Loader, MantineProvider, Stack, Text } from "@mantine/core";
+import { useColorScheme } from "@mantine/hooks";
 import { Notifications } from "@mantine/notifications";
-import { useTranslation } from "react-i18next";
+import { lazy, Suspense } from "react";
 import type { JSX } from "react";
+import { useTranslation } from "react-i18next";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-import { FondoBrand } from "@fondo/ui";
+import { fondoTheme } from "@fondo/ui";
+
+import { AppPreferencesProvider, useAppPreferences } from "./app/preferences";
+import { AppLayout } from "./app/layouts/AppLayout";
+
+const DashboardPage = lazy(() =>
+  import("./modules/dashboard/DashboardPage").then((module) => ({
+    default: module.DashboardPage,
+  })),
+);
+const ReportsPage = lazy(() =>
+  import("./modules/reports/ReportsPage").then((module) => ({
+    default: module.ReportsPage,
+  })),
+);
+const ServicesPage = lazy(() =>
+  import("./modules/services/ServicesPage").then((module) => ({
+    default: module.ServicesPage,
+  })),
+);
+const SettingsPage = lazy(() =>
+  import("./modules/settings/SettingsPage").then((module) => ({
+    default: module.SettingsPage,
+  })),
+);
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export function App(): JSX.Element {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppPreferencesProvider>
+        <ThemedApplication />
+      </AppPreferencesProvider>
+    </QueryClientProvider>
+  );
+}
+
+function ThemedApplication(): JSX.Element {
+  const { theme } = useAppPreferences();
+  const systemColorScheme = useColorScheme("dark");
+  const colorScheme = theme === "system" ? systemColorScheme : theme;
+
+  return (
+    <MantineProvider theme={fondoTheme} forceColorScheme={colorScheme}>
+      <Notifications position="top-right" />
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route
+              path="/"
+              element={<Navigate to="/app/dashboard" replace />}
+            />
+            <Route path="/app" element={<AppLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="services" element={<ServicesPage />} />
+            </Route>
+            <Route
+              path="*"
+              element={<Navigate to="/app/dashboard" replace />}
+            />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </MantineProvider>
+  );
+}
+
+function PageLoader(): JSX.Element {
   const { t } = useTranslation();
 
   return (
-    <MantineProvider defaultColorScheme="light">
-      <Notifications />
-      <AppShell header={{ height: 64 }} padding="md">
-        <AppShell.Header>
-          <Container size="xl" h="100%">
-            <Group h="100%" justify="space-between">
-              <FondoBrand size="lg" />
-              <Text c="dimmed" size="sm">
-                {t("app.foundation")}
-              </Text>
-            </Group>
-          </Container>
-        </AppShell.Header>
-        <AppShell.Main>
-          <Container size="xl">
-            <Text component="h1" size="xl" fw={700}>
-              {t("app.title")}
-            </Text>
-            <Text c="dimmed" mt="xs">
-              {t("app.description")}
-            </Text>
-          </Container>
-        </AppShell.Main>
-      </AppShell>
-    </MantineProvider>
+    <Stack align="center" justify="center" mih="60vh" gap="sm">
+      <Loader color="signal" size="sm" aria-label={t("common.loading")} />
+      <Text c="dimmed" size="sm">
+        {t("common.loading")}
+      </Text>
+    </Stack>
   );
 }
