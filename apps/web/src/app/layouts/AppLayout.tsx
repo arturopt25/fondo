@@ -20,7 +20,6 @@ import {
   IconBell,
   IconChartHistogram,
   IconChevronRight,
-  IconCreditCard,
   IconLayoutDashboard,
   IconLogout,
   IconMenu2,
@@ -232,7 +231,16 @@ export function AppLayout(): JSX.Element {
                 {t("shell.demoPlan")}
               </Text>
             </Stack>
-            <IconCreditCard size={16} className="text-muted" />
+            <Tooltip label={t("shell.signOut")} withArrow>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                aria-label={t("shell.signOut")}
+                onClick={() => void handleSignOut()}
+              >
+                <IconLogout size={17} stroke={1.6} />
+              </ActionIcon>
+            </Tooltip>
           </Group>
         </AppShell.Section>
       </AppShell.Navbar>

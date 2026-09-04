@@ -13,10 +13,12 @@ import { Link as RouterLink, useNavigate } from "react-router-dom";
 
 import { AuthLayout } from "./AuthLayout";
 import { signUpWithEmail } from "./auth-client";
+import { useAuth } from "./auth-context";
 
 export function RegisterPage(): React.JSX.Element {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { refresh } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,9 +32,11 @@ export function RegisterPage(): React.JSX.Element {
 
     try {
       await signUpWithEmail(name, email, password);
+      await refresh();
       navigate("/app/dashboard", { replace: true });
     } catch (error) {
-      const message = error instanceof Error ? error.message : t("auth.registrationFailed");
+      const message =
+        error instanceof Error ? error.message : t("auth.registrationFailed");
       setError(message);
     } finally {
       setIsSubmitting(false);

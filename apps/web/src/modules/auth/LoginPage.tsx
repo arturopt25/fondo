@@ -13,10 +13,12 @@ import { Link as RouterLink, useNavigate } from "react-router-dom";
 
 import { AuthLayout } from "./AuthLayout";
 import { signInWithEmail } from "./auth-client";
+import { useAuth } from "./auth-context";
 
 export function LoginPage(): React.JSX.Element {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { refresh } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -29,9 +31,12 @@ export function LoginPage(): React.JSX.Element {
 
     try {
       await signInWithEmail(email, password);
+      await refresh();
       navigate("/app/dashboard", { replace: true });
-    } catch {
-      setError(t("auth.invalidCredentials"));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("auth.invalidCredentials");
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }
