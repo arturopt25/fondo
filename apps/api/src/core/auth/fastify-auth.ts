@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { BetterAuthInstance } from "./better-auth.config.js";
 
 const authPathPrefix = "/api/v1/auth";
+const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:5173";
 
 type HookCallback = () => void;
 
@@ -14,6 +15,7 @@ type AuthRawRequest = IncomingMessage & {
 
 interface RawRequest {
   readonly raw: IncomingMessage;
+  readonly method: string;
 }
 
 interface RawReply {
@@ -27,6 +29,20 @@ type RawFastifyInstance = {
   ): void;
 };
 
+function applyCorsHeaders(res: ServerResponse): void {
+  res.setHeader("Access-Control-Allow-Origin", webOrigin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PATCH, DELETE, OPTIONS",
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Request-Id",
+  );
+  res.setHeader("Vary", "Origin");
+}
+
 export async function registerBetterAuth(
   app: RawFastifyInstance,
   auth: BetterAuthInstance,
@@ -39,6 +55,14 @@ export async function registerBetterAuth(
 
     if (!originalUrl.startsWith(authPathPrefix)) {
       done();
+      return;
+    }
+
+    applyCorsHeaders(reply.raw);
+
+    if (request.method === "OPTIONS") {
+      reply.raw.statusCode = 204;
+      reply.raw.end();
       return;
     }
 

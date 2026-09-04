@@ -1,7 +1,5 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 
-// Value import required for NestJS decorator metadata (design:paramtypes).
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { PrismaService } from "../prisma.service.js";
 import type {
   MeResponse,
@@ -12,7 +10,7 @@ import type {
 
 @Injectable()
 export class MeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getMe(userId: string): Promise<MeResponse> {
     const user = await this.prisma.client.user.findUnique({

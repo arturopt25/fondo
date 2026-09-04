@@ -35,6 +35,7 @@ export function createBetterAuth(provisioner: PersonalTenantProvisioner) {
     baseURL: authUrl,
     basePath: "/api/v1/auth",
     secret: process.env.BETTER_AUTH_SECRET,
+    trustedOrigins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"],
     database: prismaAdapter(prisma, {
       provider: "postgresql",
     }),
@@ -110,6 +111,14 @@ export function createBetterAuth(provisioner: PersonalTenantProvisioner) {
     databaseHooks: {
       user: {
         create: {
+          before: async (user) => {
+            return {
+              data: {
+                ...user,
+                email: user.email.toLowerCase().trim(),
+              },
+            };
+          },
           after: async (user) => {
             await provisioner.provisionForUser(
               user.id,

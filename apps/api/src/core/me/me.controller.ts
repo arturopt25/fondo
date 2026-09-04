@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Patch,
+  UseGuards,
+} from "@nestjs/common";
 
 import {
   updateProfileSchema,
@@ -7,15 +14,13 @@ import {
 
 import { SessionAuthGuard } from "../tenant/session-auth.guard.js";
 import type { CurrentUser } from "../tenant/tenant-context.js";
-// Value import required for NestJS decorator metadata (design:paramtypes).
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { MeService } from "./me.service.js";
 import { RequestUser } from "./request-user.decorator.js";
 
 @Controller("me")
 @UseGuards(SessionAuthGuard)
 export class MeController {
-  constructor(private readonly meService: MeService) {}
+  constructor(@Inject(MeService) private readonly meService: MeService) {}
 
   @Get()
   async getMe(@RequestUser() user: CurrentUser) {

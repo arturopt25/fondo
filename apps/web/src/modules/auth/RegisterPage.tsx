@@ -31,8 +31,9 @@ export function RegisterPage(): React.JSX.Element {
     try {
       await signUpWithEmail(name, email, password);
       navigate("/app/dashboard", { replace: true });
-    } catch {
-      setError(t("auth.registrationFailed"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("auth.registrationFailed");
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }

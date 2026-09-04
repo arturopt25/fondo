@@ -86,14 +86,13 @@ model Tenant {
   slug              String   @unique @db.VarChar(80)
   accountingCurrency String  @default("USD") @db.Char(3)
   timeZone          String   @default("UTC") @db.VarChar(64)
-  ownerUserId       String
+  ownerUserId       String   @unique
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   owner  User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   members Membership[]
 
-  @@index([ownerUserId])
   @@index([accountingCurrency])
 }
 

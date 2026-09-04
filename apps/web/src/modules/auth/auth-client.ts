@@ -1,9 +1,10 @@
 import { createAuthClient } from "better-auth/client";
 
+const authBaseUrl =
+  import.meta.env.VITE_AUTH_URL ?? "http://localhost:3000/api/v1/auth";
+
 export const authClient = createAuthClient({
-  baseURL: import.meta.env.VITE_API_URL
-    ? import.meta.env.VITE_API_URL.replace(/\/$/, "")
-    : "http://localhost:3000/api/v1",
+  baseURL: authBaseUrl.replace(/\/$/, ""),
 });
 
 export type SessionUser = {

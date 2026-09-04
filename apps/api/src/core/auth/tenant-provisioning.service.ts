@@ -1,13 +1,12 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import { Prisma } from "@fondo/db";
 
-// Value import required for NestJS decorator metadata (design:paramtypes).
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { PrismaService } from "../prisma.service.js";
 import { buildPersonalTenantSlug } from "../auth/better-auth.config.js";
 
 @Injectable()
 export class TenantProvisioningService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async provisionForUser(userId: string, displayName: string): Promise<void> {
     const existing = await this.prisma.client.tenant.findFirst({
@@ -22,30 +21,46 @@ export class TenantProvisioningService {
     const slug = buildPersonalTenantSlug(userId, fallbackName);
 
     try {
-      const tenant = await this.prisma.client.tenant.create({
-        data: {
-          name: `${fallbackName}'s space`,
-          slug,
-          ownerUserId: userId,
-        },
-      });
+      await this.prisma.client.$transaction(async (tx) => {
+        const tenant = await tx.tenant.create({
+          data: {
+            name: `${fallbackName}'s space`,
+            slug,
+            ownerUserId: userId,
+          },
+        });
 
-      await this.prisma.client.$transaction([
-        this.prisma.client.membership.create({
+        await tx.membership.create({
           data: {
             tenantId: tenant.id,
             userId,
             role: "ADMIN",
           },
-        }),
-        this.prisma.client.userSettings.create({
+        });
+
+        await tx.userSettings.create({
           data: {
             userId,
           },
-        }),
-      ]);
-    } catch {
-      return;
+        });
+      });
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        const retried = await this.prisma.client.tenant.findFirst({
+          where: { ownerUserId: userId },
+        });
+        if (retried) {
+          return;
+        }
+      }
+      throw error;
     }
   }
+}
+
+function isDuplicateKeyError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
 }

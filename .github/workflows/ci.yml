@@ -28,6 +28,7 @@ jobs:
       BETTER_AUTH_SECRET: ci-only-secret-that-is-at-least-32-characters
       BETTER_AUTH_URL: http://localhost:3000
       VITE_API_URL: http://localhost:3000/api/v1
+      VITE_AUTH_URL: http://localhost:3000/api/v1/auth
     steps:
       - uses: actions/checkout@v4
 

@@ -8,9 +8,12 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module.js";
 import { registerBetterAuth } from "./core/auth/fastify-auth.js";
 import type { BetterAuthInstance } from "./core/auth/better-auth.config.js";
+import { loadAppConfig } from "./core/config/app-config.js";
 import { ApiErrorFilter } from "./core/errors/api-error.filter.js";
 
 async function bootstrap(): Promise<void> {
+  loadAppConfig();
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter(),
