@@ -3,14 +3,16 @@ import { useColorScheme } from "@mantine/hooks";
 import { Notifications } from "@mantine/notifications";
 import { lazy, Suspense } from "react";
 import type { JSX } from "react";
-import { useTranslation } from "react-i18next";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { fondoTheme } from "@fondo/ui";
 
 import { AppPreferencesProvider, useAppPreferences } from "./app/preferences";
 import { AppLayout } from "./app/layouts/AppLayout";
+import { AuthProvider } from "./modules/auth/auth-context";
+import { ProtectedRoute, PublicOnlyRoute } from "./modules/auth/ProtectedRoute";
 
 const DashboardPage = lazy(() =>
   import("./modules/dashboard/DashboardPage").then((module) => ({
@@ -32,12 +34,23 @@ const SettingsPage = lazy(() =>
     default: module.SettingsPage,
   })),
 );
+const LoginPage = lazy(() =>
+  import("./modules/auth/LoginPage").then((module) => ({
+    default: module.LoginPage,
+  })),
+);
+const RegisterPage = lazy(() =>
+  import("./modules/auth/RegisterPage").then((module) => ({
+    default: module.RegisterPage,
+  })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
       refetchOnWindowFocus: false,
+      retry: false,
     },
   },
 });
@@ -45,9 +58,11 @@ const queryClient = new QueryClient({
 export function App(): JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppPreferencesProvider>
-        <ThemedApplication />
-      </AppPreferencesProvider>
+      <AuthProvider>
+        <AppPreferencesProvider>
+          <ThemedApplication />
+        </AppPreferencesProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
@@ -67,12 +82,18 @@ function ThemedApplication(): JSX.Element {
               path="/"
               element={<Navigate to="/app/dashboard" replace />}
             />
-            <Route path="/app" element={<AppLayout />}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="reports" element={<ReportsPage />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="services" element={<ServicesPage />} />
+            <Route element={<PublicOnlyRoute />}>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+            </Route>
+            <Route element={<ProtectedRoute />}>
+              <Route path="/app" element={<AppLayout />}>
+                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="reports" element={<ReportsPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route path="services" element={<ServicesPage />} />
+              </Route>
             </Route>
             <Route
               path="*"

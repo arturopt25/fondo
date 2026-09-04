@@ -23,13 +23,14 @@ import {
   IconUser,
   IconWorld,
 } from "@tabler/icons-react";
-import { startTransition } from "react";
+import { startTransition, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { DisplayCurrency, SupportedTheme } from "@fondo/shared-types";
 import { PageHeader } from "@fondo/ui";
 
 import { useAppPreferences } from "../../app/preferences";
+import { useMeQuery, useUpdateProfileMutation } from "./me-hooks";
 
 const settingsSections = [
   { key: "profile", icon: IconUser },
@@ -43,7 +44,16 @@ export function SettingsPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const { theme, displayCurrency, setTheme, setDisplayCurrency } =
     useAppPreferences();
+  const meQuery = useMeQuery();
+  const updateProfile = useUpdateProfileMutation();
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
   const currentLocale = i18n.language.startsWith("en") ? "en" : "es";
+
+  const user = meQuery.data?.user;
+  const role = meQuery.data?.membership.role ?? "MEMBER";
+  const isAdmin = role === "ADMIN";
+
+  const profileName = nameDraft ?? user?.name ?? "";
 
   function changeLocale(locale: string | null): void {
     if (locale !== "es" && locale !== "en") {
@@ -69,6 +79,13 @@ export function SettingsPage(): React.JSX.Element {
     if (nextCurrency === "USD" || nextCurrency === "EUR") {
       setDisplayCurrency(nextCurrency as DisplayCurrency);
     }
+  }
+
+  function handleSaveProfile(): void {
+    if (!user || nameDraft === null) {
+      return;
+    }
+    updateProfile.mutate({ name: nameDraft });
   }
 
   return (
@@ -126,22 +143,35 @@ export function SettingsPage(): React.JSX.Element {
                 </Stack>
               </Group>
               <Badge color="teal" variant="light">
-                {t("settings.profile.owner")}
+                {isAdmin
+                  ? t("settings.profile.owner")
+                  : t("settings.profile.member")}
               </Badge>
             </Group>
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
               <TextInput
                 label={t("settings.profile.name")}
-                defaultValue="Arturo"
+                value={profileName}
+                onChange={(event) => setNameDraft(event.currentTarget.value)}
+                disabled={!user}
               />
               <TextInput
                 label={t("settings.profile.email")}
-                defaultValue="arturo@example.com"
+                value={user?.email ?? ""}
                 readOnly
               />
             </SimpleGrid>
             <Group justify="flex-end" mt="xl">
-              <Button color="signal">{t("settings.saveChanges")}</Button>
+              <Button
+                color="signal"
+                onClick={handleSaveProfile}
+                loading={updateProfile.isPending}
+                disabled={
+                  !user || nameDraft === null || nameDraft === user?.name
+                }
+              >
+                {t("settings.saveChanges")}
+              </Button>
             </Group>
           </Card>
 
