@@ -50,6 +50,7 @@ jobs:
             ${{ runner.os }}-turbo-
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fondo/db db:generate
       - run: pnpm --filter @fondo/db db:deploy
       - run: pnpm lint
       - run: pnpm typecheck

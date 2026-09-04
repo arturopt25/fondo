@@ -25,6 +25,7 @@
     "@prisma/client": "catalog:"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
     "eslint": "catalog:",
     "prisma": "catalog:",
     "typescript": "catalog:",
