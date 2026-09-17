@@ -1,19 +1,28 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 
-import type { DisplayCurrency, SupportedTheme } from "@fondo/shared-types";
+import type {
+  DisplayCurrency,
+  SupportedLocale,
+  SupportedTheme,
+} from "@fondo/shared-types";
 
-import { api } from "../lib/api";
-import { queryKeys } from "../lib/query-keys";
-import { useSettingsQuery } from "../modules/settings/me-hooks";
+import i18n from "../i18n";
 import { useAuth } from "../modules/auth/auth-context";
+import {
+  useSettingsQuery,
+  useUpdateSettingsMutation,
+} from "../modules/settings/me-hooks";
 
 interface AppPreferencesContextValue {
   readonly theme: SupportedTheme;
   readonly displayCurrency: DisplayCurrency;
+  readonly locale: SupportedLocale;
+  readonly timeZone: string;
   readonly setTheme: (theme: SupportedTheme) => void;
   readonly setDisplayCurrency: (currency: DisplayCurrency) => void;
+  readonly setLocale: (locale: SupportedLocale) => void;
+  readonly setTimeZone: (timeZone: string) => void;
 }
 
 const AppPreferencesContext = createContext<AppPreferencesContextValue | null>(
@@ -35,18 +44,26 @@ function readDisplayCurrency(): DisplayCurrency {
     : "USD";
 }
 
+function currentLocale(): SupportedLocale {
+  return i18n.language.startsWith("en") ? "en" : "es";
+}
+
 export function AppPreferencesProvider({
   children,
 }: {
   readonly children: ReactNode;
 }): JSX.Element {
-  const queryClient = useQueryClient();
   const [theme, setThemeState] = useState<SupportedTheme>(() => readTheme());
   const [displayCurrency, setDisplayCurrencyState] = useState<DisplayCurrency>(
     () => readDisplayCurrency(),
   );
+  const [locale, setLocaleState] = useState<SupportedLocale>(() =>
+    currentLocale(),
+  );
+  const [timeZone, setTimeZoneState] = useState<string>("UTC");
   const { isAuthenticated } = useAuth();
   const settingsQuery = useSettingsQuery(isAuthenticated);
+  const updateSettings = useUpdateSettingsMutation();
 
   useEffect(() => {
     const server = settingsQuery.data;
@@ -54,40 +71,56 @@ export function AppPreferencesProvider({
       return;
     }
 
-    const serverTheme: SupportedTheme =
-      server.theme === "light" ||
-      server.theme === "dark" ||
-      server.theme === "system"
-        ? server.theme
-        : "dark";
-    const serverCurrency: DisplayCurrency =
-      server.displayCurrency === "EUR" ? "EUR" : "USD";
-
-    setThemeState((current) =>
-      current === serverTheme ? current : serverTheme,
-    );
-    setDisplayCurrencyState((current) =>
-      current === serverCurrency ? current : serverCurrency,
-    );
+    setThemeState(server.theme);
+    setDisplayCurrencyState(server.displayCurrency);
+    setLocaleState(server.locale);
+    setTimeZoneState(server.timeZone);
+    void i18n.changeLanguage(server.locale);
   }, [settingsQuery.data]);
 
   function setTheme(nextTheme: SupportedTheme): void {
     setThemeState(nextTheme);
     window.localStorage.setItem(themeStorageKey, nextTheme);
-    void api.patch("me/settings", { json: { theme: nextTheme } });
-    queryClient.invalidateQueries({ queryKey: queryKeys.meSettings });
+    if (isAuthenticated) {
+      updateSettings.mutate({ theme: nextTheme });
+    }
   }
 
   function setDisplayCurrency(nextCurrency: DisplayCurrency): void {
     setDisplayCurrencyState(nextCurrency);
     window.localStorage.setItem(currencyStorageKey, nextCurrency);
-    void api.patch("me/settings", { json: { displayCurrency: nextCurrency } });
-    queryClient.invalidateQueries({ queryKey: queryKeys.meSettings });
+    if (isAuthenticated) {
+      updateSettings.mutate({ displayCurrency: nextCurrency });
+    }
+  }
+
+  function setLocale(nextLocale: SupportedLocale): void {
+    setLocaleState(nextLocale);
+    void i18n.changeLanguage(nextLocale);
+    if (isAuthenticated) {
+      updateSettings.mutate({ locale: nextLocale });
+    }
+  }
+
+  function setTimeZone(nextTimeZone: string): void {
+    setTimeZoneState(nextTimeZone);
+    if (isAuthenticated) {
+      updateSettings.mutate({ timeZone: nextTimeZone });
+    }
   }
 
   return (
     <AppPreferencesContext.Provider
-      value={{ theme, displayCurrency, setTheme, setDisplayCurrency }}
+      value={{
+        theme,
+        displayCurrency,
+        locale,
+        timeZone,
+        setTheme,
+        setDisplayCurrency,
+        setLocale,
+        setTimeZone,
+      }}
     >
       {children}
     </AppPreferencesContext.Provider>

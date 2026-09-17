@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { randomUUID } from "node:crypto";
+import { ZodError } from "zod";
 
 interface ErrorBody {
   readonly error: {
@@ -44,6 +45,11 @@ export class ApiErrorFilter implements ExceptionFilter {
         message = exception.message;
       }
       code = httpStatusToCode(status);
+    } else if (exception instanceof ZodError) {
+      status = HttpStatus.BAD_REQUEST;
+      code = "VALIDATION_ERROR";
+      message = "Invalid request body";
+      details = exception.issues;
     } else if (exception instanceof Error && "code" in exception) {
       code = String((exception as { code: unknown }).code);
     }
