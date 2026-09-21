@@ -3,4 +3,6 @@ export const queryKeys = {
   meSettings: ["me", "settings"] as const,
   meSessions: ["me", "sessions"] as const,
   services: ["services"] as const,
+  accounts: ["accounts"] as const,
+  categories: ["categories"] as const,
 };

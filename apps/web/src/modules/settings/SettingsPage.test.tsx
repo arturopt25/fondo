@@ -146,8 +146,12 @@ describe("SettingsPage", () => {
     });
   });
 
-  it("renders the security card with the current session", () => {
+  it("renders the security card with the current session", async () => {
+    const user = userEvent.setup();
     renderSettings();
+    await user.click(
+      screen.getByRole("button", { name: "settings.sections.security" }),
+    );
 
     expect(screen.getByText("settings.security.sessions")).toBeInTheDocument();
     expect(screen.getByText("Chrome")).toBeInTheDocument();
@@ -162,6 +166,9 @@ describe("SettingsPage", () => {
   it("shows a validation error for a short new password", async () => {
     const user = userEvent.setup();
     renderSettings();
+    await user.click(
+      screen.getByRole("button", { name: "settings.sections.security" }),
+    );
 
     const inputs = screen.getAllByPlaceholderText(
       "settings.security.passwordPlaceholder",

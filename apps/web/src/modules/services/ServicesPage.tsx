@@ -1,4 +1,4 @@
-import { Group, Loader, SimpleGrid, Stack, Text } from "@mantine/core";
+import { SimpleGrid, Stack, Text } from "@mantine/core";
 import {
   IconBuildingBank,
   IconCar,
@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import type { ServiceKey, ServiceWithStatus } from "@fondo/shared-types";
-import { EmptyState, PageHeader, ServiceCard } from "@fondo/ui";
+import { EmptyState, ErrorState, LoadingState, PageHeader, ServiceCard } from "@fondo/ui";
 
 import { useMeQuery } from "../settings/me-hooks";
 import {
@@ -97,16 +97,12 @@ export function ServicesPage(): React.JSX.Element {
       </div>
 
       {servicesQuery.isLoading ? (
-        <Group gap="xs">
-          <Loader size="sm" />
-          <Text size="sm" c="dimmed">
-            {t("common.loading")}
-          </Text>
-        </Group>
+        <LoadingState label={t("common.loading")} />
       ) : servicesQuery.isError ? (
-        <Text size="sm" c="red">
-          {t("services.errors.loadFailed")}
-        </Text>
+        <ErrorState
+          title={t("services.errors.loadFailedTitle")}
+          description={t("services.errors.loadFailed")}
+        />
       ) : services.length === 0 ? (
         <EmptyState
           title={t("services.errors.emptyTitle")}

@@ -23,8 +23,11 @@ import {
   IconUser,
   IconWorld,
 } from "@tabler/icons-react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { z } from "zod";
 
 import {
   supportedTimeZones,
@@ -51,6 +54,12 @@ const settingsSections = [
   { key: "data", icon: IconWorld },
 ] as const;
 
+type SettingsSectionKey = (typeof settingsSections)[number]["key"];
+
+const profileSchema = (minMessage: string) =>
+  z.object({ name: z.string().trim().min(2, minMessage) });
+type ProfileInput = z.infer<ReturnType<typeof profileSchema>>;
+
 export function SettingsPage(): React.JSX.Element {
   const { t } = useTranslation();
   const {
@@ -69,7 +78,8 @@ export function SettingsPage(): React.JSX.Element {
   const sessionsQuery = useSessionsQuery();
   const revokeSessionMutation = useRevokeSessionMutation();
   const revokeOthers = useRevokeOtherSessionsMutation();
-  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [activeSection, setActiveSection] =
+    useState<SettingsSectionKey>("profile");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -80,7 +90,19 @@ export function SettingsPage(): React.JSX.Element {
   const role = meQuery.data?.membership.role ?? "MEMBER";
   const isAdmin = role === "ADMIN";
 
-  const profileName = nameDraft ?? user?.name ?? "";
+  const {
+    register: registerProfile,
+    handleSubmit: handleProfileSubmit,
+    watch,
+    formState: { errors: profileErrors, isDirty },
+  } = useForm<ProfileInput>({
+    resolver: zodResolver(
+      profileSchema(t("settings.validation.nameMin")),
+    ),
+    values: { name: user?.name ?? "" },
+  });
+
+  const profileName = watch("name");
   const sessions = sessionsQuery.data ?? [];
 
   function handleChangePassword(): void {
@@ -149,11 +171,11 @@ export function SettingsPage(): React.JSX.Element {
     }
   }
 
-  function handleSaveProfile(): void {
-    if (!user || nameDraft === null) {
+  function handleSaveProfile(values: ProfileInput): void {
+    if (!user || !values.name.trim()) {
       return;
     }
-    updateProfile.mutate({ name: nameDraft });
+    updateProfile.mutate({ name: values.name });
   }
 
   return (
@@ -170,34 +192,39 @@ export function SettingsPage(): React.JSX.Element {
             {t("settings.preferences")}
           </Text>
           <Stack gap={4} mt="xs">
-            {settingsSections.map((section, index) => (
-              <Button
-                key={section.key}
-                className={
-                  index === 0
-                    ? "settings-nav__item settings-nav__item--active"
-                    : "settings-nav__item"
-                }
-                variant="subtle"
-                color="gray"
-                justify="flex-start"
-                leftSection={<section.icon size={17} stroke={1.7} />}
-                rightSection={
-                  index === 0 ? (
-                    <IconCheck size={15} />
-                  ) : (
-                    <IconChevronRight size={15} />
-                  )
-                }
-              >
-                {t(`settings.sections.${section.key}`)}
-              </Button>
-            ))}
+            {settingsSections.map((section) => {
+              const isActive = activeSection === section.key;
+              return (
+                <Button
+                  key={section.key}
+                  className={
+                    isActive
+                      ? "settings-nav__item settings-nav__item--active"
+                      : "settings-nav__item"
+                  }
+                  variant="subtle"
+                  color="gray"
+                  justify="flex-start"
+                  leftSection={<section.icon size={17} stroke={1.7} />}
+                  rightSection={
+                    isActive ? (
+                      <IconCheck size={15} />
+                    ) : (
+                      <IconChevronRight size={15} />
+                    )
+                  }
+                  onClick={() => setActiveSection(section.key)}
+                >
+                  {t(`settings.sections.${section.key}`)}
+                </Button>
+              );
+            })}
           </Stack>
         </Card>
 
         <Stack gap="md">
-          <Card padding="xl" radius="lg" withBorder>
+          {activeSection === "profile" ? (
+            <Card padding="xl" radius="lg" withBorder>
             <Group justify="space-between" align="flex-start" mb="xl">
               <Group gap="md">
                 <Avatar color="signal" size={58} radius="lg">
@@ -219,9 +246,9 @@ export function SettingsPage(): React.JSX.Element {
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
               <TextInput
                 label={t("settings.profile.name")}
-                value={profileName}
-                onChange={(event) => setNameDraft(event.currentTarget.value)}
                 disabled={!user}
+                {...registerProfile("name")}
+                error={profileErrors.name?.message}
               />
               <TextInput
                 label={t("settings.profile.email")}
@@ -232,18 +259,20 @@ export function SettingsPage(): React.JSX.Element {
             <Group justify="flex-end" mt="xl">
               <Button
                 color="signal"
-                onClick={handleSaveProfile}
+                onClick={handleProfileSubmit(handleSaveProfile)}
                 loading={updateProfile.isPending}
                 disabled={
-                  !user || nameDraft === null || nameDraft === user?.name
+                  !user || !isDirty || !profileName.trim() || profileName === user?.name
                 }
               >
                 {t("settings.saveChanges")}
               </Button>
             </Group>
           </Card>
+          ) : null}
 
-          <Card padding="xl" radius="lg" withBorder>
+          {activeSection === "appearance" ? (
+            <Card padding="xl" radius="lg" withBorder>
             <Group justify="space-between" mb="xl">
               <Stack gap={4}>
                 <Title order={3}>{t("settings.appearance.title")}</Title>
@@ -264,8 +293,10 @@ export function SettingsPage(): React.JSX.Element {
               ]}
             />
           </Card>
+          ) : null}
 
-          <Card padding="xl" radius="lg" withBorder>
+          {activeSection === "languageRegion" ? (
+            <Card padding="xl" radius="lg" withBorder>
             <Group justify="space-between" mb="xl">
               <Stack gap={4}>
                 <Title order={3}>{t("settings.language.title")}</Title>
@@ -309,8 +340,10 @@ export function SettingsPage(): React.JSX.Element {
               />
             </SimpleGrid>
           </Card>
+          ) : null}
 
-          <Card padding="xl" radius="lg" withBorder>
+          {activeSection === "security" ? (
+            <Card padding="xl" radius="lg" withBorder>
             <Group justify="space-between" mb="xl">
               <Stack gap={4}>
                 <Title order={3}>{t("settings.security.title")}</Title>
@@ -446,13 +479,15 @@ export function SettingsPage(): React.JSX.Element {
               )}
             </Stack>
           </Card>
+          ) : null}
 
-          <Card
-            className="settings-data-card"
-            padding="xl"
-            radius="lg"
-            withBorder
-          >
+          {activeSection === "data" ? (
+            <Card
+              className="settings-data-card"
+              padding="xl"
+              radius="lg"
+              withBorder
+            >
             <Stack gap={5}>
               <Title order={3}>{t("settings.data.title")}</Title>
               <Text size="sm" c="dimmed" maw={600}>
@@ -468,6 +503,7 @@ export function SettingsPage(): React.JSX.Element {
               </Button>
             </Group>
           </Card>
+          ) : null}
         </Stack>
       </div>
     </Stack>
