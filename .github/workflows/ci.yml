@@ -56,7 +56,19 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - name: Create e2e test database
-        run: docker exec postgres psql -U fondo -d postgres -c "CREATE DATABASE fondo_test OWNER fondo;"
+        env:
+          PGPASSWORD: fondo-ci-password
+        run: |
+          docker run --rm \
+            --network host \
+            -e PGPASSWORD="$PGPASSWORD" \
+            postgres:17-alpine \
+            psql \
+              --host=127.0.0.1 \
+              --port=5432 \
+              --username=fondo \
+              --dbname=postgres \
+              --command="CREATE DATABASE fondo_test OWNER fondo;"
       - name: Run e2e tests
         env:
           TEST_DATABASE_URL: postgresql://fondo:fondo-ci-password@localhost:5432/fondo_test
