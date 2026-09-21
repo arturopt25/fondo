@@ -26,6 +26,8 @@ import {
   IconSettings,
   IconSparkles,
   IconStack2,
+  IconTag,
+  IconWallet,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -44,6 +46,16 @@ const navigation = [
     to: "/app/dashboard",
     labelKey: "navigation.dashboard",
     icon: IconLayoutDashboard,
+  },
+  {
+    to: "/app/accounts",
+    labelKey: "navigation.accounts",
+    icon: IconWallet,
+  },
+  {
+    to: "/app/categories",
+    labelKey: "navigation.categories",
+    icon: IconTag,
   },
   {
     to: "/app/reports",

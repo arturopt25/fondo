@@ -19,6 +19,13 @@
     "namePlaceholder": "Your name",
     "invalidCredentials": "The email or password is incorrect.",
     "registrationFailed": "Unable to create the account. Try again.",
+    "validation": {
+      "emailRequired": "Email is required.",
+      "emailInvalid": "Enter a valid email address.",
+      "nameRequired": "Name must be at least 2 characters.",
+      "passwordRequired": "Password is required.",
+      "passwordMin": "Password must be at least 8 characters."
+    },
     "loadingSession": "Checking your session",
     "haveAccount": "Already have an account?",
     "noAccount": "New to Fondo?",
@@ -41,7 +48,9 @@
     "dashboard": "Overview",
     "reports": "Reports",
     "settings": "Settings",
-    "workspace": "Personal space"
+    "workspace": "Personal space",
+    "accounts": "Accounts",
+    "categories": "Categories"
   },
   "shell": {
     "overview": "Overview",
@@ -233,6 +242,9 @@
       "description": "Safe data export and deletion will be available when the confirmation flow is ready.",
       "export": "Export data",
       "delete": "Delete space"
+    },
+    "validation": {
+      "nameMin": "Name must be at least 2 characters."
     }
   },
   "services": {
@@ -253,6 +265,7 @@
       "disabled": "Disabled"
     },
     "errors": {
+      "loadFailedTitle": "Services unavailable",
       "loadFailed": "Services could not be loaded.",
       "emptyTitle": "No services available",
       "emptyDescription": "There are no services configured for this space yet."
@@ -304,13 +317,69 @@
       "transport": "Transport",
       "leisure": "Leisure",
       "other": "Other",
-      "income": "Income"
+      "income": "Income",
+      "eyebrow": "Categories / 06",
+      "title": "Organize your spending",
+      "description": "Customize the categories you use across your space.",
+      "newCategory": "New category",
+      "name": "Name",
+      "namePlaceholder": "e.g. Travel",
+      "type": "Type",
+      "create": "Create category",
+      "listTitle": "Categories",
+      "filterAll": "All",
+      "default": "Default",
+      "active": "Active",
+      "archived": "Archived",
+      "archive": "Archive",
+      "emptyTitle": "No categories",
+      "emptyDescription": "Add a custom category to refine your tracking."
     },
     "merchants": {
       "coffeeLab": "Coffee Lab",
       "northwindSalary": "Northwind salary",
       "metroPass": "Metro pass",
       "streamingService": "Streaming service"
+    },
+    "accounts": {
+      "eyebrow": "Accounts / 05",
+      "title": "Where your money lives",
+      "description": "Track your accounts and their starting balances.",
+      "newAccount": "New account",
+      "name": "Name",
+      "namePlaceholder": "e.g. Savings",
+      "type": "Type",
+      "openingBalance": "Opening balance",
+      "create": "Create account",
+      "active": "Active",
+      "archived": "Archived",
+      "archive": "Archive",
+      "emptyTitle": "No accounts yet",
+      "emptyDescription": "Create your first account to start tracking."
+    },
+    "accountTypes": {
+      "CASH": "Cash",
+      "BANK": "Bank",
+      "CREDIT_CARD": "Credit card",
+      "OTHER": "Other"
+    },
+    "categoryTypes": {
+      "INCOME": "Income",
+      "EXPENSE": "Expense"
+    },
+    "errors": {
+      "loadFailedTitle": "Could not load data"
+    },
+    "notifications": {
+      "accountCreatedTitle": "Account created",
+      "accountCreatedMessage": "Your account was saved.",
+      "accountArchivedTitle": "Account archived",
+      "accountArchivedMessage": "The account was archived.",
+      "categoryCreatedTitle": "Category created",
+      "categoryCreatedMessage": "The category was saved.",
+      "categoryArchivedTitle": "Category archived",
+      "categoryArchivedMessage": "The category was archived.",
+      "actionError": "The action could not be completed."
     }
   }
 }

@@ -13,6 +13,7 @@ function createMockPrisma() {
   const userSettingsCreate = vi.fn();
   const serviceDefinitionFindUnique = vi.fn();
   const serviceSubscriptionCreate = vi.fn();
+  const categoryCreateMany = vi.fn();
 
   const tx = {
     tenant: { create: tenantCreate },
@@ -20,6 +21,7 @@ function createMockPrisma() {
     userSettings: { create: userSettingsCreate },
     serviceDefinition: { findUnique: serviceDefinitionFindUnique },
     serviceSubscription: { create: serviceSubscriptionCreate },
+    category: { createMany: categoryCreateMany },
   };
 
   transaction.mockImplementation(
@@ -39,6 +41,7 @@ function createMockPrisma() {
       userSettingsCreate,
       serviceDefinitionFindUnique,
       serviceSubscriptionCreate,
+      categoryCreateMany,
     },
   };
 }
@@ -79,6 +82,16 @@ describe("TenantProvisioningService", () => {
         serviceId: "svc-1",
         status: "ACTIVE",
       },
+    });
+    expect(fns.categoryCreateMany).toHaveBeenCalledWith({
+      data: [
+        { tenantId: "tenant-1", name: "Housing", type: "EXPENSE", isDefault: true },
+        { tenantId: "tenant-1", name: "Food", type: "EXPENSE", isDefault: true },
+        { tenantId: "tenant-1", name: "Transport", type: "EXPENSE", isDefault: true },
+        { tenantId: "tenant-1", name: "Leisure", type: "EXPENSE", isDefault: true },
+        { tenantId: "tenant-1", name: "Other", type: "EXPENSE", isDefault: true },
+        { tenantId: "tenant-1", name: "Income", type: "INCOME", isDefault: true },
+      ],
     });
     expect(fns.transaction).toHaveBeenCalledTimes(1);
   });

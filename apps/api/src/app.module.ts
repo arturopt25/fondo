@@ -4,6 +4,7 @@ import { ThrottlerModule } from "@nestjs/throttler";
 
 import { HealthModule } from "./core/health/health.module.js";
 import { AuthModule } from "./core/auth/auth.module.js";
+import { FinanceModule } from "./core/finance/finance.module.js";
 import { MeModule } from "./core/me/me.module.js";
 import { PrismaModule } from "./core/prisma.module.js";
 import { ServicesModule } from "./core/services/services.module.js";
@@ -22,6 +23,7 @@ import { ServicesModule } from "./core/services/services.module.js";
     MeModule,
     HealthModule,
     ServicesModule,
+    FinanceModule,
   ],
 })
 export class AppModule {}

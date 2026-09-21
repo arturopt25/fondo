@@ -19,6 +19,13 @@
     "namePlaceholder": "Tu nombre",
     "invalidCredentials": "El email o la contrasena son incorrectos.",
     "registrationFailed": "No se pudo crear la cuenta. Intentalo de nuevo.",
+    "validation": {
+      "emailRequired": "El email es obligatorio.",
+      "emailInvalid": "Introduce un email valido.",
+      "nameRequired": "El nombre debe tener al menos 2 caracteres.",
+      "passwordRequired": "La contrasena es obligatoria.",
+      "passwordMin": "La contrasena debe tener al menos 8 caracteres."
+    },
     "loadingSession": "Comprobando tu sesion",
     "haveAccount": "Ya tienes una cuenta?",
     "noAccount": "Nuevo en Fondo?",
@@ -41,7 +48,9 @@
     "dashboard": "Resumen",
     "reports": "Informes",
     "settings": "Configuracion",
-    "workspace": "Espacio personal"
+    "workspace": "Espacio personal",
+    "accounts": "Cuentas",
+    "categories": "Categorias"
   },
   "shell": {
     "overview": "Vista general",
@@ -233,6 +242,9 @@
       "description": "La exportacion y eliminacion segura de datos estaran disponibles cuando el flujo de confirmacion este listo.",
       "export": "Exportar datos",
       "delete": "Eliminar espacio"
+    },
+    "validation": {
+      "nameMin": "El nombre debe tener al menos 2 caracteres."
     }
   },
   "services": {
@@ -253,6 +265,7 @@
       "disabled": "Desactivado"
     },
     "errors": {
+      "loadFailedTitle": "Servicios no disponibles",
       "loadFailed": "No se pudieron cargar los servicios.",
       "emptyTitle": "No hay servicios disponibles",
       "emptyDescription": "Aun no hay servicios configurados para este espacio."
@@ -304,13 +317,69 @@
       "transport": "Transporte",
       "leisure": "Ocio",
       "other": "Otros",
-      "income": "Ingresos"
+      "income": "Ingresos",
+      "eyebrow": "Categorias / 06",
+      "title": "Organiza tus gastos",
+      "description": "Personaliza las categorias que usas en tu espacio.",
+      "newCategory": "Nueva categoria",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. Viajes",
+      "type": "Tipo",
+      "create": "Crear categoria",
+      "listTitle": "Categorias",
+      "filterAll": "Todas",
+      "default": "Por defecto",
+      "active": "Activa",
+      "archived": "Archivada",
+      "archive": "Archivar",
+      "emptyTitle": "No hay categorias",
+      "emptyDescription": "Anade una categoria personalizada para refinar tu registro."
     },
     "merchants": {
       "coffeeLab": "Coffee Lab",
       "northwindSalary": "Northwind salary",
       "metroPass": "Metro pass",
       "streamingService": "Streaming service"
+    },
+    "accounts": {
+      "eyebrow": "Cuentas / 05",
+      "title": "Donde vive tu dinero",
+      "description": "Gestiona tus cuentas y sus saldos iniciales.",
+      "newAccount": "Nueva cuenta",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. Ahorros",
+      "type": "Tipo",
+      "openingBalance": "Saldo inicial",
+      "create": "Crear cuenta",
+      "active": "Activa",
+      "archived": "Archivada",
+      "archive": "Archivar",
+      "emptyTitle": "Aun no hay cuentas",
+      "emptyDescription": "Crea tu primera cuenta para empezar a registrar."
+    },
+    "accountTypes": {
+      "CASH": "Efectivo",
+      "BANK": "Banco",
+      "CREDIT_CARD": "Tarjeta de credito",
+      "OTHER": "Otro"
+    },
+    "categoryTypes": {
+      "INCOME": "Ingreso",
+      "EXPENSE": "Gasto"
+    },
+    "errors": {
+      "loadFailedTitle": "No se pudieron cargar los datos"
+    },
+    "notifications": {
+      "accountCreatedTitle": "Cuenta creada",
+      "accountCreatedMessage": "Tu cuenta fue guardada.",
+      "accountArchivedTitle": "Cuenta archivada",
+      "accountArchivedMessage": "La cuenta fue archivada.",
+      "categoryCreatedTitle": "Categoria creada",
+      "categoryCreatedMessage": "La categoria fue guardada.",
+      "categoryArchivedTitle": "Categoria archivada",
+      "categoryArchivedMessage": "La categoria fue archivada.",
+      "actionError": "No se pudo completar la accion."
     }
   }
 }

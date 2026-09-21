@@ -34,6 +34,16 @@ const SettingsPage = lazy(() =>
     default: module.SettingsPage,
   })),
 );
+const AccountsPage = lazy(() =>
+  import("./modules/finance/AccountsPage").then((module) => ({
+    default: module.AccountsPage,
+  })),
+);
+const CategoriesPage = lazy(() =>
+  import("./modules/finance/CategoriesPage").then((module) => ({
+    default: module.CategoriesPage,
+  })),
+);
 const LoginPage = lazy(() =>
   import("./modules/auth/LoginPage").then((module) => ({
     default: module.LoginPage,
@@ -90,6 +100,8 @@ function ThemedApplication(): JSX.Element {
               <Route path="/app" element={<AppLayout />}>
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="accounts" element={<AccountsPage />} />
+                <Route path="categories" element={<CategoriesPage />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="services" element={<ServicesPage />} />

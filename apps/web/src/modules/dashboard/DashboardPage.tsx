@@ -35,6 +35,7 @@ import { DashboardSection, MetricCard, PageHeader } from "@fondo/ui";
 
 import {
   DateRangeSelector,
+  type DateRange,
   type PeriodKey,
 } from "../../components/DateRangeSelector";
 import { useAppPreferences } from "../../app/preferences";
@@ -54,6 +55,7 @@ export function DashboardPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const { displayCurrency } = useAppPreferences();
   const [period, setPeriod] = useState<PeriodKey>("currentMonth");
+  const [customRange, setCustomRange] = useState<DateRange>([null, null]);
   const locale = i18n.language === "en" ? "en-US" : "es-ES";
 
   function showTransactionNotice(): void {
@@ -83,7 +85,12 @@ export function DashboardPage(): React.JSX.Element {
         description={t("dashboard.description")}
         rightSection={
           <Group gap="sm" align="center">
-            <DateRangeSelector value={period} onChange={setPeriod} />
+            <DateRangeSelector
+              value={period}
+              onChange={setPeriod}
+              range={customRange}
+              onRangeChange={setCustomRange}
+            />
             <Button
               leftSection={<IconPlus size={17} />}
               color="signal"

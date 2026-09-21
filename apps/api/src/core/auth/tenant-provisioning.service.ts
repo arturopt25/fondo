@@ -57,6 +57,15 @@ export class TenantProvisioningService {
             },
           });
         }
+
+        await tx.category.createMany({
+          data: DEFAULT_CATEGORIES.map((category) => ({
+            tenantId: tenant.id,
+            name: category.name,
+            type: category.type,
+            isDefault: true,
+          })),
+        });
       });
     } catch (error) {
       if (isDuplicateKeyError(error)) {
@@ -78,3 +87,12 @@ function isDuplicateKeyError(error: unknown): boolean {
     error.code === "P2002"
   );
 }
+
+const DEFAULT_CATEGORIES = [
+  { name: "Housing", type: "EXPENSE" },
+  { name: "Food", type: "EXPENSE" },
+  { name: "Transport", type: "EXPENSE" },
+  { name: "Leisure", type: "EXPENSE" },
+  { name: "Other", type: "EXPENSE" },
+  { name: "Income", type: "INCOME" },
+] as const;

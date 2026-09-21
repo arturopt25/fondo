@@ -27,6 +27,7 @@ import {
 
 import {
   DateRangeSelector,
+  type DateRange,
   type PeriodKey,
 } from "../../components/DateRangeSelector";
 import { useAppPreferences } from "../../app/preferences";
@@ -42,6 +43,7 @@ export function ReportsPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const { displayCurrency } = useAppPreferences();
   const [period, setPeriod] = useState<PeriodKey>("currentMonth");
+  const [customRange, setCustomRange] = useState<DateRange>([null, null]);
   const locale = i18n.language === "en" ? "en-US" : "es-ES";
   const reportData = monthlyCashFlow.map((month) => ({
     ...month,
@@ -61,7 +63,12 @@ export function ReportsPage(): React.JSX.Element {
         description={t("reports.description")}
         rightSection={
           <Group gap="sm">
-            <DateRangeSelector value={period} onChange={setPeriod} />
+            <DateRangeSelector
+              value={period}
+              onChange={setPeriod}
+              range={customRange}
+              onRangeChange={setCustomRange}
+            />
             <Button variant="default" leftSection={<IconDownload size={16} />}>
               {t("reports.export")}
             </Button>

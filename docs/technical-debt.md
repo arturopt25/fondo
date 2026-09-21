@@ -23,7 +23,7 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 | Phase 2: Authentication and Personal Tenant | Done        |
 | Phase 3: Functional Settings                | Mostly done |
 | Phase 4: Services and Feature Flags         | Mostly done |
-| Phase 5: Accounts and Categories            | Pending     |
+| Phase 5: Accounts and Categories            | Done        |
 | Phase 6: Transactions and Ledger            | Pending     |
 | Phase 7: Dashboard and Reports              | Pending     |
 | Phase 8: Security and Production Hardening  | Pending     |
@@ -110,53 +110,54 @@ Declared but not yet consumed:
 
 ### TD-008: Replace mocks with API adapters
 
-- Status: Pending
+- Status: Blocked
 - Priority: P0
 - Area: Web
-- Problem: Dashboard, Reports and Services render typed mocks from `mock-data.ts`.
+- Problem: Dashboard and Reports render typed mocks from `mock-data.ts`. (Services was migrated to real API data in Phase 4A.)
 - Planned resolution: Introduce repository/query adapters with the same contracts, then connect them to TanStack Query.
 - Acceptance criteria: Screens render server data; mocks live only in test fixtures.
 - Verification: Component tests and API integration tests.
+- Blocked on: Financial Accounts and Transactions (Phase 5/6) — there is no server data to render yet.
 
 ### TD-009: Implement real date range picker
 
-- Status: Pending
+- Status: Done
 - Priority: P2
 - Area: Web / UX
 - Problem: The `Custom` period option in `DateRangeSelector` has no date picker.
 - Planned resolution: Use `@mantine/dates` `DatePickerInput` for custom ranges.
 - Acceptance criteria: Selecting a custom range changes the query period.
-- Verification: Interaction test.
+- Verification: `DateRangeSelector` renders a controlled range `DatePicker`; the range is surfaced via `onRangeChange`.
 
 ### TD-010: Add real loading, empty, error and disabled states
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: Web / UX
 - Problem: Screens mostly assume success; error and empty states are incomplete.
 - Planned resolution: Standardize state components and apply to every screen.
 - Acceptance criteria: Every data screen handles loading, empty, error and disabled.
-- Verification: Component tests per state.
+- Verification: `LoadingState` and `ErrorState` added to `@fondo/ui` and applied to Services, Settings and the finance pages. Dashboard/Reports remain mock-backed until TD-008.
 
 ### TD-011: Add React Testing Library render tests
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: Web / Quality
-- Problem: UI has no render tests.
+- Problem: UI has render tests for Settings, Services and auth-client, but the App Shell, auth pages and key components are not covered.
 - Planned resolution: Test the App Shell, auth pages, Settings sections and key components.
 - Acceptance criteria: Navigation, theme, language and currency changes are covered.
-- Verification: `pnpm --filter @fondo/web test`.
+- Verification: Tests now cover Login, Register, App Shell navigation, Settings sections, Services and Accounts pages.
 
 ### TD-012: Improve internal Settings navigation
 
-- Status: Pending
+- Status: Done
 - Priority: P2
 - Area: Web / UX
 - Problem: Settings sections are visual; navigation does not change the view.
 - Planned resolution: Use nested routes or active section state with real content per section.
 - Acceptance criteria: Each section renders distinct content and active state.
-- Verification: Interaction test.
+- Verification: Section state drives which card renders; nav buttons update the active section.
 
 ### TD-013: Complete WCAG AA accessibility review
 
@@ -200,13 +201,13 @@ Declared but not yet consumed:
 
 ### TD-017: Replace visual forms with React Hook Form + Zod
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: Web / Quality
 - Problem: Login, Register and Settings use uncontrolled inputs or local state.
 - Planned resolution: Adopt `react-hook-form` with `zodResolver` everywhere.
 - Acceptance criteria: Forms validate with Zod and show field-level errors.
-- Verification: Component tests.
+- Verification: Login, Register, profile and the finance create forms use RHF + shared Zod schemas; the password form keeps explicit validation with field errors.
 
 ## Phase 2: Authentication and Personal Tenant
 
@@ -408,7 +409,7 @@ Declared but not yet consumed:
 - Area: Web / Settings
 - Planned resolution: Wire name and avatar updates to `PATCH /me/profile`.
 - Acceptance criteria: The display name persists and is returned by `/me`.
-- Verification: E2E test updates the profile name; avatar upload remains deferred.
+- Verification: E2E test updates the profile name. Avatar upload remains deferred (object storage), separate from the name flow.
 
 ### TD-037: Persist theme through the API
 
@@ -511,15 +512,15 @@ Declared but not yet consumed:
 
 ## Phase 5: Accounts and Categories
 
-- TD-055: Create `FinancialAccount`. Pending.
-- TD-056: Create `Category`. Pending.
-- TD-057: Seed default categories. Pending.
-- TD-058: Add per-tenant custom categories. Pending.
-- TD-059: Implement accounts/categories API. Pending.
-- TD-060: Implement functional UI. Pending.
-- TD-061: Add pagination and allowlisted sorting. Pending.
-- TD-062: Enforce tenant-scoped repositories. Pending.
-- TD-063: Add audit logging. Pending.
+- TD-055: Create `FinancialAccount`. Done.
+- TD-056: Create `Category`. Done.
+- TD-057: Seed default categories. Done.
+- TD-058: Add per-tenant custom categories. Done.
+- TD-059: Implement accounts/categories API. Done.
+- TD-060: Implement functional UI. Done.
+- TD-061: Add pagination and allowlisted sorting. Done.
+- TD-062: Enforce tenant-scoped repositories. Done.
+- TD-063: Add audit logging. Done.
 
 ## Phase 6: Transactions and Ledger
 
@@ -589,6 +590,7 @@ At the end of every phase:
 
 ## Changelog
 
+- 2026-09-21: UI Exit Gate + Phase 5A (Accounts and Categories). Added `LoadingState`/`ErrorState` to the design system, migrated Login/Register/profile and the finance forms to React Hook Form + Zod, implemented a real custom range picker, and made Settings navigation section-driven. Shipped `FinancialAccount` and `Category` with per-tenant default-category seeding (atomic at provisioning + backfill), tenant-scoped repositories, paginated accounts/categories APIs with allowlisted sorting and audit logging, cross-tenant isolation tests, and functional Accounts/Categories pages. TD-009, TD-010, TD-011, TD-012, TD-017, TD-055–TD-063 done.
 - 2026-09-21: Platform hardening + Services foundation. Enabled Better Auth rate limiting (sign-in/sign-up/change-password), added a real Terminus/Prisma health check, refactored the Fastify auth bridge to typed `FastifyInstance`, resolved `TenantContext` in `SessionAuthGuard` (TD-096), and shipped the Services catalog: `ServiceDefinition`/`ServiceSubscription` models, Personal Finance enabled atomically at provisioning with backfill for existing tenants, `ServiceAccessGuard`, `AdminOnlyGuard`, enable/disable endpoints with audit logging, and a data-driven Services page. Web runtime image is now non-root. TD-003, TD-004, TD-005, TD-007, TD-025, TD-033, TD-047–TD-051, TD-053, TD-054, TD-096 done.
 - 2026-09-17: Phase 3A — Functional Settings closed. Centralized preference mutations in `AppPreferencesProvider`, removed fire-and-forget writes, made timezone a controlled searchable field validated against IANA, and wired password change + session management through Better Auth. Added Vitest/jsdom + Testing Library setup with web tests, and an e2e suite (`pnpm --filter @fondo/api test:e2e`) that runs against a dedicated `TEST_DATABASE_URL` (guard refuses the local dev database). Zod errors now map to `400 VALIDATION_ERROR`. TD-002, TD-006, TD-019, TD-020, TD-024, TD-029, TD-030, TD-031, TD-032, TD-035, TD-036–TD-045 done.
 - 2026-09-04: Fixed dev-mode DI failure — `tsx` does not emit `design:paramtypes`, so NestJS constructor injection passed `undefined`. Switched auth/me providers to explicit `@Inject()` tokens; works under both `tsx` and `tsc`. Added CORS headers and OPTIONS preflight handling for Better Auth routes.
