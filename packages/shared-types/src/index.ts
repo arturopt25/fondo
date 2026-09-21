@@ -5,4 +5,5 @@ export interface HealthResponse {
 
 export * from "./enums.js";
 export * from "./me.js";
+export * from "./services.js";
 export * from "./timezone.js";

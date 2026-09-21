@@ -243,6 +243,27 @@
     "activeCount": "1 active",
     "introEyebrow": "Fondo catalog",
     "introDescription": "Each service has its own domain boundaries. For now, Personal Finance is the only operational module.",
+    "actions": {
+      "open": "Open module",
+      "enable": "Enable",
+      "disable": "Disable"
+    },
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled"
+    },
+    "errors": {
+      "loadFailed": "Services could not be loaded.",
+      "emptyTitle": "No services available",
+      "emptyDescription": "There are no services configured for this space yet."
+    },
+    "notifications": {
+      "enabledTitle": "Service enabled",
+      "enabledMessage": "The service was enabled.",
+      "disabledTitle": "Service disabled",
+      "disabledMessage": "The service was disabled.",
+      "actionError": "The service status could not be changed."
+    },
     "cards": {
       "personalFinance": {
         "name": "Personal Finance",

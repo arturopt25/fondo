@@ -43,6 +43,20 @@ export class TenantProvisioningService {
             userId,
           },
         });
+
+        const personalFinance = await tx.serviceDefinition.findUnique({
+          where: { key: "PERSONAL_FINANCE" },
+        });
+
+        if (personalFinance) {
+          await tx.serviceSubscription.create({
+            data: {
+              tenantId: tenant.id,
+              serviceId: personalFinance.id,
+              status: "ACTIVE",
+            },
+          });
+        }
       });
     } catch (error) {
       if (isDuplicateKeyError(error)) {

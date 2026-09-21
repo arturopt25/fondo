@@ -1,11 +1,25 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { HealthController } from "./health.controller.js";
 
 describe("HealthController", () => {
-  it("reports the API as healthy", () => {
-    const controller = new HealthController();
+  it("reports the database health through Terminus", async () => {
+    const check = vi.fn().mockResolvedValue({
+      status: "ok",
+      details: { database: { status: "up" } },
+    });
+    const database = { pingCheck: vi.fn() };
+    const prisma = { client: {} };
 
-    expect(controller.getHealth()).toEqual({ status: "ok", service: "api" });
+    const controller = new HealthController(
+      { check } as never,
+      database as never,
+      prisma as never,
+    );
+
+    const result = await controller.check();
+
+    expect(result.status).toBe("ok");
+    expect(check).toHaveBeenCalledTimes(1);
   });
 });

@@ -243,6 +243,27 @@
     "activeCount": "1 activo",
     "introEyebrow": "Catalogo de Fondo",
     "introDescription": "Cada servicio tendra sus propios limites de dominio. Por ahora, Personal Finance es el unico modulo operativo.",
+    "actions": {
+      "open": "Abrir modulo",
+      "enable": "Activar",
+      "disable": "Desactivar"
+    },
+    "status": {
+      "active": "Activo",
+      "disabled": "Desactivado"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar los servicios.",
+      "emptyTitle": "No hay servicios disponibles",
+      "emptyDescription": "Aun no hay servicios configurados para este espacio."
+    },
+    "notifications": {
+      "enabledTitle": "Servicio activado",
+      "enabledMessage": "El servicio fue activado.",
+      "disabledTitle": "Servicio desactivado",
+      "disabledMessage": "El servicio fue desactivado.",
+      "actionError": "No se pudo cambiar el estado del servicio."
+    },
     "cards": {
       "personalFinance": {
         "name": "Personal Finance",

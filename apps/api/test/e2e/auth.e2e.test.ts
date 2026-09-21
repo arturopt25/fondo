@@ -249,4 +249,25 @@ describe("auth e2e", () => {
 
     await agent.get("/api/v1/me").expect(401);
   });
+
+  it("reports database health through Terminus", async () => {
+    const response = await request(httpServer).get("/api/v1/health").expect(200);
+
+    expect(response.body.status).toBe("ok");
+    expect(response.body.details.database.status).toBe("up");
+  });
+
+  it("returns 429 once the sign-in rate limit is exceeded", async () => {
+    const email = uniqueEmail();
+
+    const statuses: number[] = [];
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const response = await request(httpServer)
+        .post("/api/v1/auth/sign-in/email")
+        .send({ email, password: "wrong-password" });
+      statuses.push(response.status);
+    }
+
+    expect(statuses).toContain(429);
+  });
 });

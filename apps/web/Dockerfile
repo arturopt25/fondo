@@ -7,8 +7,8 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @fondo/web build
 
-FROM nginx:1.29-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.29-alpine AS runtime
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
-EXPOSE 80
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

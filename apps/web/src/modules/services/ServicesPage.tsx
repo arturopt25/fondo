@@ -1,4 +1,4 @@
-import { SimpleGrid, Stack, Text } from "@mantine/core";
+import { Group, Loader, SimpleGrid, Stack, Text } from "@mantine/core";
 import {
   IconBuildingBank,
   IconCar,
@@ -6,35 +6,79 @@ import {
   IconReceiptTax,
   IconShieldCheck,
 } from "@tabler/icons-react";
+import type { TablerIcon } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
-import { PageHeader, ServiceCard } from "@fondo/ui";
+import type { ServiceKey, ServiceWithStatus } from "@fondo/shared-types";
+import { EmptyState, PageHeader, ServiceCard } from "@fondo/ui";
 
-const serviceCards = [
-  {
-    key: "personalFinance",
-    icon: IconBuildingBank,
-    statusColor: "teal",
-    enabled: true,
-  },
-  { key: "vehicle", icon: IconCar, statusColor: "gray", enabled: false },
-  { key: "home", icon: IconHome2, statusColor: "gray", enabled: false },
-  {
-    key: "insurance",
-    icon: IconShieldCheck,
-    statusColor: "gray",
-    enabled: false,
-  },
-  {
-    key: "entrepreneurship",
-    icon: IconReceiptTax,
-    statusColor: "gray",
-    enabled: false,
-  },
-] as const;
+import { useMeQuery } from "../settings/me-hooks";
+import {
+  useDisableServiceMutation,
+  useEnableServiceMutation,
+  useServicesQuery,
+} from "./services-hooks";
+
+const serviceMeta: Record<
+  ServiceKey,
+  { readonly icon: TablerIcon; readonly statusColor: string }
+> = {
+  PERSONAL_FINANCE: { icon: IconBuildingBank, statusColor: "teal" },
+  VEHICLE: { icon: IconCar, statusColor: "gray" },
+  HOME: { icon: IconHome2, statusColor: "gray" },
+  INSURANCE: { icon: IconShieldCheck, statusColor: "gray" },
+  ENTREPRENEURSHIP: { icon: IconReceiptTax, statusColor: "gray" },
+};
 
 export function ServicesPage(): React.JSX.Element {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const servicesQuery = useServicesQuery();
+  const enableService = useEnableServiceMutation();
+  const disableService = useDisableServiceMutation();
+  const meQuery = useMeQuery();
+
+  const isAdmin = meQuery.data?.membership.role === "ADMIN";
+  const services = servicesQuery.data?.services ?? [];
+
+  function handleAction(service: ServiceWithStatus): void {
+    if (service.status === "ACTIVE" && service.key === "PERSONAL_FINANCE") {
+      navigate("/app/dashboard");
+      return;
+    }
+
+    if (service.status === "ACTIVE") {
+      disableService.mutate(service.key);
+      return;
+    }
+
+    enableService.mutate(service.key);
+  }
+
+  function actionLabel(service: ServiceWithStatus): string {
+    if (service.status === "ACTIVE" && service.key === "PERSONAL_FINANCE") {
+      return t("services.actions.open");
+    }
+    if (service.status === "ACTIVE") {
+      return t("services.actions.disable");
+    }
+    return t("services.actions.enable");
+  }
+
+  function isActionDisabled(service: ServiceWithStatus): boolean {
+    if (service.status === "ACTIVE") {
+      return !isAdmin && service.key !== "PERSONAL_FINANCE";
+    }
+    return !isAdmin;
+  }
+
+  function statusFor(service: ServiceWithStatus): string {
+    if (service.status === "ACTIVE") {
+      return t("services.status.active");
+    }
+    return t("services.status.disabled");
+  }
 
   return (
     <Stack className="page-stack" gap="xl">
@@ -51,24 +95,52 @@ export function ServicesPage(): React.JSX.Element {
           {t("services.introDescription")}
         </Text>
       </div>
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-        {serviceCards.map((service) => (
-          <ServiceCard
-            key={service.key}
-            name={t(`services.cards.${service.key}.name`)}
-            description={t(`services.cards.${service.key}.description`)}
-            status={t(
-              `services.cards.${service.key}.${service.enabled ? "active" : "comingSoon"}`,
-            )}
-            statusColor={service.statusColor}
-            icon={service.icon}
-            actionLabel={t(
-              `services.cards.${service.key}.${service.enabled ? "open" : "notify"}`,
-            )}
-            disabled={!service.enabled}
-          />
-        ))}
-      </SimpleGrid>
+
+      {servicesQuery.isLoading ? (
+        <Group gap="xs">
+          <Loader size="sm" />
+          <Text size="sm" c="dimmed">
+            {t("common.loading")}
+          </Text>
+        </Group>
+      ) : servicesQuery.isError ? (
+        <Text size="sm" c="red">
+          {t("services.errors.loadFailed")}
+        </Text>
+      ) : services.length === 0 ? (
+        <EmptyState
+          title={t("services.errors.emptyTitle")}
+          description={t("services.errors.emptyDescription")}
+        />
+      ) : (
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+          {services.map((service) => {
+            const meta = serviceMeta[service.key] ?? {
+              icon: IconBuildingBank,
+              statusColor: "gray",
+            };
+            const pending =
+              (enableService.isPending &&
+                enableService.variables === service.key) ||
+              (disableService.isPending &&
+                disableService.variables === service.key);
+
+            return (
+              <ServiceCard
+                key={service.key}
+                name={service.name}
+                description={service.description}
+                status={statusFor(service)}
+                statusColor={meta.statusColor}
+                icon={meta.icon}
+                actionLabel={actionLabel(service)}
+                disabled={isActionDisabled(service) || pending}
+                onAction={() => handleAction(service)}
+              />
+            );
+          })}
+        </SimpleGrid>
+      )}
     </Stack>
   );
 }

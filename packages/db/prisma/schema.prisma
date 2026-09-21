@@ -12,6 +12,19 @@ enum MemberRole {
   MEMBER
 }
 
+enum ServiceKey {
+  PERSONAL_FINANCE
+  VEHICLE
+  HOME
+  INSURANCE
+  ENTREPRENEURSHIP
+}
+
+enum ServiceStatus {
+  ACTIVE
+  DISABLED
+}
+
 model User {
   id            String    @id
   name          String    @db.VarChar(255)
@@ -92,6 +105,7 @@ model Tenant {
 
   owner  User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   members Membership[]
+  subscriptions ServiceSubscription[]
 
   @@index([accountingCurrency])
 }
@@ -121,4 +135,43 @@ model UserSettings {
   updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ServiceDefinition {
+  id          String      @id @default(uuid()) @db.Uuid
+  key         ServiceKey  @unique
+  name        String      @db.VarChar(120)
+  description String      @db.VarChar(255)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  subscriptions ServiceSubscription[]
+}
+
+model ServiceSubscription {
+  id        String        @id @default(uuid()) @db.Uuid
+  tenantId  String        @db.Uuid
+  serviceId String        @db.Uuid
+  status    ServiceStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  tenant  Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  service ServiceDefinition @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, serviceId])
+  @@index([serviceId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String?  @db.Uuid
+  actorId   String?
+  action    String   @db.VarChar(64)
+  resource  String   @db.VarChar(64)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([createdAt])
 }
