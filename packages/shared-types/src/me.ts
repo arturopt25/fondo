@@ -1,13 +1,20 @@
 import { z } from "zod";
 
+import {
+  displayCurrencySchema,
+  localeSchema,
+  themeSchema,
+} from "./enums.js";
+import { timeZoneSchema } from "./timezone.js";
+
 export const tenantRoleSchema = z.enum(["ADMIN", "MEMBER"]);
 export type TenantRole = z.infer<typeof tenantRoleSchema>;
 
 export const userSettingsSchema = z.object({
-  locale: z.enum(["es", "en"]),
-  theme: z.enum(["light", "dark", "system"]),
-  displayCurrency: z.enum(["USD", "EUR"]),
-  timeZone: z.string().min(1).max(64),
+  locale: localeSchema,
+  theme: themeSchema,
+  displayCurrency: displayCurrencySchema,
+  timeZone: timeZoneSchema,
 });
 export type UserSettings = z.infer<typeof userSettingsSchema>;
 

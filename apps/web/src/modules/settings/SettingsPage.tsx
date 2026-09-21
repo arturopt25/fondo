@@ -5,11 +5,11 @@ import {
   Card,
   Divider,
   Group,
+  Loader,
   PasswordInput,
   Select,
   SimpleGrid,
   Stack,
-  Switch,
   Text,
   TextInput,
   Title,
@@ -23,14 +23,25 @@ import {
   IconUser,
   IconWorld,
 } from "@tabler/icons-react";
-import { startTransition, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { DisplayCurrency, SupportedTheme } from "@fondo/shared-types";
+import {
+  supportedTimeZones,
+  type DisplayCurrency,
+  type SupportedTheme,
+} from "@fondo/shared-types";
 import { PageHeader } from "@fondo/ui";
 
 import { useAppPreferences } from "../../app/preferences";
-import { useMeQuery, useUpdateProfileMutation } from "./me-hooks";
+import {
+  useChangePasswordMutation,
+  useMeQuery,
+  useRevokeOtherSessionsMutation,
+  useRevokeSessionMutation,
+  useSessionsQuery,
+  useUpdateProfileMutation,
+} from "./me-hooks";
 
 const settingsSections = [
   { key: "profile", icon: IconUser },
@@ -41,28 +52,79 @@ const settingsSections = [
 ] as const;
 
 export function SettingsPage(): React.JSX.Element {
-  const { t, i18n } = useTranslation();
-  const { theme, displayCurrency, setTheme, setDisplayCurrency } =
-    useAppPreferences();
+  const { t } = useTranslation();
+  const {
+    theme,
+    displayCurrency,
+    locale,
+    timeZone,
+    setTheme,
+    setDisplayCurrency,
+    setLocale,
+    setTimeZone,
+  } = useAppPreferences();
   const meQuery = useMeQuery();
   const updateProfile = useUpdateProfileMutation();
+  const changePasswordMutation = useChangePasswordMutation();
+  const sessionsQuery = useSessionsQuery();
+  const revokeSessionMutation = useRevokeSessionMutation();
+  const revokeOthers = useRevokeOtherSessionsMutation();
   const [nameDraft, setNameDraft] = useState<string | null>(null);
-  const currentLocale = i18n.language.startsWith("en") ? "en" : "es";
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [revokingToken, setRevokingToken] = useState<string | null>(null);
 
   const user = meQuery.data?.user;
   const role = meQuery.data?.membership.role ?? "MEMBER";
   const isAdmin = role === "ADMIN";
 
   const profileName = nameDraft ?? user?.name ?? "";
+  const sessions = sessionsQuery.data ?? [];
 
-  function changeLocale(locale: string | null): void {
-    if (locale !== "es" && locale !== "en") {
+  function handleChangePassword(): void {
+    if (newPassword.length < 8) {
+      setPasswordError(t("settings.security.passwordTooShort"));
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError(t("settings.security.passwordMismatch"));
       return;
     }
 
-    startTransition(() => {
-      void i18n.changeLanguage(locale);
+    setPasswordError(null);
+    changePasswordMutation.mutate(
+      { currentPassword, newPassword },
+      {
+        onSuccess: () => {
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmPassword("");
+        },
+      },
+    );
+  }
+
+  function handleRevokeSession(token: string): void {
+    setRevokingToken(token);
+    revokeSessionMutation.mutate(token, {
+      onSettled: () => setRevokingToken(null),
     });
+  }
+
+  function formatSessionDate(value: Date): string {
+    const dateFormat = new Intl.DateTimeFormat(
+      locale === "en" ? "en-US" : "es-ES",
+      { dateStyle: "medium", timeStyle: "short" },
+    );
+    return dateFormat.format(new Date(value));
+  }
+
+  function changeLocale(nextLocale: string | null): void {
+    if (nextLocale === "es" || nextLocale === "en") {
+      setLocale(nextLocale);
+    }
   }
 
   function changeTheme(nextTheme: string | null): void {
@@ -78,6 +140,12 @@ export function SettingsPage(): React.JSX.Element {
   function changeCurrency(nextCurrency: string | null): void {
     if (nextCurrency === "USD" || nextCurrency === "EUR") {
       setDisplayCurrency(nextCurrency as DisplayCurrency);
+    }
+  }
+
+  function changeTimeZone(nextTimeZone: string | null): void {
+    if (nextTimeZone) {
+      setTimeZone(nextTimeZone);
     }
   }
 
@@ -210,7 +278,7 @@ export function SettingsPage(): React.JSX.Element {
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
               <Select
                 label={t("settings.language.language")}
-                value={currentLocale}
+                value={locale}
                 onChange={changeLocale}
                 data={[
                   { value: "es", label: t("settings.language.spanish") },
@@ -228,13 +296,18 @@ export function SettingsPage(): React.JSX.Element {
               />
               <Select
                 label={t("settings.language.timezone")}
-                defaultValue="America/New_York"
-                data={["America/New_York", "Europe/Madrid", "UTC"]}
+                value={timeZone}
+                onChange={changeTimeZone}
+                data={supportedTimeZones.map((zone) => ({
+                  value: zone,
+                  label: zone,
+                }))}
+                searchable
+                nothingFoundMessage={t(
+                  "settings.language.noTimeZoneMatch",
+                )}
               />
             </SimpleGrid>
-            <Text size="xs" c="dimmed" mt="md">
-              {t("settings.language.mockNote")}
-            </Text>
           </Card>
 
           <Card padding="xl" radius="lg" withBorder>
@@ -251,17 +324,46 @@ export function SettingsPage(): React.JSX.Element {
               <PasswordInput
                 label={t("settings.security.currentPassword")}
                 placeholder={t("settings.security.passwordPlaceholder")}
+                value={currentPassword}
+                onChange={(event) =>
+                  setCurrentPassword(event.currentTarget.value)
+                }
+                autoComplete="current-password"
               />
               <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
                 <PasswordInput
                   label={t("settings.security.newPassword")}
                   placeholder={t("settings.security.passwordPlaceholder")}
+                  value={newPassword}
+                  onChange={(event) =>
+                    setNewPassword(event.currentTarget.value)
+                  }
+                  autoComplete="new-password"
+                  error={passwordError ?? undefined}
                 />
                 <PasswordInput
                   label={t("settings.security.confirmPassword")}
                   placeholder={t("settings.security.passwordPlaceholder")}
+                  value={confirmPassword}
+                  onChange={(event) =>
+                    setConfirmPassword(event.currentTarget.value)
+                  }
+                  autoComplete="new-password"
+                  error={passwordError ?? undefined}
                 />
               </SimpleGrid>
+              <Group justify="flex-end">
+                <Button
+                  color="signal"
+                  onClick={handleChangePassword}
+                  loading={changePasswordMutation.isPending}
+                  disabled={
+                    !currentPassword || !newPassword || !confirmPassword
+                  }
+                >
+                  {t("settings.security.updatePassword")}
+                </Button>
+              </Group>
               <Divider />
               <Group justify="space-between">
                 <Stack gap={2}>
@@ -272,17 +374,76 @@ export function SettingsPage(): React.JSX.Element {
                     {t("settings.security.sessionsDescription")}
                   </Text>
                 </Stack>
-                <Switch
-                  label={t("settings.security.sessionToggle")}
-                  defaultChecked
-                  color="signal"
-                />
-              </Group>
-              <Group justify="flex-end">
-                <Button variant="default">
-                  {t("settings.security.updatePassword")}
+                <Button
+                  variant="subtle"
+                  color="gray"
+                  size="xs"
+                  onClick={() => revokeOthers.mutate()}
+                  loading={revokeOthers.isPending}
+                  disabled={!sessions.some((session) => !session.isCurrent)}
+                >
+                  {t("settings.security.signOutOthers")}
                 </Button>
               </Group>
+              {sessionsQuery.isLoading ? (
+                <Group gap="xs">
+                  <Loader size="sm" />
+                  <Text size="sm" c="dimmed">
+                    {t("settings.security.sessionsLoading")}
+                  </Text>
+                </Group>
+              ) : sessionsQuery.isError ? (
+                <Text size="sm" c="red">
+                  {t("settings.security.sessionsError")}
+                </Text>
+              ) : sessions.length === 0 ? (
+                <Text size="sm" c="dimmed">
+                  {t("settings.security.noSessions")}
+                </Text>
+              ) : (
+                <Stack gap="xs">
+                  {sessions.map((session) => (
+                    <Group
+                      key={session.id}
+                      justify="space-between"
+                      wrap="nowrap"
+                    >
+                      <Stack gap={2} miw={0}>
+                        <Group gap="xs" wrap="nowrap">
+                          <Text size="sm" fw={600} truncate>
+                            {session.userAgent ??
+                              t("settings.security.unknownDevice")}
+                          </Text>
+                          {session.isCurrent ? (
+                            <Badge color="signal" variant="light" size="xs">
+                              {t("settings.security.thisDevice")}
+                            </Badge>
+                          ) : null}
+                        </Group>
+                        <Text size="xs" c="dimmed">
+                          {session.ipAddress ?? "—"} ·{" "}
+                          {t("settings.security.connectedAt", {
+                            date: formatSessionDate(session.createdAt),
+                          })}
+                        </Text>
+                      </Stack>
+                      <Button
+                        variant="subtle"
+                        color="red"
+                        size="xs"
+                        onClick={() => handleRevokeSession(session.token)}
+                        loading={
+                          revokeSessionMutation.isPending &&
+                          revokingToken === session.token
+                        }
+                        disabled={session.isCurrent}
+                      >
+                        {t("settings.security.revoke")}
+                      </Button>
+                    </Group>
+                  ))}
+                </Stack>
+              )}
             </Stack>
           </Card>
 

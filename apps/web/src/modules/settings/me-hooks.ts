@@ -11,6 +11,13 @@ import type {
 
 import { api } from "../../lib/api";
 import { queryKeys } from "../../lib/query-keys";
+import {
+  changePassword,
+  listSessions,
+  revokeOtherSessions,
+  revokeSession,
+  type ActiveSession,
+} from "../auth/auth-client";
 
 export function useMeQuery() {
   return useQuery({
@@ -56,6 +63,7 @@ export function useUpdateSettingsMutation() {
       });
     },
     onError: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.meSettings });
       notifications.show({
         title: t("notifications.settingsErrorTitle"),
         message: t("notifications.settingsErrorMessage"),
@@ -85,6 +93,93 @@ export function useUpdateProfileMutation() {
       notifications.show({
         title: t("notifications.settingsErrorTitle"),
         message: t("notifications.settingsErrorMessage"),
+        color: "red",
+      });
+    },
+  });
+}
+
+export function useChangePasswordMutation() {
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: async (input: {
+      readonly currentPassword: string;
+      readonly newPassword: string;
+    }): Promise<void> => {
+      await changePassword(input.currentPassword, input.newPassword);
+    },
+    onSuccess: () => {
+      notifications.show({
+        title: t("settings.security.passwordChangedTitle"),
+        message: t("settings.security.passwordChangedMessage"),
+        color: "signal",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: t("notifications.settingsErrorTitle"),
+        message: t("settings.security.passwordError"),
+        color: "red",
+      });
+    },
+  });
+}
+
+export function useSessionsQuery() {
+  return useQuery({
+    queryKey: queryKeys.meSessions,
+    queryFn: async (): Promise<ActiveSession[]> => listSessions(),
+    retry: false,
+  });
+}
+
+export function useRevokeSessionMutation() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: async (token: string): Promise<void> => {
+      await revokeSession(token);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.meSessions });
+      notifications.show({
+        title: t("settings.security.sessionRevokedTitle"),
+        message: t("settings.security.sessionRevokedMessage"),
+        color: "signal",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: t("notifications.settingsErrorTitle"),
+        message: t("settings.security.sessionError"),
+        color: "red",
+      });
+    },
+  });
+}
+
+export function useRevokeOtherSessionsMutation() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: async (): Promise<void> => {
+      await revokeOtherSessions();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.meSessions });
+      notifications.show({
+        title: t("settings.security.sessionsRevokedTitle"),
+        message: t("settings.security.sessionsRevokedMessage"),
+        color: "signal",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: t("notifications.settingsErrorTitle"),
+        message: t("settings.security.sessionError"),
         color: "red",
       });
     },

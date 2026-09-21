@@ -20,9 +20,9 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 | ------------------------------------------- | ----------- |
 | Phase 0: Repository Foundation              | Mostly done |
 | Phase 1: UI Foundation                      | Mostly done |
-| Phase 2: Authentication and Personal Tenant | Stabilized  |
-| Phase 3: Functional Settings                | Pending     |
-| Phase 4: Services and Feature Flags         | Pending     |
+| Phase 2: Authentication and Personal Tenant | Done        |
+| Phase 3: Functional Settings                | Mostly done |
+| Phase 4: Services and Feature Flags         | Mostly done |
 | Phase 5: Accounts and Categories            | Pending     |
 | Phase 6: Transactions and Ledger            | Pending     |
 | Phase 7: Dashboard and Reports              | Pending     |
@@ -42,7 +42,7 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 
 ### TD-002: Formalize React Testing Library setup
 
-- Status: Pending
+- Status: Done
 - Priority: P2
 - Area: Web / Quality
 - Problem: RTL dependencies exist but there is no shared test setup or jsdom configuration.
@@ -52,53 +52,59 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 
 ### TD-003: Add real PostgreSQL health check
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: API / DevOps
 - Problem: `/api/v1/health` reports `ok` without checking the database.
 - Planned resolution: Use `@nestjs/terminus` Prisma health indicator.
 - Acceptance criteria: Health reflects database connectivity.
-- Verification: Integration test against a running PostgreSQL.
+- Verification: `HealthModule` uses `PrismaHealthIndicator`; e2e test asserts `details.database.status` is `up`.
 
 ### TD-004: Review Dockerfiles for non-root runtime
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: DevOps / Security
 - Problem: Runtime images are not fully verified as non-root and minimal.
 - Planned resolution: Verify `USER` directives, minimal images and no secrets in layers.
 - Acceptance criteria: Containers run as non-root; no secrets in image.
-- Verification: Build and inspect images.
+- Verification: API image already runs as `USER node`; web image switched to `nginxinc/nginx-unprivileged` (non-root, port `8080`).
 
 ### TD-005: Clarify local vs CI PostgreSQL ports
 
-- Status: Pending
+- Status: Done
 - Priority: P2
 - Area: DevOps / Docs
 - Problem: Local Postgres is on host port `5433`; CI uses `5432` inside the job.
 - Planned resolution: Document the mapping and keep `.env.example` consistent.
 - Acceptance criteria: Local and CI setup are unambiguous.
-- Verification: README and `.env.example` review.
+- Verification: README documents local `5433` vs CI `5432`; `.env.example` uses `5433`.
 
 ### TD-006: Validate environment variables on API startup
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: API / Security
 - Problem: `DATABASE_URL`, `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` are partially validated only when auth is created.
 - Planned resolution: Fail fast at bootstrap with clear errors.
 - Acceptance criteria: Missing required variables prevent startup.
-- Verification: Start API without env vars and observe early failure.
+- Verification: Implemented by `loadAppConfig()`; superseded by TD-023.
 
 ### TD-007: Document unused declared dependencies
 
-- Status: Pending
+- Status: Done
 - Priority: P2
 - Area: Monorepo / Quality
 - Problem: Several catalog dependencies are declared but not yet used, or used later in the roadmap.
 - Planned resolution: Either remove them or document the phase where they are consumed.
 - Acceptance criteria: Every dependency is used or documented.
-- Verification: `pnpm lint` and manual review.
+- Verification: `pnpm lint` and manual review. See the "Declared but not yet consumed" note below.
+
+Declared but not yet consumed:
+
+- API (`apps/api`): `@fastify/cookie`, `@fastify/helmet`, `@fastify/static`, `@fastify/middie`, `nestjs-zod` — candidates for Phase 8 security/hardening or removal.
+- Web (`apps/web`): `@fondo/i18n`, `@tanstack/react-query-devtools`, `@mantine/dates` (TD-009), `react-hook-form` and `@hookform/resolvers` (TD-017).
+- `@nestjs/terminus` is now consumed by TD-003.
 
 ## Phase 1: UI Foundation
 
@@ -216,23 +222,23 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 
 ### TD-019: Add end-to-end signup test
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: API / Quality
 - Problem: Registration is only manually verified.
 - Planned resolution: Add an integration test that registers, provisions tenant and returns a session cookie.
 - Acceptance criteria: Test asserts user, tenant, membership and settings rows.
-- Verification: `pnpm --filter @fondo/api test`.
+- Verification: `pnpm --filter @fondo/api test:e2e`.
 
 ### TD-020: Add end-to-end session, login and logout tests
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: API / Quality
 - Problem: Login, `/me`, settings and logout are not covered by automated tests.
 - Planned resolution: Add integration tests for the full flow.
 - Acceptance criteria: Login, `/me`, settings update and logout are asserted.
-- Verification: `pnpm --filter @fondo/api test`.
+- Verification: `pnpm --filter @fondo/api test:e2e`.
 
 ### TD-021: Enforce unique case-insensitive email
 
@@ -252,7 +258,7 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 - Problem: Duplicate registration error may leak account existence details.
 - Planned resolution: Return a generic safe message and log the real reason server-side.
 - Acceptance criteria: Client never learns whether the email exists.
-- Verification: Manual smoke test; automated assertion pending in TD-019.
+- Verification: E2E duplicate-signup test asserts a single user is created and no account details leak.
 
 ### TD-023: Validate auth configuration at startup
 
@@ -266,23 +272,23 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 
 ### TD-024: Review Better Auth + Fastify mounting
 
-- Status: In Progress
+- Status: Done
 - Priority: P0
 - Area: API / Auth
 - Problem: The auth handler is mounted through a Fastify `onRequest` hook with manual URL rewriting.
 - Planned resolution: Review the integration, add tests for path handling, and document the mount contract. Origin/CSRF handling verified via `trustedOrigins`.
 - Acceptance criteria: All auth routes resolve under `/api/v1/auth`; logout passes the origin check.
-- Verification: Integration tests pending for path handling.
+- Verification: Integration tests cover sign-up, sign-in, sign-out and session routes.
 
 ### TD-025: Remove unsafe HTTP type casts
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: API / Quality
 - Problem: The Fastify/Node bridge uses casts between raw and typed objects.
 - Planned resolution: Introduce narrow typed helpers instead of broad casts.
 - Acceptance criteria: No broad casts remain in the auth bridge.
-- Verification: Typecheck and code review.
+- Verification: `fastify-auth.ts` now types against `FastifyInstance`; only one narrow cast to the Better Auth raw-request contract remains.
 
 ### TD-026: Remove provisioning catch-all that hides errors
 
@@ -316,53 +322,53 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 
 ### TD-029: Test concurrent provisioning
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: API / Quality
 - Problem: Idempotency under concurrent signups is unverified.
 - Planned resolution: Add a concurrency test that fires simultaneous provisioning for the same user.
 - Acceptance criteria: Only one tenant is created.
-- Verification: Integration test.
+- Verification: Integration test in `auth.e2e.test.ts`.
 
 ### TD-030: Test user without membership
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: API / Quality
 - Problem: `/me` behavior for a user without membership is untested.
 - Planned resolution: Add a test asserting a safe 404.
 - Acceptance criteria: No data leaks; response is safe.
-- Verification: Integration test.
+- Verification: Integration test in `auth.e2e.test.ts`.
 
 ### TD-031: Test expired sessions
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: API / Quality
 - Problem: Expired sessions are not covered.
 - Planned resolution: Add a test with an expired session token.
 - Acceptance criteria: Expired sessions get `401`.
-- Verification: Integration test.
+- Verification: Integration test in `auth.e2e.test.ts`.
 
 ### TD-032: Test HttpOnly cookies and CORS
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: API / Security
 - Problem: Cookie flags and CORS behavior are unverified.
 - Planned resolution: Assert `HttpOnly`, `SameSite`, `Secure` in production, and CORS origin allowlist.
 - Acceptance criteria: Cookies are HttpOnly; CORS only allows configured origins.
-- Verification: Integration tests.
+- Verification: Integration test in `auth.e2e.test.ts`.
 
 ### TD-033: Add effective rate limiting for auth endpoints
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: API / Security
 - Problem: Throttler is configured globally but not applied to auth routes specifically.
 - Planned resolution: Add stricter limits for sign-up, sign-in and password change.
 - Acceptance criteria: Brute-force attempts get `429`.
-- Verification: Integration test.
+- Verification: Better Auth `rateLimit` enabled with strict custom rules; e2e test asserts `429` once the sign-in limit is exceeded.
 
 ### TD-034: Keep email verification deferred
 
@@ -375,85 +381,115 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 
 ### TD-035: Isolate test fixtures from the local database
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: DevOps / Quality
 - Problem: Smoke tests have created rows in the local database.
 - Planned resolution: Use a dedicated test database and clean fixtures.
 - Acceptance criteria: Local data is never touched by automated tests.
-- Verification: Test run against a separate database.
+- Verification: `TEST_DATABASE_URL` runs against `fondo_test`; a guard refuses the local dev database (`fondo@localhost:5433`).
+
+### TD-096: Resolve tenant context at the request boundary
+
+- Status: Done
+- Priority: P0
+- Area: API / Tenant
+- Problem: `SessionAuthGuard` only attached `CurrentUser`; `TenantContext` was never populated, forcing every module to re-resolve membership.
+- Planned resolution: Resolve membership and tenant after the session check and attach them to the request.
+- Acceptance criteria: Every private request carries `tenantId`, role, name, currency and timezone; users without membership get a safe 404.
+- Verification: Guard unit tests plus e2e coverage for `/me`, member/owner role and the services endpoints.
 
 ## Phase 3: Functional Settings
 
 ### TD-036: Persist profile through the API
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: Web / Settings
 - Planned resolution: Wire name and avatar updates to `PATCH /me/profile`.
+- Acceptance criteria: The display name persists and is returned by `/me`.
+- Verification: E2E test updates the profile name; avatar upload remains deferred.
 
 ### TD-037: Persist theme through the API
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: Web / Settings
 - Planned resolution: Replace local-only theme writes with a settings mutation.
+- Acceptance criteria: Theme changes survive a new session.
+- Verification: E2E test updates and reads back `theme`.
 
 ### TD-038: Persist locale for authenticated users
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: Web / Settings
 - Planned resolution: Send locale changes to `PATCH /me/settings`.
+- Acceptance criteria: Locale is stored server-side and applied to i18n.
+- Verification: E2E test updates and reads back `locale`.
 
 ### TD-039: Persist timezone
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: Web / Settings
 - Planned resolution: Add timezone to the settings mutation and validate IANA identifiers.
+- Acceptance criteria: Timezone is persisted and validated as an IANA identifier.
+- Verification: E2E test updates and reads back `timeZone`.
 
 ### TD-040: Persist display currency
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: Web / Settings
 - Planned resolution: Wire currency changes through the settings mutation.
+- Acceptance criteria: Currency is stored server-side.
+- Verification: E2E test updates and reads back `displayCurrency`.
 
 ### TD-041: Validate IANA timezones
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: API / Validation
 - Planned resolution: Validate timezone strings against `Intl.supportedValuesOf("timeZone")`.
+- Acceptance criteria: Invalid timezones are rejected with `400`.
+- Verification: Shared schema test plus E2E test asserting a validation error.
 
 ### TD-042: Connect password change with Better Auth
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: Web / Security
 - Planned resolution: Use Better Auth `changePassword` with current password verification.
+- Acceptance criteria: Password changes and the new password signs in.
+- Verification: E2E test changes the password and logs in with the new one.
 
 ### TD-043: Implement active sessions management
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: Web / Security
 - Planned resolution: List and revoke sessions using Better Auth session APIs.
+- Acceptance criteria: Sessions are listed, the current device is marked, and sessions can be revoked.
+- Verification: E2E test lists and revokes sessions; web test renders the security card.
 
 ### TD-044: Add mutation error and notification handling
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: Web / UX
 - Planned resolution: Replace fire-and-forget requests with `useMutation` plus notifications.
+- Acceptance criteria: Mutations report success and failure states.
+- Verification: Web tests cover settings mutation wiring and password validation.
 
 ### TD-045: Remove fire-and-forget preference requests
 
-- Status: Pending
+- Status: Done
 - Priority: P0
 - Area: Web / Quality
 - Planned resolution: Every preference change goes through a tracked mutation.
+- Acceptance criteria: No preference write bypasses the settings mutation.
+- Verification: Web test asserts the mutation is called when authenticated and skipped when not.
 
 ### TD-046: Add safe email change flow
 
@@ -464,14 +500,14 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 
 ## Phase 4: Services and Feature Flags
 
-- TD-047: Create `ServiceDefinition` catalog. Pending.
-- TD-048: Create `ServiceSubscription` per tenant. Pending.
-- TD-049: Enable Personal Finance by default. Pending.
-- TD-050: Create `ServiceAccessGuard`. Pending.
-- TD-051: Add `ADMIN` / `MEMBER` permissions. Pending.
+- TD-047: Create `ServiceDefinition` catalog. Done.
+- TD-048: Create `ServiceSubscription` per tenant. Done.
+- TD-049: Enable Personal Finance by default. Done.
+- TD-050: Create `ServiceAccessGuard`. Done.
+- TD-051: Add `ADMIN` / `MEMBER` permissions. Done.
 - TD-052: Add contracts for Vehicle, Home, Insurance, Entrepreneurship. Pending.
-- TD-053: Implement service-aware navigation. Pending.
-- TD-054: Audit service enable/disable actions. Pending.
+- TD-053: Implement service-aware navigation. Done.
+- TD-054: Audit service enable/disable actions. Done.
 
 ## Phase 5: Accounts and Categories
 
@@ -553,6 +589,8 @@ At the end of every phase:
 
 ## Changelog
 
+- 2026-09-21: Platform hardening + Services foundation. Enabled Better Auth rate limiting (sign-in/sign-up/change-password), added a real Terminus/Prisma health check, refactored the Fastify auth bridge to typed `FastifyInstance`, resolved `TenantContext` in `SessionAuthGuard` (TD-096), and shipped the Services catalog: `ServiceDefinition`/`ServiceSubscription` models, Personal Finance enabled atomically at provisioning with backfill for existing tenants, `ServiceAccessGuard`, `AdminOnlyGuard`, enable/disable endpoints with audit logging, and a data-driven Services page. Web runtime image is now non-root. TD-003, TD-004, TD-005, TD-007, TD-025, TD-033, TD-047–TD-051, TD-053, TD-054, TD-096 done.
+- 2026-09-17: Phase 3A — Functional Settings closed. Centralized preference mutations in `AppPreferencesProvider`, removed fire-and-forget writes, made timezone a controlled searchable field validated against IANA, and wired password change + session management through Better Auth. Added Vitest/jsdom + Testing Library setup with web tests, and an e2e suite (`pnpm --filter @fondo/api test:e2e`) that runs against a dedicated `TEST_DATABASE_URL` (guard refuses the local dev database). Zod errors now map to `400 VALIDATION_ERROR`. TD-002, TD-006, TD-019, TD-020, TD-024, TD-029, TD-030, TD-031, TD-032, TD-035, TD-036–TD-045 done.
 - 2026-09-04: Fixed dev-mode DI failure — `tsx` does not emit `design:paramtypes`, so NestJS constructor injection passed `undefined`. Switched auth/me providers to explicit `@Inject()` tokens; works under both `tsx` and `tsc`. Added CORS headers and OPTIONS preflight handling for Better Auth routes.
 - 2026-09-04: Fixed Better Auth client base path — `VITE_AUTH_URL` now points to `/api/v1/auth`; signup/login hit the correct route instead of `404` on `/api/v1/sign-up/email`.
 - 2026-09-04: Phase 2 stabilization — atomic provisioning, case-insensitive email, tenant owner uniqueness, startup env validation, trusted-origins for logout. TD-018, TD-021, TD-022, TD-023, TD-026, TD-027, TD-028 done.

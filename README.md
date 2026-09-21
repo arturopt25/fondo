@@ -210,6 +210,13 @@ pnpm format:check     # Verify Prettier formatting
 
 The API, web app and shared packages each expose their own `lint`, `typecheck`, `test` and `build` scripts, so quality gates can also run per workspace (for example, `pnpm --filter @fondo/api test`).
 
+The end-to-end auth suite runs against a dedicated database. Create it once and point `TEST_DATABASE_URL` at it (the suite refuses to touch the local dev database `fondo@localhost:5433`):
+
+```bash
+docker exec fondo-postgres-1 psql -U fondo -d postgres -c "CREATE DATABASE fondo_test OWNER fondo;"
+TEST_DATABASE_URL=postgresql://fondo:change-me-locally@localhost:5433/fondo_test pnpm --filter @fondo/api test:e2e
+```
+
 > [!NOTE]
 > Automated coverage is still maturing. Component tests under jsdom and end-to-end auth integration tests are tracked in [`docs/technical-debt.md`](docs/technical-debt.md), along with isolating test fixtures from the local database.
 

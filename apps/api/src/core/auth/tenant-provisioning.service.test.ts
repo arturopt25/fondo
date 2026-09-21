@@ -11,11 +11,15 @@ function createMockPrisma() {
   const tenantCreate = vi.fn();
   const membershipCreate = vi.fn();
   const userSettingsCreate = vi.fn();
+  const serviceDefinitionFindUnique = vi.fn();
+  const serviceSubscriptionCreate = vi.fn();
 
   const tx = {
     tenant: { create: tenantCreate },
     membership: { create: membershipCreate },
     userSettings: { create: userSettingsCreate },
+    serviceDefinition: { findUnique: serviceDefinitionFindUnique },
+    serviceSubscription: { create: serviceSubscriptionCreate },
   };
 
   transaction.mockImplementation(
@@ -33,6 +37,8 @@ function createMockPrisma() {
       tenantCreate,
       membershipCreate,
       userSettingsCreate,
+      serviceDefinitionFindUnique,
+      serviceSubscriptionCreate,
     },
   };
 }
@@ -42,10 +48,11 @@ describe("TenantProvisioningService", () => {
     vi.clearAllMocks();
   });
 
-  it("creates tenant, ADMIN membership and settings atomically", async () => {
+  it("creates tenant, ADMIN membership, settings and the default service atomically", async () => {
     const { client, fns } = createMockPrisma();
     fns.tenantFindFirst.mockResolvedValue(null);
     fns.tenantCreate.mockResolvedValue({ id: "tenant-1" });
+    fns.serviceDefinitionFindUnique.mockResolvedValue({ id: "svc-1" });
     const service = new TenantProvisioningService({ client } as never);
 
     await service.provisionForUser("user-1", "Arturo");
@@ -62,6 +69,16 @@ describe("TenantProvisioningService", () => {
     });
     expect(fns.userSettingsCreate).toHaveBeenCalledWith({
       data: { userId: "user-1" },
+    });
+    expect(fns.serviceDefinitionFindUnique).toHaveBeenCalledWith({
+      where: { key: "PERSONAL_FINANCE" },
+    });
+    expect(fns.serviceSubscriptionCreate).toHaveBeenCalledWith({
+      data: {
+        tenantId: "tenant-1",
+        serviceId: "svc-1",
+        status: "ACTIVE",
+      },
     });
     expect(fns.transaction).toHaveBeenCalledTimes(1);
   });

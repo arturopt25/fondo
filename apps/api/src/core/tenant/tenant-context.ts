@@ -20,4 +20,5 @@ export interface TenantContext {
 
 export interface AuthenticatedRequest extends FastifyRequest {
   user: CurrentUser;
+  tenant: TenantContext;
 }

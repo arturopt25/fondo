@@ -196,6 +196,7 @@
       "usd": "USD · Dolar estadounidense",
       "eur": "EUR · Euro",
       "timezone": "Zona horaria",
+      "noTimeZoneMatch": "Ninguna zona horaria coincide",
       "mockNote": "La conversion EUR usa una tasa mock durante esta fase visual."
     },
     "security": {
@@ -205,9 +206,26 @@
       "newPassword": "Nueva contrasena",
       "confirmPassword": "Confirmar contrasena",
       "passwordPlaceholder": "Introduce una contrasena segura",
+      "passwordTooShort": "La contrasena debe tener al menos 8 caracteres.",
+      "passwordMismatch": "Las contrasenas nuevas no coinciden.",
+      "passwordChangedTitle": "Contrasena actualizada",
+      "passwordChangedMessage": "Tu contrasena se cambio correctamente.",
+      "passwordError": "No se pudo cambiar tu contrasena.",
       "sessions": "Sesiones activas",
       "sessionsDescription": "Cierra sesiones antiguas desde este espacio.",
-      "sessionToggle": "Activas",
+      "sessionsLoading": "Cargando sesiones...",
+      "sessionsError": "No se pudieron cargar las sesiones.",
+      "noSessions": "No hay sesiones activas.",
+      "signOutOthers": "Cerrar sesion en otros dispositivos",
+      "thisDevice": "Este dispositivo",
+      "unknownDevice": "Dispositivo desconocido",
+      "connectedAt": "Conectado {date}",
+      "revoke": "Revocar",
+      "sessionRevokedTitle": "Sesion cerrada",
+      "sessionRevokedMessage": "La sesion fue revocada.",
+      "sessionError": "No se pudo revocar la sesion.",
+      "sessionsRevokedTitle": "Sesiones cerradas",
+      "sessionsRevokedMessage": "Se cerraron las demas sesiones.",
       "updatePassword": "Actualizar contrasena"
     },
     "data": {
@@ -225,6 +243,27 @@
     "activeCount": "1 activo",
     "introEyebrow": "Catalogo de Fondo",
     "introDescription": "Cada servicio tendra sus propios limites de dominio. Por ahora, Personal Finance es el unico modulo operativo.",
+    "actions": {
+      "open": "Abrir modulo",
+      "enable": "Activar",
+      "disable": "Desactivar"
+    },
+    "status": {
+      "active": "Activo",
+      "disabled": "Desactivado"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar los servicios.",
+      "emptyTitle": "No hay servicios disponibles",
+      "emptyDescription": "Aun no hay servicios configurados para este espacio."
+    },
+    "notifications": {
+      "enabledTitle": "Servicio activado",
+      "enabledMessage": "El servicio fue activado.",
+      "disabledTitle": "Servicio desactivado",
+      "disabledMessage": "El servicio fue desactivado.",
+      "actionError": "No se pudo cambiar el estado del servicio."
+    },
     "cards": {
       "personalFinance": {
         "name": "Personal Finance",

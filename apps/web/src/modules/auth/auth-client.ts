@@ -61,3 +61,68 @@ export async function signUpWithEmail(
 export async function signOut(): Promise<void> {
   await authClient.signOut();
 }
+
+export interface ActiveSession {
+  readonly id: string;
+  readonly token: string;
+  readonly createdAt: Date;
+  readonly expiresAt: Date;
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
+  readonly isCurrent: boolean;
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const result = await authClient.changePassword({
+    currentPassword,
+    newPassword,
+    revokeOtherSessions: true,
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message ?? "Unable to change password");
+  }
+}
+
+export async function listSessions(): Promise<ActiveSession[]> {
+  const [sessionResult, sessionsResult] = await Promise.all([
+    authClient.getSession(),
+    authClient.listSessions(),
+  ]);
+
+  if (sessionsResult.error) {
+    throw new Error(
+      sessionsResult.error.message ?? "Unable to load active sessions",
+    );
+  }
+
+  const currentToken = sessionResult.data?.session.token ?? null;
+
+  return (sessionsResult.data ?? []).map((session) => ({
+    id: session.id,
+    token: session.token,
+    createdAt: session.createdAt,
+    expiresAt: session.expiresAt,
+    ipAddress: session.ipAddress || null,
+    userAgent: session.userAgent || null,
+    isCurrent: session.token === currentToken,
+  }));
+}
+
+export async function revokeSession(token: string): Promise<void> {
+  const result = await authClient.revokeSession({ token });
+
+  if (result.error) {
+    throw new Error(result.error.message ?? "Unable to revoke session");
+  }
+}
+
+export async function revokeOtherSessions(): Promise<void> {
+  const sessions = await listSessions();
+  const otherSessions = sessions.filter((session) => !session.isCurrent);
+
+  await Promise.all(otherSessions.map((session) => revokeSession(session.token)));
+}

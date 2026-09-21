@@ -196,6 +196,7 @@
       "usd": "USD · US Dollar",
       "eur": "EUR · Euro",
       "timezone": "Timezone",
+      "noTimeZoneMatch": "No matching time zone",
       "mockNote": "EUR conversion uses a mock rate during this visual phase."
     },
     "security": {
@@ -205,9 +206,26 @@
       "newPassword": "New password",
       "confirmPassword": "Confirm password",
       "passwordPlaceholder": "Enter a secure password",
+      "passwordTooShort": "Password must be at least 8 characters.",
+      "passwordMismatch": "New passwords do not match.",
+      "passwordChangedTitle": "Password updated",
+      "passwordChangedMessage": "Your password was changed.",
+      "passwordError": "Your password could not be changed.",
       "sessions": "Active sessions",
       "sessionsDescription": "Close older sessions from this space.",
-      "sessionToggle": "Active",
+      "sessionsLoading": "Loading sessions...",
+      "sessionsError": "Sessions could not be loaded.",
+      "noSessions": "No active sessions.",
+      "signOutOthers": "Sign out of other devices",
+      "thisDevice": "This device",
+      "unknownDevice": "Unknown device",
+      "connectedAt": "Signed in {date}",
+      "revoke": "Revoke",
+      "sessionRevokedTitle": "Session closed",
+      "sessionRevokedMessage": "The session was revoked.",
+      "sessionError": "The session could not be revoked.",
+      "sessionsRevokedTitle": "Sessions closed",
+      "sessionsRevokedMessage": "Other sessions were signed out.",
       "updatePassword": "Update password"
     },
     "data": {
@@ -225,6 +243,27 @@
     "activeCount": "1 active",
     "introEyebrow": "Fondo catalog",
     "introDescription": "Each service has its own domain boundaries. For now, Personal Finance is the only operational module.",
+    "actions": {
+      "open": "Open module",
+      "enable": "Enable",
+      "disable": "Disable"
+    },
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled"
+    },
+    "errors": {
+      "loadFailed": "Services could not be loaded.",
+      "emptyTitle": "No services available",
+      "emptyDescription": "There are no services configured for this space yet."
+    },
+    "notifications": {
+      "enabledTitle": "Service enabled",
+      "enabledMessage": "The service was enabled.",
+      "disabledTitle": "Service disabled",
+      "disabledMessage": "The service was disabled.",
+      "actionError": "The service status could not be changed."
+    },
     "cards": {
       "personalFinance": {
         "name": "Personal Finance",

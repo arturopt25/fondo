@@ -96,6 +96,16 @@ export function createBetterAuth(provisioner: PersonalTenantProvisioner) {
       autoSignIn: true,
       requireEmailVerification: false,
     },
+    rateLimit: {
+      enabled: true,
+      window: 60,
+      max: 100,
+      customRules: {
+        "/sign-in/email": { window: 60, max: 10 },
+        "/sign-up/email": { window: 60, max: 20 },
+        "/change-password": { window: 60, max: 5 },
+      },
+    },
     socialProviders: {
       github: {
         clientId: process.env.GITHUB_CLIENT_ID ?? "",
