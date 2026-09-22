@@ -31,6 +31,8 @@ jobs:
       VITE_AUTH_URL: http://localhost:3000/api/v1/auth
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -74,3 +76,9 @@ jobs:
           TEST_DATABASE_URL: postgresql://fondo:fondo-ci-password@localhost:5432/fondo_test
         run: pnpm --filter @fondo/api test:e2e
       - run: pnpm build
+      - name: Install Qlty CLI
+        run: curl -sSL https://qlty.sh | bash
+      - name: Qlty quality gate
+        run: |
+          export PATH="$HOME/.qlty/bin:$PATH"
+          qlty check --fail-level medium

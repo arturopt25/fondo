@@ -13,7 +13,12 @@
     "format:check": "prettier --check .",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "check:quality": "qlty check --fail-level medium",
+    "check:quality:all": "qlty check --all --fail-level medium",
+    "security": "qlty check --all --level medium",
+    "smells": "qlty smells --all",
+    "metrics": "qlty metrics --max-depth=2"
   },
   "devDependencies": {
     "dependency-cruiser": "catalog:",

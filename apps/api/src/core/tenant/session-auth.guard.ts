@@ -68,8 +68,7 @@ export class SessionAuthGuard implements CanActivate {
       userId: session.user.id,
       tenantId: membership.tenant.id,
       tenantName: membership.tenant.name,
-      accountingCurrency: membership.tenant
-        .accountingCurrency as "USD" | "EUR",
+      accountingCurrency: membership.tenant.accountingCurrency as "USD" | "EUR",
       timeZone: membership.tenant.timeZone,
       role: membership.role === "ADMIN" ? "ADMIN" : "MEMBER",
     };
