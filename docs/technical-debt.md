@@ -98,7 +98,7 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 - Problem: Several catalog dependencies are declared but not yet used, or used later in the roadmap.
 - Planned resolution: Either remove them or document the phase where they are consumed.
 - Acceptance criteria: Every dependency is used or documented.
-- Verification: `pnpm lint` and manual review. See the "Declared but not yet consumed" note below.
+- Verification: `pnpm lint` and manual review. Qlty's `knip` plugin confirms the list below. See the "Declared but not yet consumed" note below.
 
 Declared but not yet consumed:
 
@@ -559,7 +559,7 @@ Declared but not yet consumed:
 - TD-090: Complete payload size limits. Pending.
 - TD-091: Review production CORS. Pending.
 - TD-092: Add basic observability. Pending.
-- TD-093: Run dependency audit. Pending.
+- TD-093: Run dependency audit. Pending. osv-scanner (via Qlty) reports CVE-2026-84373 (`vitest@3.2.7` / `@vitest/mocker@3.2.7`), CVE-2026-40345 (`deepmerge-ts@7.1.5`, transitive via `prisma`) and CVE-2026-16732 / CVE-2026-18504 (`fastify@5.11.3`). Vitest and deepmerge-ts need major upgrades; fastify can be bumped in range.
 - TD-094: Complete E2E tests. Pending.
 - TD-095: Review accessibility and performance. Pending.
 
@@ -600,6 +600,7 @@ At the end of every phase:
 
 ## Changelog
 
+- 2026-09-22: Qlty CLI integrated as a non-overlapping quality layer. Added `.qlty/qlty.toml` (gitleaks, osv-scanner, knip, markdownlint, yamllint, prisma, hadolint, editorconfig-checker, smells — no eslint/prettier, which stay with `pnpm lint`/`format:check`), root `check:quality`/`check:quality:all`/`security`/`smells`/`metrics` scripts, a CI gate, and recorded osv-scanner CVE findings under TD-093.
 - 2026-09-22: Session policy + client revalidation. Configured Better Auth with an explicit idle expiration (7 days, refreshed every 24 hours), added a 30-day absolute session lifetime enforced in `SessionAuthGuard`, made the web client revalidate the session on focus/visibility, and added global `401` handling that clears the session and redirects to login. TD-097 done.
 - 2026-09-21: UI Exit Gate + Phase 5A (Accounts and Categories). Added `LoadingState`/`ErrorState` to the design system, migrated Login/Register/profile and the finance forms to React Hook Form + Zod, implemented a real custom range picker, and made Settings navigation section-driven. Shipped `FinancialAccount` and `Category` with per-tenant default-category seeding (atomic at provisioning + backfill), tenant-scoped repositories, paginated accounts/categories APIs with allowlisted sorting and audit logging, cross-tenant isolation tests, and functional Accounts/Categories pages. TD-009, TD-010, TD-011, TD-012, TD-017, TD-055–TD-063 done.
 - 2026-09-21: Platform hardening + Services foundation. Enabled Better Auth rate limiting (sign-in/sign-up/change-password), added a real Terminus/Prisma health check, refactored the Fastify auth bridge to typed `FastifyInstance`, resolved `TenantContext` in `SessionAuthGuard` (TD-096), and shipped the Services catalog: `ServiceDefinition`/`ServiceSubscription` models, Personal Finance enabled atomically at provisioning with backfill for existing tenants, `ServiceAccessGuard`, `AdminOnlyGuard`, enable/disable endpoints with audit logging, and a data-driven Services page. Web runtime image is now non-root. TD-003, TD-004, TD-005, TD-007, TD-025, TD-033, TD-047–TD-051, TD-053, TD-054, TD-096 done.

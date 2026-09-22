@@ -24,7 +24,7 @@ vi.mock("react-i18next", async () => {
       }
       node = (node as Record<string, unknown>)[segment];
     }
-    return typeof node === "string" ? node : options?.defaultValue ?? key;
+    return typeof node === "string" ? node : (options?.defaultValue ?? key);
   };
 
   return { useTranslation: () => ({ t: translate }) };

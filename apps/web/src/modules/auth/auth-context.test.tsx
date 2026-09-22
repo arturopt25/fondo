@@ -22,7 +22,12 @@ import { AuthProvider, useAuth } from "./auth-context";
 
 function validSession() {
   return {
-    user: { id: "user-1", name: "Arturo", email: "arturo@example.com", image: null },
+    user: {
+      id: "user-1",
+      name: "Arturo",
+      email: "arturo@example.com",
+      image: null,
+    },
   };
 }
 
@@ -110,7 +115,9 @@ describe("AuthProvider", () => {
     authClient.fetchSession.mockRejectedValue(new Error("network"));
     window.dispatchEvent(new Event("focus"));
 
-    await waitFor(() => expect(authClient.fetchSession).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(authClient.fetchSession).toHaveBeenCalledTimes(2),
+    );
     expect(screen.getByTestId("authenticated")).toHaveTextContent("true");
   });
 });

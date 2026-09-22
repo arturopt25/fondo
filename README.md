@@ -210,6 +210,20 @@ pnpm format:check     # Verify Prettier formatting
 
 The API, web app and shared packages each expose their own `lint`, `typecheck`, `test` and `build` scripts, so quality gates can also run per workspace (for example, `pnpm --filter @fondo/api test`).
 
+### Qlty quality toolkit
+
+[Qlty CLI](https://qlty.sh) complements the commands above without overlapping them: it does **not** run ESLint or Prettier (those are already covered by `pnpm lint` and `pnpm format:check`). It adds secrets and dependency-vulnerability scanning, unused-dependency detection, duplication/complexity smells, and Markdown/YAML/Prisma linting. Configuration lives in `.qlty/qlty.toml`.
+
+```bash
+pnpm check:quality        # Qlty gate: checks changed files, fails on medium+ issues
+pnpm check:quality:all    # Full scan of every file at medium+ severity
+pnpm security             # Full scan focused on medium+ findings (incl. dependency CVEs)
+pnpm smells               # Duplication and complexity smells across the repo
+pnpm metrics              # Code quality metrics summary
+```
+
+The `check:quality` gate is also part of the CI pipeline. Install Qlty locally with `curl https://qlty.sh | bash`.
+
 The end-to-end auth suite runs against a dedicated database. Create it once and point `TEST_DATABASE_URL` at it (the suite refuses to touch the local dev database `fondo@localhost:5433`):
 
 ```bash
