@@ -42,6 +42,9 @@ describe("SessionAuthGuard", () => {
   it("attaches the user and tenant context to the request", async () => {
     const { guard } = createGuard({
       session: {
+        session: {
+          createdAt: new Date(),
+        },
         user: {
           id: "user-1",
           name: "Arturo",
@@ -82,9 +85,39 @@ describe("SessionAuthGuard", () => {
     );
   });
 
+  it("rejects sessions older than the absolute lifetime", async () => {
+    const { guard } = createGuard({
+      session: {
+        session: {
+          createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+        },
+        user: { id: "user-1", name: "A", email: "a@b.c", image: null },
+      },
+      membership: {
+        role: "ADMIN",
+        tenant: {
+          id: "tenant-1",
+          name: "A",
+          accountingCurrency: "USD",
+          timeZone: "UTC",
+        },
+      },
+    });
+    const { context } = buildContext();
+
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
   it("rejects users without a membership with 404", async () => {
     const { guard } = createGuard({
-      session: { user: { id: "user-1", name: "A", email: "a@b.c", image: null } },
+      session: {
+        session: {
+          createdAt: new Date(),
+        },
+        user: { id: "user-1", name: "A", email: "a@b.c", image: null },
+      },
       membership: null,
     });
     const { context } = buildContext();

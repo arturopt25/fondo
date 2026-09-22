@@ -140,6 +140,17 @@ describe("auth e2e", () => {
     await agent.get("/api/v1/me").expect(401);
   });
 
+  it("returns 401 for a session older than the absolute lifetime", async () => {
+    const agent = request.agent(httpServer);
+    await signUp(agent, uniqueEmail());
+
+    await prisma.session.updateMany({
+      data: { createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) },
+    });
+
+    await agent.get("/api/v1/me").expect(401);
+  });
+
   it("sets HttpOnly session cookies and exposes CORS headers", async () => {
     const email = uniqueEmail();
     const signUpResponse = await request(httpServer)
@@ -269,5 +280,39 @@ describe("auth e2e", () => {
     }
 
     expect(statuses).toContain(429);
+  });
+});
+
+describe("auth session persistence across API restarts", () => {
+  it("keeps a valid session after the API instance is restarted", async () => {
+    const firstApp = await createTestApp();
+    const firstServer = firstApp.getHttpServer();
+    const email = uniqueEmail();
+
+    const signUpResponse = await request(firstServer)
+      .post("/api/v1/auth/sign-up/email")
+      .send({ name: "E2E User", email, password: "password123" })
+      .expect(200);
+
+    const setCookie = signUpResponse.headers["set-cookie"] as
+      | string[]
+      | undefined;
+    const sessionCookie = (setCookie ?? []).find((cookie) =>
+      cookie.startsWith("better-auth.session_token="),
+    );
+    expect(sessionCookie).toBeTruthy();
+
+    await request(firstServer).get("/api/v1/me").set("Cookie", sessionCookie).expect(200);
+    await firstApp.close();
+
+    const secondApp = await createTestApp();
+    const secondServer = secondApp.getHttpServer();
+
+    await request(secondServer)
+      .get("/api/v1/me")
+      .set("Cookie", sessionCookie)
+      .expect(200);
+
+    await secondApp.close();
   });
 });

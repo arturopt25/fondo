@@ -1,6 +1,15 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { JSX, ReactNode } from "react";
 
+import { UNAUTHORIZED_EVENT } from "../../lib/api";
 import {
   fetchSession,
   signOut as apiSignOut,
@@ -22,8 +31,15 @@ export function AuthProvider({
 }: {
   readonly children: ReactNode;
 }): JSX.Element {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<SessionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const revalidationRef = useRef<Promise<void> | null>(null);
+
+  const clearSession = useCallback(() => {
+    setSession(null);
+    queryClient.clear();
+  }, [queryClient]);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,6 +50,8 @@ export function AuthProvider({
         if (!cancelled) {
           setSession(data);
         }
+      } catch {
+        // A failed initial check is treated as unauthenticated.
       } finally {
         if (!cancelled) {
           setIsLoading(false);
@@ -46,6 +64,45 @@ export function AuthProvider({
     };
   }, []);
 
+  useEffect(() => {
+    function handleUnauthorized(): void {
+      clearSession();
+    }
+
+    window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+
+    return () => {
+      window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    };
+  }, [clearSession]);
+
+  useEffect(() => {
+    function revalidate(): void {
+      if (document.visibilityState === "hidden" || revalidationRef.current) {
+        return;
+      }
+
+      revalidationRef.current = fetchSession()
+        .then((data) => {
+          setSession(data);
+        })
+        .catch(() => {
+          // Transient failures must not log the user out.
+        })
+        .finally(() => {
+          revalidationRef.current = null;
+        });
+    }
+
+    window.addEventListener("focus", revalidate);
+    document.addEventListener("visibilitychange", revalidate);
+
+    return () => {
+      window.removeEventListener("focus", revalidate);
+      document.removeEventListener("visibilitychange", revalidate);
+    };
+  }, []);
+
   async function refresh(): Promise<void> {
     const data = await fetchSession();
     setSession(data);
@@ -53,7 +110,7 @@ export function AuthProvider({
 
   async function signOut(): Promise<void> {
     await apiSignOut();
-    setSession(null);
+    clearSession();
   }
 
   return (
