@@ -5,7 +5,20 @@ import {
 } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DAY } from "../auth/session-policy.js";
 import { SessionAuthGuard } from "./session-auth.guard.js";
+
+function buildMembership() {
+  return {
+    role: "ADMIN",
+    tenant: {
+      id: "tenant-1",
+      name: "Arturo's space",
+      accountingCurrency: "USD",
+      timeZone: "UTC",
+    },
+  };
+}
 
 function createGuard({
   session,
@@ -52,15 +65,7 @@ describe("SessionAuthGuard", () => {
           image: null,
         },
       },
-      membership: {
-        role: "ADMIN",
-        tenant: {
-          id: "tenant-1",
-          name: "Arturo's space",
-          accountingCurrency: "USD",
-          timeZone: "UTC",
-        },
-      },
+      membership: buildMembership(),
     });
     const { request, context } = buildContext();
 
@@ -89,19 +94,11 @@ describe("SessionAuthGuard", () => {
     const { guard } = createGuard({
       session: {
         session: {
-          createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+          createdAt: new Date(Date.now() - 31 * DAY * 1000),
         },
         user: { id: "user-1", name: "A", email: "a@b.c", image: null },
       },
-      membership: {
-        role: "ADMIN",
-        tenant: {
-          id: "tenant-1",
-          name: "A",
-          accountingCurrency: "USD",
-          timeZone: "UTC",
-        },
-      },
+      membership: buildMembership(),
     });
     const { context } = buildContext();
 

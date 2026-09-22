@@ -1,9 +1,9 @@
-const seconds = (value: number): number => value;
+export const DAY = 24 * 60 * 60;
 
 export const sessionPolicy = {
-  expiresIn: seconds(60 * 60 * 24 * 7),
-  updateAge: seconds(60 * 60 * 24),
-  absoluteMaxLifetime: seconds(60 * 60 * 24 * 30),
+  expiresIn: 7 * DAY,
+  updateAge: DAY,
+  absoluteMaxLifetime: 30 * DAY,
 } as const;
 
 export function isWithinAbsoluteSessionLifetime(

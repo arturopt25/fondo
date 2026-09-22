@@ -13,9 +13,22 @@ const servicesHooks = vi.hoisted(() => ({
 }));
 const meHooks = vi.hoisted(() => ({ useMeQuery: vi.fn() }));
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}));
+vi.mock("react-i18next", async () => {
+  const es = (await import("../../locales/es/translation.json")).default;
+
+  const translate = (key: string, options?: { defaultValue?: string }) => {
+    let node: unknown = es;
+    for (const segment of key.split(".")) {
+      if (typeof node !== "object" || node === null) {
+        return options?.defaultValue ?? key;
+      }
+      node = (node as Record<string, unknown>)[segment];
+    }
+    return typeof node === "string" ? node : options?.defaultValue ?? key;
+  };
+
+  return { useTranslation: () => ({ t: translate }) };
+});
 vi.mock("../settings/me-hooks", () => ({
   useMeQuery: meHooks.useMeQuery,
 }));
@@ -72,17 +85,20 @@ describe("ServicesPage", () => {
     });
   });
 
-  it("renders the catalog from the server", () => {
+  it("renders the catalog with localized names and descriptions", () => {
     meHooks.useMeQuery.mockReturnValue({
       data: { membership: { role: "ADMIN" } },
     });
     renderServices();
 
-    expect(screen.getByText("Personal Finance")).toBeInTheDocument();
-    expect(screen.getByText("Vehicle")).toBeInTheDocument();
-    expect(screen.getAllByText("services.status.active").length).toBeGreaterThan(
-      0,
-    );
+    expect(screen.getByText("Finanzas personales")).toBeInTheDocument();
+    expect(screen.getByText("Vehículo")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Cuentas, movimientos, presupuestos y una lectura completa de tu balance.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Activo")).toBeInTheDocument();
   });
 
   it("lets an ADMIN enable a disabled service", async () => {
@@ -98,7 +114,7 @@ describe("ServicesPage", () => {
     renderServices();
 
     const enableButtons = screen.getAllByRole("button", {
-      name: "services.actions.enable",
+      name: "Activar",
     });
     await user.click(enableButtons[0] ?? document.body);
 
@@ -112,7 +128,7 @@ describe("ServicesPage", () => {
     renderServices();
 
     const enableButton = screen.getByRole("button", {
-      name: "services.actions.enable",
+      name: "Activar",
     });
     expect(enableButton).toBeDisabled();
   });

@@ -279,31 +279,31 @@
     },
     "cards": {
       "personalFinance": {
-        "name": "Personal Finance",
+        "name": "Finanzas personales",
         "description": "Cuentas, movimientos, presupuestos y una lectura completa de tu balance.",
         "active": "Activo",
         "open": "Abrir modulo"
       },
       "vehicle": {
-        "name": "Vehicle",
+        "name": "Vehículo",
         "description": "Combustible, mantenimiento, documentos y recordatorios de tu vehiculo.",
         "comingSoon": "Proximamente",
         "notify": "Aviseame"
       },
       "home": {
-        "name": "Home",
+        "name": "Hogar",
         "description": "Gastos del hogar, pagos, mantenimiento y tareas recurrentes.",
         "comingSoon": "Proximamente",
         "notify": "Aviseame"
       },
       "insurance": {
-        "name": "Insurance",
+        "name": "Seguros",
         "description": "Polizas, cobertura, pagos y fechas importantes en un solo lugar.",
         "comingSoon": "Proximamente",
         "notify": "Aviseame"
       },
       "entrepreneurship": {
-        "name": "Entrepreneurship",
+        "name": "Emprendimiento",
         "description": "Ingresos, gastos y metricas para la parte financiera de tu negocio.",
         "comingSoon": "Proximamente",
         "notify": "Aviseame"

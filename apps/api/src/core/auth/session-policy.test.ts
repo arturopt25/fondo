@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DAY,
   isWithinAbsoluteSessionLifetime,
   sessionPolicy,
 } from "./session-policy.js";
 
-const dayMs = 24 * 60 * 60 * 1000;
+const dayMs = DAY * 1000;
 
 describe("sessionPolicy", () => {
   it("keeps a session within the absolute lifetime", () => {
