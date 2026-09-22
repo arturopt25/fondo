@@ -3,6 +3,8 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 
 import { prisma } from "@fondo/db";
 
+import { sessionPolicy } from "./session-policy.js";
+
 export interface PersonalTenantProvisioner {
   provisionForUser(userId: string, name: string): Promise<void>;
 }
@@ -52,6 +54,8 @@ export function createBetterAuth(provisioner: PersonalTenantProvisioner) {
     },
     session: {
       modelName: "Session",
+      expiresIn: sessionPolicy.expiresIn,
+      updateAge: sessionPolicy.updateAge,
       fields: {
         token: "token",
         expiresAt: "expiresAt",

@@ -10,6 +10,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyRequest } from "fastify";
 
 import { PrismaService } from "../prisma.service.js";
+import { isWithinAbsoluteSessionLifetime } from "../auth/session-policy.js";
 
 // Value import required for NestJS decorator metadata (design:paramtypes).
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -40,6 +41,10 @@ export class SessionAuthGuard implements CanActivate {
 
     if (!session) {
       throw new UnauthorizedException("Authentication required");
+    }
+
+    if (!isWithinAbsoluteSessionLifetime(session.session.createdAt)) {
+      throw new UnauthorizedException("Session expired");
     }
 
     const membership = await this.prisma.client.membership.findFirst({

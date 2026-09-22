@@ -5,7 +5,20 @@ import {
 } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DAY } from "../auth/session-policy.js";
 import { SessionAuthGuard } from "./session-auth.guard.js";
+
+function buildMembership() {
+  return {
+    role: "ADMIN",
+    tenant: {
+      id: "tenant-1",
+      name: "Arturo's space",
+      accountingCurrency: "USD",
+      timeZone: "UTC",
+    },
+  };
+}
 
 function createGuard({
   session,
@@ -42,6 +55,9 @@ describe("SessionAuthGuard", () => {
   it("attaches the user and tenant context to the request", async () => {
     const { guard } = createGuard({
       session: {
+        session: {
+          createdAt: new Date(),
+        },
         user: {
           id: "user-1",
           name: "Arturo",
@@ -49,15 +65,7 @@ describe("SessionAuthGuard", () => {
           image: null,
         },
       },
-      membership: {
-        role: "ADMIN",
-        tenant: {
-          id: "tenant-1",
-          name: "Arturo's space",
-          accountingCurrency: "USD",
-          timeZone: "UTC",
-        },
-      },
+      membership: buildMembership(),
     });
     const { request, context } = buildContext();
 
@@ -82,9 +90,31 @@ describe("SessionAuthGuard", () => {
     );
   });
 
+  it("rejects sessions older than the absolute lifetime", async () => {
+    const { guard } = createGuard({
+      session: {
+        session: {
+          createdAt: new Date(Date.now() - 31 * DAY * 1000),
+        },
+        user: { id: "user-1", name: "A", email: "a@b.c", image: null },
+      },
+      membership: buildMembership(),
+    });
+    const { context } = buildContext();
+
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
   it("rejects users without a membership with 404", async () => {
     const { guard } = createGuard({
-      session: { user: { id: "user-1", name: "A", email: "a@b.c", image: null } },
+      session: {
+        session: {
+          createdAt: new Date(),
+        },
+        user: { id: "user-1", name: "A", email: "a@b.c", image: null },
+      },
       membership: null,
     });
     const { context } = buildContext();

@@ -31,6 +31,14 @@ const serviceMeta: Record<
   ENTREPRENEURSHIP: { icon: IconReceiptTax, statusColor: "gray" },
 };
 
+const serviceCardKey: Record<ServiceKey, string> = {
+  PERSONAL_FINANCE: "personalFinance",
+  VEHICLE: "vehicle",
+  HOME: "home",
+  INSURANCE: "insurance",
+  ENTREPRENEURSHIP: "entrepreneurship",
+};
+
 export function ServicesPage(): React.JSX.Element {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -115,6 +123,8 @@ export function ServicesPage(): React.JSX.Element {
               icon: IconBuildingBank,
               statusColor: "gray",
             };
+            const cardKey =
+              serviceCardKey[service.key] ?? service.key.toLowerCase();
             const pending =
               (enableService.isPending &&
                 enableService.variables === service.key) ||
@@ -124,8 +134,12 @@ export function ServicesPage(): React.JSX.Element {
             return (
               <ServiceCard
                 key={service.key}
-                name={service.name}
-                description={service.description}
+                name={t(`services.cards.${cardKey}.name`, {
+                  defaultValue: service.name,
+                })}
+                description={t(`services.cards.${cardKey}.description`, {
+                  defaultValue: service.description,
+                })}
                 status={statusFor(service)}
                 statusColor={meta.statusColor}
                 icon={meta.icon}

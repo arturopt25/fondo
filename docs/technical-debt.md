@@ -563,6 +563,16 @@ Declared but not yet consumed:
 - TD-094: Complete E2E tests. Pending.
 - TD-095: Review accessibility and performance. Pending.
 
+### TD-097: Enforce explicit session policy and revalidate client sessions
+
+- Status: Done
+- Priority: P1
+- Area: Auth / Web
+- Problem: Better Auth used its default 7-day sliding expiration with no absolute lifetime, and the web client only validated the session on mount, so a stale tab could keep showing an expired or revoked session.
+- Planned resolution: Configure explicit `expiresIn`/`updateAge`, enforce an absolute 30-day lifetime in `SessionAuthGuard`, revalidate the session on focus/visibility, and clear the session on a global `401`.
+- Acceptance criteria: Restarting the API preserves valid sessions; sessions older than 30 days are rejected; expired or revoked sessions redirect to login on the next interaction.
+- Verification: `session-policy.test.ts`, `session-auth.guard.test.ts`, `auth.e2e.test.ts` and `auth-context.test.tsx`.
+
 ## Deferred Decisions
 
 These are intentional and should not be confused with forgotten work:
@@ -590,6 +600,7 @@ At the end of every phase:
 
 ## Changelog
 
+- 2026-09-22: Session policy + client revalidation. Configured Better Auth with an explicit idle expiration (7 days, refreshed every 24 hours), added a 30-day absolute session lifetime enforced in `SessionAuthGuard`, made the web client revalidate the session on focus/visibility, and added global `401` handling that clears the session and redirects to login. TD-097 done.
 - 2026-09-21: UI Exit Gate + Phase 5A (Accounts and Categories). Added `LoadingState`/`ErrorState` to the design system, migrated Login/Register/profile and the finance forms to React Hook Form + Zod, implemented a real custom range picker, and made Settings navigation section-driven. Shipped `FinancialAccount` and `Category` with per-tenant default-category seeding (atomic at provisioning + backfill), tenant-scoped repositories, paginated accounts/categories APIs with allowlisted sorting and audit logging, cross-tenant isolation tests, and functional Accounts/Categories pages. TD-009, TD-010, TD-011, TD-012, TD-017, TD-055–TD-063 done.
 - 2026-09-21: Platform hardening + Services foundation. Enabled Better Auth rate limiting (sign-in/sign-up/change-password), added a real Terminus/Prisma health check, refactored the Fastify auth bridge to typed `FastifyInstance`, resolved `TenantContext` in `SessionAuthGuard` (TD-096), and shipped the Services catalog: `ServiceDefinition`/`ServiceSubscription` models, Personal Finance enabled atomically at provisioning with backfill for existing tenants, `ServiceAccessGuard`, `AdminOnlyGuard`, enable/disable endpoints with audit logging, and a data-driven Services page. Web runtime image is now non-root. TD-003, TD-004, TD-005, TD-007, TD-025, TD-033, TD-047–TD-051, TD-053, TD-054, TD-096 done.
 - 2026-09-17: Phase 3A — Functional Settings closed. Centralized preference mutations in `AppPreferencesProvider`, removed fire-and-forget writes, made timezone a controlled searchable field validated against IANA, and wired password change + session management through Better Auth. Added Vitest/jsdom + Testing Library setup with web tests, and an e2e suite (`pnpm --filter @fondo/api test:e2e`) that runs against a dedicated `TEST_DATABASE_URL` (guard refuses the local dev database). Zod errors now map to `400 VALIDATION_ERROR`. TD-002, TD-006, TD-019, TD-020, TD-024, TD-029, TD-030, TD-031, TD-032, TD-035, TD-036–TD-045 done.
