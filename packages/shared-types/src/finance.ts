@@ -92,6 +92,18 @@ export type PageQuery = z.infer<typeof pageQuerySchema>;
 export const transactionTypeSchema = z.enum(["INCOME", "EXPENSE", "TRANSFER"]);
 export type TransactionType = z.infer<typeof transactionTypeSchema>;
 
+export const entryDirectionSchema = z.enum(["DEBIT", "CREDIT"]);
+export type EntryDirection = z.infer<typeof entryDirectionSchema>;
+
+export const transactionEntrySchema = z.object({
+  id: z.string(),
+  direction: entryDirectionSchema,
+  amountMinor: z.number().int().positive(),
+  accountId: z.string().nullable(),
+  categoryId: z.string().nullable(),
+});
+export type TransactionEntry = z.infer<typeof transactionEntrySchema>;
+
 export const transactionSchema = z.object({
   id: z.string(),
   type: transactionTypeSchema,
@@ -106,8 +118,16 @@ export const transactionSchema = z.object({
   note: z.string().nullable(),
   occurredAt: z.string(),
   createdAt: z.string(),
+  reversesId: z.string().nullable(),
+  reversedById: z.string().nullable(),
+  entries: z.array(transactionEntrySchema),
 });
 export type Transaction = z.infer<typeof transactionSchema>;
+
+export const reverseTransactionSchema = z.object({
+  note: z.string().trim().max(500).optional(),
+});
+export type ReverseTransactionInput = z.infer<typeof reverseTransactionSchema>;
 
 export const createIncomeSchema = z.object({
   accountId: z.string(),

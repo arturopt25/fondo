@@ -3,16 +3,20 @@ import {
   Controller,
   Get,
   Inject,
+  Param,
   Post,
   Query,
+  Req,
   UseGuards,
 } from "@nestjs/common";
+import type { FastifyRequest } from "fastify";
 
 import {
   createExpenseSchema,
   createIncomeSchema,
   createTransferSchema,
   pageQuerySchema,
+  reverseTransactionSchema,
 } from "@fondo/shared-types";
 
 import { SessionAuthGuard } from "../tenant/session-auth.guard.js";
@@ -56,30 +60,59 @@ export class TransactionsController {
   async createIncome(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
+    @Req() request: FastifyRequest,
     @Body() body: unknown,
   ) {
     const input = createIncomeSchema.parse(body);
-    return this.transactions.createIncome(tenant.tenantId, user.id, input);
+    return this.transactions.createIncome(
+      tenant.tenantId,
+      user.id,
+      input,
+      idempotencyKeyFrom(request),
+    );
   }
 
   @Post("expense")
   async createExpense(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
+    @Req() request: FastifyRequest,
     @Body() body: unknown,
   ) {
     const input = createExpenseSchema.parse(body);
-    return this.transactions.createExpense(tenant.tenantId, user.id, input);
+    return this.transactions.createExpense(
+      tenant.tenantId,
+      user.id,
+      input,
+      idempotencyKeyFrom(request),
+    );
   }
 
   @Post("transfer")
   async createTransfer(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
+    @Req() request: FastifyRequest,
     @Body() body: unknown,
   ) {
     const input = createTransferSchema.parse(body);
-    return this.transactions.createTransfer(tenant.tenantId, user.id, input);
+    return this.transactions.createTransfer(
+      tenant.tenantId,
+      user.id,
+      input,
+      idempotencyKeyFrom(request),
+    );
+  }
+
+  @Post(":id/reverse")
+  async reverse(
+    @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const input = reverseTransactionSchema.parse(body ?? {});
+    return this.transactions.reverse(tenant.tenantId, user.id, id, input.note);
   }
 }
 
@@ -102,4 +135,12 @@ export class LedgerController {
         : undefined;
     return this.transactions.balance(tenant.tenantId, ledgerId);
   }
+}
+
+function idempotencyKeyFrom(request: FastifyRequest): string | undefined {
+  const header = request.headers["idempotency-key"];
+  if (typeof header !== "string" || header.trim() === "") {
+    return undefined;
+  }
+  return header.trim();
 }

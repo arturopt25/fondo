@@ -526,19 +526,22 @@ Declared but not yet consumed:
 
 ## Phase 6: Transactions and Ledger
 
-- TD-064: Create `Transaction` aggregate. Pending. A basic single-row `Transaction` (income/expense/transfer with service context and source entity) is implemented; full double-entry entries (TD-065) remain pending.
-- TD-065: Create `TransactionEntry`. Pending.
+- TD-064: Create `Transaction` aggregate. Done. A single-row `Transaction` (income/expense/transfer with service context and source entity) with a balanced pair of `TransactionEntry` partidas.
+- TD-065: Create `TransactionEntry`. Done. Every movement writes DEBIT/CREDIT partidas; the balance endpoint derives account balances from entries.
 - TD-066: Implement income. Done.
 - TD-067: Implement expenses. Done.
-- TD-068: Implement atomic transfers. Done (same-ledger transfers; cross-ledger transfers pending).
-- TD-069: Prevent double booking. Pending.
-- TD-070: Reject negative asset balances. Pending.
-- TD-071: Model credit card negative debt. Pending.
-- TD-072: Add audited edit/delete. Pending.
-- TD-073: Add atomicity tests. Pending.
-- TD-074: Add concurrency tests. Pending.
+- TD-068: Implement atomic transfers. Done (same-ledger transfers; cross-ledger transfers pending, TD-104).
+- TD-069: Prevent double booking. Done. `Idempotency-Key` on create endpoints deduplicates retries; reusing a key with a different payload returns `409`.
+- TD-070: Reject negative asset balances. Done. Asset accounts (`CASH`, `BANK`, `OTHER`) cannot go below zero, enforced inside the write transaction with `FOR UPDATE` row locks.
+- TD-071: Model credit card negative debt. Done. `CREDIT_CARD` accounts are liabilities and carry debt as a negative balance.
+- TD-072: Add audited edit/delete. Done. Transactions are immutable; `POST /transactions/:id/reverse` creates an audited reversal and marks the original. Edit is modelled as reverse + recreate (TD-105).
+- TD-073: Add atomicity tests. Done. Transaction, entries and audit log commit in a single Prisma transaction; balance and idempotency invariants are unit- and e2e-tested.
+- TD-074: Add concurrency tests. Pending. Parallel transfers and concurrent idempotent creates are not yet asserted.
 - TD-101: Create `Ledger` and attach accounts/transactions to it. Done.
 - TD-102: Implement operational domain entities for Vehicle, Home, Insurance and Entrepreneurship (vehicles, properties, policies, businesses and their expense flows). Pending.
+- TD-103: Enforce financial write invariants. Done. Writes validate tenant-scoped active accounts, category type vs movement type, active service subscriptions and same-ledger transfers.
+- TD-104: Support cross-ledger transfers. Pending. Needs a bridge-account or explicit settlement rule once `SEPARATE` ledgers exist.
+- TD-105: Add edit-as-replacement UX. Pending. UI flow that reverses the original and creates a corrected transaction in one action.
 
 ## Phase 7: Dashboard and Reports
 
@@ -604,6 +607,7 @@ At the end of every phase:
 
 ## Changelog
 
+- 2026-09-23: Double-entry ledger core. Added `TransactionEntry` with DEBIT/CREDIT partidas (backfilled from existing transactions), atomic writes (transaction + entries + audit in a single Prisma transaction with `FOR UPDATE` account locks), `Idempotency-Key` deduplication (TD-069), balance rules that reject negative asset balances (TD-070) and model credit-card debt (TD-071), audited reversals via `POST /transactions/:id/reverse` (TD-072), financial write invariants (active account, category type, active service, same-ledger transfer) (TD-103), and unit/e2e coverage. TD-064, TD-065, TD-069, TD-070, TD-071, TD-072, TD-073, TD-103 done.
 - 2026-09-23: Services capabilities + ledger foundation. Added `ServiceCapabilityDefinition`/`ServiceCapabilitySelection` with a per-service capability checklist on the Services page, a `ledgerMode` (shared/separate) on subscriptions for Entrepreneurship, a `Ledger` + `Transaction` model (income/expense/transfer with optional service context and source entity), transactions/ledger-balance API and a functional Transactions page. TD-099, TD-100, TD-101, TD-066, TD-067, TD-068 done.
 - 2026-09-22: Qlty CLI integrated as a non-overlapping quality layer. Added `.qlty/qlty.toml` (gitleaks, osv-scanner, knip, markdownlint, yamllint, prisma, hadolint, editorconfig-checker, smells — no eslint/prettier, which stay with `pnpm lint`/`format:check`), root `check:quality`/`check:quality:all`/`security`/`smells`/`metrics` scripts, a CI gate, and recorded osv-scanner CVE findings under TD-093.
 - 2026-09-22: Session policy + client revalidation. Configured Better Auth with an explicit idle expiration (7 days, refreshed every 24 hours), added a 30-day absolute session lifetime enforced in `SessionAuthGuard`, made the web client revalidate the session on focus/visibility, and added global `401` handling that clears the session and redirects to login. TD-097 done.
