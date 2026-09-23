@@ -154,7 +154,7 @@ describe("ServicesPage", () => {
     expect(screen.getByText("Desactivado")).toBeInTheDocument();
   });
 
-  it("lets an ADMIN configure and enable a disabled service", async () => {
+  it("lets an ADMIN activate and configure a disabled service", async () => {
     const user = userEvent.setup();
     const enable = vi.fn();
     meHooks.useMeQuery.mockReturnValue({
@@ -166,12 +166,14 @@ describe("ServicesPage", () => {
     });
     renderServices();
 
-    const configureButtons = screen.getAllByRole("button", {
-      name: "Configurar",
+    const activateButtons = screen.getAllByRole("button", {
+      name: "Activar",
     });
-    await user.click(configureButtons[0] ?? document.body);
+    await user.click(activateButtons[0] ?? document.body);
 
-    expect(screen.getByText("Configurar Vehículo")).toBeInTheDocument();
+    expect(
+      screen.getByText("Configura tu servicio de Vehículo"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Vehículos")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Activar servicio" }));
@@ -186,15 +188,15 @@ describe("ServicesPage", () => {
     );
   });
 
-  it("prevents a MEMBER from configuring services", () => {
+  it("prevents a MEMBER from activating services", () => {
     meHooks.useMeQuery.mockReturnValue({
       data: { membership: { role: "MEMBER" } },
     });
     renderServices();
 
-    const configureButton = screen.getAllByRole("button", {
-      name: "Configurar",
+    const activateButton = screen.getAllByRole("button", {
+      name: "Activar",
     })[0];
-    expect(configureButton).toBeDisabled();
+    expect(activateButton).toBeDisabled();
   });
 });

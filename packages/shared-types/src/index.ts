@@ -6,5 +6,6 @@ export interface HealthResponse {
 export * from "./enums.js";
 export * from "./finance.js";
 export * from "./me.js";
+export * from "./reports.js";
 export * from "./services.js";
 export * from "./timezone.js";

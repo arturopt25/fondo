@@ -110,14 +110,13 @@ Declared but not yet consumed:
 
 ### TD-008: Replace mocks with API adapters
 
-- Status: Blocked
+- Status: Done
 - Priority: P0
 - Area: Web
 - Problem: Dashboard and Reports render typed mocks from `mock-data.ts`. (Services was migrated to real API data in Phase 4A.)
 - Planned resolution: Introduce repository/query adapters with the same contracts, then connect them to TanStack Query.
 - Acceptance criteria: Screens render server data; mocks live only in test fixtures.
-- Verification: Component tests and API integration tests.
-- Blocked on: Financial Accounts and Transactions (Phase 5/6) — there is no server data to render yet.
+- Verification: Dashboard and Reports query `GET /reports/*`; `mock-data.ts` was removed and formatting helpers moved to `lib/money.ts` with tests.
 
 ### TD-009: Implement real date range picker
 
@@ -171,33 +170,33 @@ Declared but not yet consumed:
 
 ### TD-014: Formalize exchange rate provider
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: Web / Money
 - Problem: EUR conversion uses a constant inside `mock-data.ts`.
 - Planned resolution: Create a typed `ExchangeRateProvider` abstraction.
 - Acceptance criteria: UI contracts depend on the provider, not on mock constants.
-- Verification: Unit tests for the provider and conversion.
+- Verification: `GET /reports/dashboard` returns an `ExchangeRateView` (`rate`, `source`, `effectiveAt`); the web formats amounts with it via `lib/money.ts`. A live external provider remains deferred.
 
 ### TD-015: Show exchange rate source and effective date
 
-- Status: Pending
+- Status: Done
 - Priority: P2
 - Area: Web / Money
 - Problem: The UI shows a rate without source or effective date.
 - Planned resolution: Display `source` and `effectiveAt` from the provider.
 - Acceptance criteria: Users see when and where the rate came from.
-- Verification: Component test.
+- Verification: The dashboard hero renders `source` and the effective date of the configured rate.
 
 ### TD-016: Define behavior when no valid rate exists
 
-- Status: Pending
+- Status: Done
 - Priority: P1
 - Area: Web / Money
 - Problem: There is no fallback when a rate is missing.
 - Planned resolution: Fall back to USD with a visible warning; never invent a rate.
 - Acceptance criteria: Missing rate degrades gracefully.
-- Verification: Unit tests.
+- Verification: `formatMinorAmount`/`convertMinor` treat a null rate as USD passthrough; the hero hides the rate block when `exchangeRate` is null.
 
 ### TD-017: Replace visual forms with React Hook Form + Zod
 
@@ -511,6 +510,7 @@ Declared but not yet consumed:
 - TD-054: Audit service enable/disable actions. Done.
 - TD-099: Create `ServiceCapabilityDefinition` and per-subscription capability selections. Done.
 - TD-100: Add ledger mode (`SHARED`/`SEPARATE`) to service subscriptions, selectable for Entrepreneurship. Done.
+- TD-106: Clarify activation vs configuration copy. Done. Disabled services show `Activate`; the modal uses activation copy (`Configure your Vehicle service`) for disabled services and configuration copy for active ones, both i18n ES/EN.
 
 ## Phase 5: Accounts and Categories
 
@@ -545,28 +545,29 @@ Declared but not yet consumed:
 
 ## Phase 7: Dashboard and Reports
 
-- TD-075: Replace mocks with real queries. Pending.
-- TD-076: Finalize query keys. Pending.
-- TD-077: Implement financial dashboard. Pending.
-- TD-078: Implement category spending. Pending.
-- TD-079: Implement cash flow. Pending.
-- TD-080: Implement budgets vs actual. Pending.
-- TD-081: Implement real period selector. Pending.
-- TD-082: Apply USD/EUR conversion. Pending.
-- TD-083: Use latest rate for current balances. Pending.
-- TD-084: Use effective rate for historical reports. Pending.
-- TD-085: Add aggregation tests. Pending.
+- TD-075: Replace mocks with real queries. Done. `GET /reports/dashboard`, `/reports/cash-flow` and `/reports/category-spend` aggregate from `TransactionEntry`; Dashboard and Reports render real data.
+- TD-076: Finalize query keys. Done. `queryKeys.reports.*` are parameterized factories (period, ledger, service).
+- TD-077: Implement financial dashboard. Done. Balance, summary, cash flow, category spend and recent movements from the reporting API.
+- TD-078: Implement category spending. Done. `ReportsService.categorySpend` with unit and e2e coverage.
+- TD-079: Implement cash flow. Done. Monthly buckets computed in the tenant timezone.
+- TD-080: Implement budgets vs actual. Pending. Requires a `Budget` model and API; the dashboard shows an empty state meanwhile.
+- TD-081: Implement real period selector. Done. `DateRangeSelector` drives `from`/`to` query parameters on both pages.
+- TD-082: Apply USD/EUR conversion. Done. `lib/money.ts` converts with the report `ExchangeRateView`.
+- TD-083: Use latest rate for current balances. Done. The configured rate applies to current balance presentation.
+- TD-084: Use effective rate for historical reports. Pending. Needs a persisted rate history and a real provider; currently a single configured rate is used for both current and historical.
+- TD-085: Add aggregation tests. Done. Unit tests for `ReportsService` and e2e for dashboard, reversal compensation and service filters.
+- TD-107: Define general vs service-specific reports. Done. `serviceKey` filters movements per active service; domain-specific reports still wait on TD-102.
 
 ## Phase 8: Security and Production Hardening
 
-- TD-086: Implement PostgreSQL RLS. Pending.
-- TD-087: Verify `SET LOCAL` inside transactions. Pending.
-- TD-088: Add cross-tenant tests. Pending.
+- TD-086: Implement PostgreSQL RLS. Pending. Requires a dedicated non-superuser app role (`NOBYPASSRLS`) connected by the runtime in dev/CI/e2e (the current `fondo` role is superuser and bypasses RLS), plus wrapping every tenant-scoped read in a tenant transaction. App-layer isolation and cross-tenant tests already cover current releases; RLS remains the defense-in-depth milestone before production.
+- TD-087: Verify `SET LOCAL` inside transactions. Pending. `set_config('app.tenant_id', ..., true)` must be set as the first statement of each tenant-scoped transaction; verify rollback restores it.
+- TD-088: Add cross-tenant tests. Pending. Prove an under-scoped query returns nothing under the restricted role; the existing cross-tenant e2e suite must keep passing on the app role.
 - TD-089: Apply per-endpoint rate limiting. Pending.
 - TD-090: Complete payload size limits. Pending.
 - TD-091: Review production CORS. Pending.
 - TD-092: Add basic observability. Pending.
-- TD-093: Run dependency audit. Pending. osv-scanner (via Qlty) reports CVE-2026-84373 (`vitest@3.2.7` / `@vitest/mocker@3.2.7`), CVE-2026-40345 (`deepmerge-ts@7.1.5`, transitive via `prisma`) and CVE-2026-16732 / CVE-2026-18504 (`fastify@5.11.3`). Vitest and deepmerge-ts need major upgrades; fastify can be bumped in range.
+- TD-093: Run dependency audit. Partially done. osv-scanner findings: `fastify` unified to 5.12.5 via `pnpm-workspace.yaml` `overrides` (pinned by `@nestjs/platform-fastify@11.2.3`), resolving CVE-2026-16732 / CVE-2026-18504. Remaining: CVE-2026-84373 (`vitest@3.2.7`) requires a major 3→4/5 upgrade, and CVE-2026-40345 (`deepmerge-ts@7.1.5`, transitive via `prisma`) requires a major Prisma 6→7 upgrade — both are dedicated migrations with breaking changes.
 - TD-094: Complete E2E tests. Pending.
 - TD-095: Review accessibility and performance. Pending.
 
@@ -607,6 +608,7 @@ At the end of every phase:
 
 ## Changelog
 
+- 2026-09-23: Real dashboard and reports + services copy. Added a reporting API (`GET /reports/dashboard|cash-flow|category-spend`) that aggregates from `TransactionEntry` with reversal compensation, tenant-timezone monthly buckets, `serviceKey` filters and an `ExchangeRateView`; migrated Dashboard and Reports off `mock-data.ts` to parameterized query keys with loading/empty/error states; budgets show an empty state until TD-080. Services cards now say `Activate` and the modal uses activation/config copy (i18n ES/EN). Hardened idempotency under concurrency (`FOR UPDATE` + replay on P2002) with concurrency e2e tests (TD-074). Unified `fastify` to 5.12.5 via `pnpm-workspace.yaml` `overrides` (TD-093 partial). TD-008, TD-014–016, TD-075–079, TD-081–083, TD-085, TD-106, TD-107 done.
 - 2026-09-23: Double-entry ledger core. Added `TransactionEntry` with DEBIT/CREDIT partidas (backfilled from existing transactions), atomic writes (transaction + entries + audit in a single Prisma transaction with `FOR UPDATE` account locks), `Idempotency-Key` deduplication (TD-069), balance rules that reject negative asset balances (TD-070) and model credit-card debt (TD-071), audited reversals via `POST /transactions/:id/reverse` (TD-072), financial write invariants (active account, category type, active service, same-ledger transfer) (TD-103), and unit/e2e coverage. TD-064, TD-065, TD-069, TD-070, TD-071, TD-072, TD-073, TD-103 done.
 - 2026-09-23: Services capabilities + ledger foundation. Added `ServiceCapabilityDefinition`/`ServiceCapabilitySelection` with a per-service capability checklist on the Services page, a `ledgerMode` (shared/separate) on subscriptions for Entrepreneurship, a `Ledger` + `Transaction` model (income/expense/transfer with optional service context and source entity), transactions/ledger-balance API and a functional Transactions page. TD-099, TD-100, TD-101, TD-066, TD-067, TD-068 done.
 - 2026-09-22: Qlty CLI integrated as a non-overlapping quality layer. Added `.qlty/qlty.toml` (gitleaks, osv-scanner, knip, markdownlint, yamllint, prisma, hadolint, editorconfig-checker, smells — no eslint/prettier, which stay with `pnpm lint`/`format:check`), root `check:quality`/`check:quality:all`/`security`/`smells`/`metrics` scripts, a CI gate, and recorded osv-scanner CVE findings under TD-093.

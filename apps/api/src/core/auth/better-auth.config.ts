@@ -103,10 +103,16 @@ export function createBetterAuth(provisioner: PersonalTenantProvisioner) {
     rateLimit: {
       enabled: true,
       window: 60,
-      max: 100,
+      max: Number(process.env.AUTH_RATE_LIMIT_MAX ?? 100),
       customRules: {
-        "/sign-in/email": { window: 60, max: 10 },
-        "/sign-up/email": { window: 60, max: 20 },
+        "/sign-in/email": {
+          window: 60,
+          max: Number(process.env.AUTH_SIGNIN_RATE_LIMIT ?? 10),
+        },
+        "/sign-up/email": {
+          window: 60,
+          max: Number(process.env.AUTH_SIGNUP_RATE_LIMIT ?? 20),
+        },
         "/change-password": { window: 60, max: 5 },
       },
     },

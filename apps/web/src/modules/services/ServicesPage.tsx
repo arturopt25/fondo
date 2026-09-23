@@ -235,7 +235,7 @@ function ServiceCatalogCard({
           ? t("services.actions.open")
           : service.status === "ACTIVE"
             ? t("services.actions.disable")
-            : t("services.actions.configure")
+            : t("services.actions.activate")
       }
       disabled={!isAdmin || isPending}
       onAction={() => onAction(service)}
@@ -253,8 +253,7 @@ function isServiceMutationPending(
       mutations.enable.variables?.key === serviceKey) ||
     (mutations.configure.isPending &&
       mutations.configure.variables?.key === serviceKey) ||
-    (mutations.disable.isPending &&
-      mutations.disable.variables === serviceKey)
+    (mutations.disable.isPending && mutations.disable.variables === serviceKey)
   );
 }
 
@@ -279,6 +278,7 @@ function ServiceConfigModal({
   const localizedName = t(`services.cards.${cardKey}.name`, {
     defaultValue: service.name,
   });
+  const isActivating = service.status !== "ACTIVE";
   const [selected, setSelected] = useState<Set<string>>(() => {
     const initial = new Set(service.selectedCapabilities);
     for (const capability of service.capabilities) {
@@ -306,12 +306,19 @@ function ServiceConfigModal({
     <Modal
       opened={opened}
       onClose={onClose}
-      title={t("services.configure.title", { name: localizedName })}
+      title={t(
+        isActivating ? "services.activate.title" : "services.configure.title",
+        { name: localizedName },
+      )}
       size="lg"
     >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          {t("services.configure.description")}
+          {t(
+            isActivating
+              ? "services.activate.description"
+              : "services.configure.description",
+          )}
         </Text>
         <Stack gap="xs">
           {service.capabilities.map((capability) => {
@@ -360,9 +367,9 @@ function ServiceConfigModal({
             loading={isPending}
             onClick={() => onSave([...selected], ledgerMode)}
           >
-            {service.status === "ACTIVE"
-              ? t("services.configure.save")
-              : t("services.configure.enable")}
+            {isActivating
+              ? t("services.activate.submit")
+              : t("services.configure.save")}
           </Button>
         </Group>
       </Stack>

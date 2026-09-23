@@ -350,6 +350,95 @@ describe("finance e2e", () => {
       .expect(409);
   });
 
+  it("handles concurrent requests that share an idempotency key", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const account = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Cash", type: "BANK" })
+      .expect(201);
+    const incomeCategories = await agent
+      .get("/api/v1/categories?type=INCOME")
+      .expect(200);
+    const payload = {
+      accountId: account.body.id,
+      categoryId: incomeCategories.body.items[0].id,
+      amountMinor: 100000,
+    };
+
+    const results = await Promise.allSettled([
+      agent
+        .post("/api/v1/transactions/income")
+        .set("Idempotency-Key", "concurrent-key")
+        .send(payload),
+      agent
+        .post("/api/v1/transactions/income")
+        .set("Idempotency-Key", "concurrent-key")
+        .send(payload),
+      agent
+        .post("/api/v1/transactions/income")
+        .set("Idempotency-Key", "concurrent-key")
+        .send(payload),
+    ]);
+
+    const succeeded = results.filter(
+      (result) => result.status === "fulfilled" && result.value.status === 201,
+    );
+    expect(succeeded.length).toBe(3);
+    const ids = new Set(
+      succeeded.map((result) => result.value.body.id as string),
+    );
+    expect(ids.size).toBe(1);
+
+    const list = await agent.get("/api/v1/transactions").expect(200);
+    expect(list.body.total).toBe(1);
+  });
+
+  it("serializes concurrent transfers and prevents double spending", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const source = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Source", type: "BANK", openingBalanceMinor: 1000 })
+      .expect(201);
+    const targetA = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "A", type: "BANK" })
+      .expect(201);
+    const targetB = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "B", type: "BANK" })
+      .expect(201);
+
+    const results = await Promise.allSettled([
+      agent.post("/api/v1/transactions/transfer").send({
+        fromAccountId: source.body.id,
+        toAccountId: targetA.body.id,
+        amountMinor: 600,
+      }),
+      agent.post("/api/v1/transactions/transfer").send({
+        fromAccountId: source.body.id,
+        toAccountId: targetB.body.id,
+        amountMinor: 600,
+      }),
+    ]);
+
+    const succeeded = results.filter(
+      (result) => result.status === "fulfilled" && result.value.status === 201,
+    );
+    const rejected = results.filter(
+      (result) => result.status === "fulfilled" && result.value.status === 400,
+    );
+    expect(succeeded.length).toBe(1);
+    expect(rejected.length).toBe(1);
+
+    const balance = await agent.get("/api/v1/ledger/balance").expect(200);
+    const sourceAccount = balance.body.accounts.find(
+      (account: { name: string }) => account.name === "Source",
+    );
+    expect(sourceAccount.balanceMinor).toBe(400);
+  });
+
   it("rejects a transaction for a service that is not active", async () => {
     const agent = await signUp(uniqueEmail());
 
@@ -436,5 +525,138 @@ describe("finance e2e", () => {
     await agentB
       .post(`/api/v1/transactions/${expense.body.id}/reverse`)
       .expect(404);
+  });
+
+  it("returns a dashboard report aggregated from real transactions", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const account = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Cash", type: "BANK", openingBalanceMinor: 50000 })
+      .expect(201);
+    const incomeCategories = await agent
+      .get("/api/v1/categories?type=INCOME")
+      .expect(200);
+    const expenseCategories = await agent
+      .get("/api/v1/categories?type=EXPENSE")
+      .expect(200);
+
+    await agent
+      .post("/api/v1/transactions/income")
+      .send({
+        accountId: account.body.id,
+        categoryId: incomeCategories.body.items[0].id,
+        amountMinor: 100000,
+      })
+      .expect(201);
+    await agent
+      .post("/api/v1/transactions/expense")
+      .send({
+        accountId: account.body.id,
+        categoryId: expenseCategories.body.items[0].id,
+        amountMinor: 25000,
+      })
+      .expect(201);
+
+    const now = new Date();
+    const from = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    ).toISOString();
+    const to = now.toISOString();
+
+    const report = await agent
+      .get(
+        `/api/v1/reports/dashboard?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      )
+      .expect(200);
+
+    expect(report.body.balanceMinor).toBe(125000);
+    expect(report.body.summary.incomeMinor).toBe(100000);
+    expect(report.body.summary.expenseMinor).toBe(25000);
+    expect(report.body.summary.savingsMinor).toBe(75000);
+    expect(report.body.cashFlow).toHaveLength(1);
+    expect(report.body.categorySpend[0].amountMinor).toBe(25000);
+    expect(report.body.recent.length).toBeGreaterThanOrEqual(1);
+    expect(report.body.exchangeRate.source).toBe("configured");
+  });
+
+  it("compensates reversed movements in reports", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const account = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Cash", type: "BANK", openingBalanceMinor: 50000 })
+      .expect(201);
+    const incomeCategories = await agent
+      .get("/api/v1/categories?type=INCOME")
+      .expect(200);
+
+    const income = await agent
+      .post("/api/v1/transactions/income")
+      .send({
+        accountId: account.body.id,
+        categoryId: incomeCategories.body.items[0].id,
+        amountMinor: 100000,
+      })
+      .expect(201);
+    await agent
+      .post(`/api/v1/transactions/${income.body.id}/reverse`)
+      .expect(201);
+
+    const now = new Date();
+    const from = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    ).toISOString();
+    const report = await agent
+      .get(
+        `/api/v1/reports/dashboard?from=${encodeURIComponent(from)}&to=${encodeURIComponent(now.toISOString())}`,
+      )
+      .expect(200);
+
+    expect(report.body.summary.incomeMinor).toBe(0);
+    expect(report.body.balanceMinor).toBe(50000);
+  });
+
+  it("filters dashboard reports by an active service", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const account = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Cash", type: "BANK" })
+      .expect(201);
+    const incomeCategories = await agent
+      .get("/api/v1/categories?type=INCOME")
+      .expect(200);
+    const incomeCategoryId = incomeCategories.body.items[0].id as string;
+
+    await agent
+      .post("/api/v1/transactions/income")
+      .send({
+        accountId: account.body.id,
+        categoryId: incomeCategoryId,
+        amountMinor: 100000,
+        serviceKey: "PERSONAL_FINANCE",
+      })
+      .expect(201);
+    await agent
+      .post("/api/v1/transactions/income")
+      .send({
+        accountId: account.body.id,
+        categoryId: incomeCategoryId,
+        amountMinor: 50000,
+      })
+      .expect(201);
+
+    const now = new Date();
+    const from = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    ).toISOString();
+    const report = await agent
+      .get(
+        `/api/v1/reports/dashboard?serviceKey=PERSONAL_FINANCE&from=${encodeURIComponent(from)}&to=${encodeURIComponent(now.toISOString())}`,
+      )
+      .expect(200);
+
+    expect(report.body.summary.incomeMinor).toBe(100000);
   });
 });

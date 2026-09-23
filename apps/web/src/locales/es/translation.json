@@ -82,16 +82,12 @@
     "description": "Una lectura clara de tus movimientos, objetivos y ritmo financiero.",
     "newTransaction": "Nueva transaccion",
     "totalBalance": "Balance total",
-    "upFromLastMonth": "+6.8% vs. mes anterior",
     "asOfToday": "Actualizado hoy",
     "balanceCaption": "Tu balance combina todas las cuentas activas en tu espacio personal.",
     "exchangeRate": "Tasa de cambio",
-    "mockRate": "Referencia visual · mock",
     "viewReport": "Ver informe",
-    "viewAll": "Ver todo",
-    "moreTransactions": "Mas acciones para transacciones",
-    "mockNoticeTitle": "Modo visual activo",
-    "mockNoticeDescription": "Esta accion se conectara a la API en la siguiente fase.",
+    "emptyTitle": "Todavia no hay movimientos",
+    "emptyDescription": "Registra tu primer ingreso o gasto para empezar a construir tu panel.",
     "metrics": {
       "income": "Ingresos",
       "expenses": "Gastos",
@@ -103,26 +99,32 @@
       "healthy": "ritmo saludable"
     },
     "cashFlow": {
-      "eyebrow": "Ultimos seis meses",
-      "title": "Flujo de efectivo"
+      "eyebrow": "Periodo seleccionado",
+      "title": "Flujo de efectivo",
+      "emptyTitle": "Nada que mostrar aun",
+      "emptyDescription": "El flujo aparecera cuando registres movimientos en este periodo."
     },
     "chart": {
       "income": "Ingresos",
       "expenses": "Gastos"
     },
     "spending": {
-      "eyebrow": "Periodo actual",
-      "title": "Donde se va tu dinero"
+      "eyebrow": "Periodo seleccionado",
+      "title": "Donde se va tu dinero",
+      "emptyTitle": "Aun no hay gastos",
+      "emptyDescription": "El gasto por categoria aparecera cuando registres gastos."
     },
     "budgets": {
       "eyebrow": "Control mensual",
       "title": "Presupuestos",
-      "remaining": "{percentage}% disponible",
-      "over": "{percentage}% sobre el limite"
+      "emptyTitle": "Presupuestos en camino",
+      "emptyDescription": "Define limites por categoria cuando los presupuestos esten disponibles."
     },
     "recent": {
       "eyebrow": "Actividad reciente",
-      "title": "Ultimos movimientos"
+      "title": "Ultimos movimientos",
+      "emptyTitle": "Sin movimientos recientes",
+      "emptyDescription": "Tus ultimas transacciones apareceran aqui."
     },
     "insight": {
       "title": "Tu ahorro va por delante del ritmo anterior.",
@@ -136,8 +138,7 @@
     "description": "Convierte tus movimientos en senales simples para tomar mejores decisiones personales.",
     "export": "Exportar",
     "periodTitle": "Lectura del periodo actual",
-    "periodDescription": "Los datos estan preparados para conectarse al ledger real de Fondo.",
-    "mockData": "Datos de muestra",
+    "periodDescription": "Basado en los movimientos reales de tu ledger.",
     "metrics": {
       "income": "Ingresos del periodo",
       "expenses": "Gastos del periodo",
@@ -149,7 +150,9 @@
     },
     "cashFlow": {
       "eyebrow": "Ingresos vs. gastos",
-      "title": "Ritmo mensual"
+      "title": "Ritmo mensual",
+      "emptyTitle": "Nada que mostrar aun",
+      "emptyDescription": "El flujo aparecera cuando registres movimientos en este periodo."
     },
     "chart": {
       "income": "Ingresos",
@@ -158,7 +161,9 @@
     "category": {
       "eyebrow": "Distribucion",
       "title": "Gasto por categoria",
-      "spent": "Gasto"
+      "spent": "Gasto",
+      "emptyTitle": "Aun no hay gastos",
+      "emptyDescription": "El gasto por categoria aparecera cuando registres gastos."
     },
     "future": {
       "eyebrow": "Extensiones previstas",
@@ -260,11 +265,17 @@
       "open": "Abrir modulo",
       "enable": "Activar",
       "disable": "Desactivar",
-      "configure": "Configurar"
+      "configure": "Configurar",
+      "activate": "Activar"
+    },
+    "activate": {
+      "title": "Configura tu servicio de {{name}}",
+      "description": "Selecciona las capacidades que quieres activar para este servicio.",
+      "submit": "Activar servicio"
     },
     "configure": {
       "title": "Configurar {{name}}",
-      "description": "Selecciona las capacidades que quieres usar en este servicio. Las capacidades principales siempre estan activas.",
+      "description": "Selecciona las capacidades que quieres mantener en este servicio.",
       "ledgerModeLabel": "Libro financiero",
       "ledgerModeDescription": "Elige si tu negocio usa el libro personal compartido o un libro empresarial separado.",
       "save": "Guardar cambios",
