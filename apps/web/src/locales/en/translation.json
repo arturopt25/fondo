@@ -50,7 +50,8 @@
     "settings": "Settings",
     "workspace": "Personal space",
     "accounts": "Accounts",
-    "categories": "Categories"
+    "categories": "Categories",
+    "transactions": "Transactions"
   },
   "shell": {
     "overview": "Overview",
@@ -252,13 +253,178 @@
     "title": "Active services",
     "pageTitle": "Build your own financial system.",
     "pageDescription": "Start with a personal foundation and activate new spaces only when they add value.",
-    "activeCount": "1 active",
+    "activeCount": "{{count}} active",
     "introEyebrow": "Fondo catalog",
     "introDescription": "Each service has its own domain boundaries. For now, Personal Finance is the only operational module.",
     "actions": {
       "open": "Open module",
       "enable": "Enable",
-      "disable": "Disable"
+      "disable": "Disable",
+      "configure": "Configure"
+    },
+    "configure": {
+      "title": "Configure {{name}}",
+      "description": "Select the capabilities you want to use for this service. Core capabilities are always enabled.",
+      "ledgerModeLabel": "Financial ledger",
+      "ledgerModeDescription": "Choose whether your business uses the shared personal ledger or a separate business ledger.",
+      "save": "Save changes",
+      "enable": "Enable service",
+      "cancel": "Cancel"
+    },
+    "ledgerModes": {
+      "SHARED": "Shared with personal finances",
+      "SEPARATE": "Separate business ledger"
+    },
+    "capabilities": {
+      "personalFinance": {
+        "accounts": {
+          "name": "Accounts and balances",
+          "description": "Manage financial accounts and balances"
+        },
+        "categories": {
+          "name": "Categories",
+          "description": "Organize movements into categories"
+        },
+        "income": {
+          "name": "Income",
+          "description": "Record income movements"
+        },
+        "expenses": {
+          "name": "Expenses",
+          "description": "Record expense movements"
+        },
+        "transfers": {
+          "name": "Transfers",
+          "description": "Move money between accounts"
+        },
+        "budgets": {
+          "name": "Budgets",
+          "description": "Set budgets per category and period"
+        },
+        "cashflow": {
+          "name": "Cash flow",
+          "description": "Track cash flow over time"
+        },
+        "reports": {
+          "name": "Reports",
+          "description": "Period reports and analytics"
+        },
+        "recurring": {
+          "name": "Recurring movements",
+          "description": "Repeat scheduled movements"
+        }
+      },
+      "vehicle": {
+        "vehicles": {
+          "name": "Vehicles",
+          "description": "Register and manage vehicles"
+        },
+        "expenses": {
+          "name": "Vehicle expenses",
+          "description": "Record expenses linked to a vehicle"
+        },
+        "mileage": {
+          "name": "Mileage tracking",
+          "description": "Track odometer and distance"
+        },
+        "fuel": {
+          "name": "Fuel and consumption",
+          "description": "Log fuel ups and consumption"
+        },
+        "maintenance": {
+          "name": "Maintenance",
+          "description": "Schedule and record maintenance"
+        },
+        "documents": {
+          "name": "Documents and due dates",
+          "description": "Store documents and expirations"
+        },
+        "reminders": {
+          "name": "Reminders",
+          "description": "Reminders for maintenance and due dates"
+        }
+      },
+      "home": {
+        "properties": {
+          "name": "Properties",
+          "description": "Register and manage properties"
+        },
+        "expenses": {
+          "name": "Home expenses",
+          "description": "Record household expenses"
+        },
+        "recurring": {
+          "name": "Recurring utilities",
+          "description": "Track electricity, water, internet and more"
+        },
+        "maintenance": {
+          "name": "Maintenance",
+          "description": "Record maintenance and repairs"
+        },
+        "inventory": {
+          "name": "Asset inventory",
+          "description": "Inventory of household goods"
+        },
+        "documents": {
+          "name": "Property documents",
+          "description": "Store documents and warranties"
+        }
+      },
+      "insurance": {
+        "policies": {
+          "name": "Policies",
+          "description": "Register and manage insurance policies"
+        },
+        "insuredItems": {
+          "name": "Insured items",
+          "description": "Track what is insured"
+        },
+        "premiums": {
+          "name": "Premiums",
+          "description": "Record premium payments"
+        },
+        "coverage": {
+          "name": "Coverage, limits and deductibles",
+          "description": "Coverage details per policy"
+        },
+        "renewals": {
+          "name": "Renewals",
+          "description": "Track upcoming renewals"
+        },
+        "claims": {
+          "name": "Claims",
+          "description": "Register claims with status and amounts"
+        },
+        "documents": {
+          "name": "Policy documents",
+          "description": "Store policy documents"
+        }
+      },
+      "entrepreneurship": {
+        "business": {
+          "name": "Business profile",
+          "description": "Register the business"
+        },
+        "income": {
+          "name": "Business income",
+          "description": "Record business income"
+        },
+        "expenses": {
+          "name": "Business expenses",
+          "description": "Record business expenses"
+        },
+        "accounts": {
+          "name": "Business accounts",
+          "description": "Manage separate business accounts"
+        },
+        "clients": { "name": "Clients", "description": "Manage clients" },
+        "projects": { "name": "Projects", "description": "Manage projects" },
+        "invoicing": {
+          "name": "Invoicing",
+          "description": "Generate invoices"
+        },
+        "taxes": { "name": "Taxes", "description": "Track taxes" }
+      }
     },
     "status": {
       "active": "Active",
@@ -275,6 +441,8 @@
       "enabledMessage": "The service was enabled.",
       "disabledTitle": "Service disabled",
       "disabledMessage": "The service was disabled.",
+      "updatedTitle": "Service updated",
+      "updatedMessage": "The service configuration was updated.",
       "actionError": "The service status could not be changed."
     },
     "cards": {
@@ -308,6 +476,45 @@
         "comingSoon": "Coming soon",
         "notify": "Notify me"
       }
+    }
+  },
+  "transactions": {
+    "eyebrow": "Ledger / 05",
+    "title": "Record movements",
+    "description": "Register income, expenses and transfers across your space.",
+    "newMovement": "New movement",
+    "balance": "Balance",
+    "recent": "Recent movements",
+    "account": "Account",
+    "accountPlaceholder": "Select an account",
+    "category": "Category",
+    "categoryPlaceholder": "Select a category",
+    "amount": "Amount",
+    "service": "Service",
+    "servicePlaceholder": "Optional service",
+    "note": "Note",
+    "notePlaceholder": "Optional note",
+    "createIncome": "Record income",
+    "createExpense": "Record expense",
+    "emptyTitle": "No movements yet",
+    "emptyDescription": "Record your first income or expense to start building your balance.",
+    "types": {
+      "INCOME": "Income",
+      "EXPENSE": "Expense",
+      "TRANSFER": "Transfer"
+    },
+    "table": {
+      "type": "Type",
+      "service": "Service",
+      "note": "Note",
+      "date": "Date",
+      "amount": "Amount"
+    },
+    "notifications": {
+      "incomeCreatedTitle": "Income recorded",
+      "expenseCreatedTitle": "Expense recorded",
+      "createdMessage": "The movement was recorded.",
+      "actionError": "The movement could not be recorded."
     }
   },
   "finance": {

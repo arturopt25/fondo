@@ -8,6 +8,7 @@ import type {
 } from "@fondo/shared-types";
 
 import { PrismaService } from "../prisma.service.js";
+import { LedgerService } from "./ledger.service.js";
 import { AccountsRepository } from "./repositories/accounts.repository.js";
 
 const ALLOWED_SORTS = new Set(["name", "createdAt"]);
@@ -16,6 +17,7 @@ const ALLOWED_SORTS = new Set(["name", "createdAt"]);
 export class AccountsService {
   constructor(
     @Inject(AccountsRepository) private readonly accounts: AccountsRepository,
+    @Inject(LedgerService) private readonly ledgers: LedgerService,
     @Inject(PrismaService) private readonly prisma: PrismaService,
   ) {}
 
@@ -46,7 +48,8 @@ export class AccountsService {
     actorId: string,
     input: CreateAccountInput,
   ): Promise<FinancialAccount> {
-    const account = await this.accounts.create(tenantId, {
+    const ledger = await this.ledgers.personalLedger(tenantId);
+    const account = await this.accounts.create(tenantId, ledger.id, {
       name: input.name,
       type: input.type,
       currency: input.currency,

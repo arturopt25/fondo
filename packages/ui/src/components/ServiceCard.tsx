@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Badge,
   Button,
   Card,
@@ -8,6 +9,7 @@ import {
   ThemeIcon,
   Title,
 } from "@mantine/core";
+import { IconSettings } from "@tabler/icons-react";
 import type { TablerIcon } from "@tabler/icons-react";
 
 export interface ServiceCardProps {
@@ -19,6 +21,7 @@ export interface ServiceCardProps {
   readonly actionLabel: string;
   readonly disabled?: boolean;
   readonly onAction?: () => void;
+  readonly onSettings?: () => void;
 }
 
 export function ServiceCard({
@@ -30,6 +33,7 @@ export function ServiceCard({
   actionLabel,
   disabled = false,
   onAction,
+  onSettings,
 }: ServiceCardProps): React.JSX.Element {
   return (
     <Card className="service-card" padding="lg" radius="lg" withBorder>
@@ -37,9 +41,22 @@ export function ServiceCard({
         <ThemeIcon color="signal" variant="light" size={42} radius="md">
           <Icon size={21} stroke={1.6} />
         </ThemeIcon>
-        <Badge color={statusColor} variant="light" size="sm">
-          {status}
-        </Badge>
+        <Group gap="xs" wrap="nowrap">
+          {onSettings ? (
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="sm"
+              aria-label="service settings"
+              onClick={onSettings}
+            >
+              <IconSettings size={16} stroke={1.6} />
+            </ActionIcon>
+          ) : null}
+          <Badge color={statusColor} variant="light" size="sm">
+            {status}
+          </Badge>
+        </Group>
       </Group>
       <Stack gap={7} mt="xl">
         <Title order={3} className="section-title">

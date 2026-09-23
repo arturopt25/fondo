@@ -15,7 +15,7 @@ function uniqueEmail(): string {
 
 async function truncateAll(): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceDefinition", "ServiceSubscription", "AuditLog", "FinancialAccount", "Category" RESTART IDENTITY CASCADE',
+    'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceDefinition", "ServiceSubscription", "AuditLog", "FinancialAccount", "Category", "Ledger", "Transaction" RESTART IDENTITY CASCADE',
   );
   await prisma.$executeRawUnsafe(
     `INSERT INTO "ServiceDefinition" ("id", "key", "name", "description", "createdAt", "updatedAt") VALUES
@@ -27,7 +27,9 @@ async function truncateAll(): Promise<void> {
   );
 }
 
-async function signUp(email: string): Promise<ReturnType<typeof request.agent>> {
+async function signUp(
+  email: string,
+): Promise<ReturnType<typeof request.agent>> {
   const agent = request.agent(httpServer);
   await agent
     .post("/api/v1/auth/sign-up/email")
@@ -71,7 +73,12 @@ describe("finance e2e", () => {
 
     const created = await agent
       .post("/api/v1/accounts")
-      .send({ name: "Savings", type: "BANK", currency: "USD", openingBalanceMinor: 50000 })
+      .send({
+        name: "Savings",
+        type: "BANK",
+        currency: "USD",
+        openingBalanceMinor: 50000,
+      })
       .expect(201);
 
     const accountId = created.body.id as string;
@@ -126,7 +133,9 @@ describe("finance e2e", () => {
       ),
     ).toBe(true);
 
-    const income = await agent.get("/api/v1/categories?type=INCOME").expect(200);
+    const income = await agent
+      .get("/api/v1/categories?type=INCOME")
+      .expect(200);
     expect(
       income.body.items.some(
         (category: { name: string }) => category.name === "Travel",
@@ -141,5 +150,51 @@ describe("finance e2e", () => {
       .patch("/api/v1/accounts/00000000-0000-0000-0000-000000000000")
       .send({ name: "Hijacked" })
       .expect(404);
+  });
+
+  it("records income and expense and computes the ledger balance", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const account = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Cash", type: "CASH" })
+      .expect(201);
+    const accountId = account.body.id as string;
+
+    const expenseCategories = await agent
+      .get("/api/v1/categories?type=EXPENSE")
+      .expect(200);
+    const incomeCategories = await agent
+      .get("/api/v1/categories?type=INCOME")
+      .expect(200);
+    const expenseCategoryId = expenseCategories.body.items[0].id as string;
+    const incomeCategoryId = incomeCategories.body.items[0].id as string;
+
+    await agent
+      .post("/api/v1/transactions/income")
+      .send({
+        accountId,
+        categoryId: incomeCategoryId,
+        amountMinor: 100000,
+        serviceKey: "ENTREPRENEURSHIP",
+      })
+      .expect(201);
+
+    await agent
+      .post("/api/v1/transactions/expense")
+      .send({
+        accountId,
+        categoryId: expenseCategoryId,
+        amountMinor: 25000,
+      })
+      .expect(201);
+
+    const balance = await agent.get("/api/v1/ledger/balance").expect(200);
+    expect(balance.body.totalMinor).toBe(75000);
+    expect(balance.body.accounts).toHaveLength(1);
+    expect(balance.body.accounts[0].balanceMinor).toBe(75000);
+
+    const list = await agent.get("/api/v1/transactions").expect(200);
+    expect(list.body.total).toBe(2);
   });
 });

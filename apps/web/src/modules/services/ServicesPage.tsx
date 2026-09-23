@@ -1,4 +1,14 @@
-import { SimpleGrid, Stack, Text } from "@mantine/core";
+import {
+  Button,
+  Checkbox,
+  Group,
+  Modal,
+  Select,
+  SimpleGrid,
+  Stack,
+  Text,
+} from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import {
   IconBuildingBank,
   IconCar,
@@ -7,10 +17,15 @@ import {
   IconShieldCheck,
 } from "@tabler/icons-react";
 import type { TablerIcon } from "@tabler/icons-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import type { ServiceKey, ServiceWithStatus } from "@fondo/shared-types";
+import type {
+  ServiceKey,
+  ServiceLedgerMode,
+  ServiceWithCapabilities,
+} from "@fondo/shared-types";
 import {
   EmptyState,
   ErrorState,
@@ -21,9 +36,11 @@ import {
 
 import { useMeQuery } from "../settings/me-hooks";
 import {
+  useConfigureServiceMutation,
   useDisableServiceMutation,
   useEnableServiceMutation,
   useServicesQuery,
+  type EnableServiceInput,
 } from "./services-hooks";
 
 const serviceMeta: Record<
@@ -45,53 +62,76 @@ const serviceCardKey: Record<ServiceKey, string> = {
   ENTREPRENEURSHIP: "entrepreneurship",
 };
 
+interface ServiceMutations {
+  readonly enable: {
+    readonly isPending: boolean;
+    readonly variables?: EnableServiceInput | null | undefined;
+  };
+  readonly configure: {
+    readonly isPending: boolean;
+    readonly variables?: EnableServiceInput | null | undefined;
+  };
+  readonly disable: {
+    readonly isPending: boolean;
+    readonly variables?: ServiceKey | null | undefined;
+  };
+}
+
 export function ServicesPage(): React.JSX.Element {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const servicesQuery = useServicesQuery();
   const enableService = useEnableServiceMutation();
+  const configureService = useConfigureServiceMutation();
   const disableService = useDisableServiceMutation();
   const meQuery = useMeQuery();
 
   const isAdmin = meQuery.data?.membership.role === "ADMIN";
   const services = servicesQuery.data?.services ?? [];
 
-  function handleAction(service: ServiceWithStatus): void {
+  const [configureFor, setConfigureFor] =
+    useState<ServiceWithCapabilities | null>(null);
+  const [opened, { open, close }] = useDisclosure(false);
+
+  function openConfig(service: ServiceWithCapabilities): void {
+    setConfigureFor(service);
+    open();
+  }
+
+  function closeConfig(): void {
+    close();
+    setConfigureFor(null);
+  }
+
+  function handleAction(service: ServiceWithCapabilities): void {
     if (service.status === "ACTIVE" && service.key === "PERSONAL_FINANCE") {
       navigate("/app/dashboard");
       return;
     }
-
     if (service.status === "ACTIVE") {
       disableService.mutate(service.key);
       return;
     }
-
-    enableService.mutate(service.key);
+    openConfig(service);
   }
 
-  function actionLabel(service: ServiceWithStatus): string {
-    if (service.status === "ACTIVE" && service.key === "PERSONAL_FINANCE") {
-      return t("services.actions.open");
+  function handleServiceConfigSave(
+    capabilities: string[],
+    ledgerMode: ServiceLedgerMode,
+  ): void {
+    if (!configureFor) {
+      return;
     }
-    if (service.status === "ACTIVE") {
-      return t("services.actions.disable");
+    const input: EnableServiceInput = {
+      key: configureFor.key,
+      capabilities,
+      ledgerMode,
+    };
+    if (configureFor.status === "ACTIVE") {
+      configureService.mutate(input, { onSuccess: closeConfig });
+    } else {
+      enableService.mutate(input, { onSuccess: closeConfig });
     }
-    return t("services.actions.enable");
-  }
-
-  function isActionDisabled(service: ServiceWithStatus): boolean {
-    if (service.status === "ACTIVE") {
-      return !isAdmin && service.key !== "PERSONAL_FINANCE";
-    }
-    return !isAdmin;
-  }
-
-  function statusFor(service: ServiceWithStatus): string {
-    if (service.status === "ACTIVE") {
-      return t("services.status.active");
-    }
-    return t("services.status.disabled");
   }
 
   return (
@@ -124,39 +164,208 @@ export function ServicesPage(): React.JSX.Element {
         />
       ) : (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-          {services.map((service) => {
-            const meta = serviceMeta[service.key] ?? {
-              icon: IconBuildingBank,
-              statusColor: "gray",
-            };
-            const cardKey =
-              serviceCardKey[service.key] ?? service.key.toLowerCase();
-            const pending =
-              (enableService.isPending &&
-                enableService.variables === service.key) ||
-              (disableService.isPending &&
-                disableService.variables === service.key);
+          {services.map((service) => (
+            <ServiceCatalogCard
+              key={service.key}
+              service={service}
+              isAdmin={isAdmin}
+              isPending={isServiceMutationPending(service.key, {
+                enable: enableService,
+                configure: configureService,
+                disable: disableService,
+              })}
+              onAction={handleAction}
+              onOpenConfig={openConfig}
+            />
+          ))}
+        </SimpleGrid>
+      )}
 
+      {configureFor ? (
+        <ServiceConfigModal
+          service={configureFor}
+          opened={opened}
+          isPending={enableService.isPending || configureService.isPending}
+          onClose={closeConfig}
+          onSave={handleServiceConfigSave}
+        />
+      ) : null}
+    </Stack>
+  );
+}
+
+function ServiceCatalogCard({
+  service,
+  isAdmin,
+  isPending,
+  onAction,
+  onOpenConfig,
+}: {
+  readonly service: ServiceWithCapabilities;
+  readonly isAdmin: boolean;
+  readonly isPending: boolean;
+  readonly onAction: (service: ServiceWithCapabilities) => void;
+  readonly onOpenConfig: (service: ServiceWithCapabilities) => void;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const meta = serviceMeta[service.key] ?? {
+    icon: IconBuildingBank,
+    statusColor: "gray",
+  };
+  const cardKey = serviceCardKey[service.key] ?? service.key.toLowerCase();
+  const showSettings = isAdmin && service.status === "ACTIVE";
+
+  return (
+    <ServiceCard
+      name={t(`services.cards.${cardKey}.name`, {
+        defaultValue: service.name,
+      })}
+      description={t(`services.cards.${cardKey}.description`, {
+        defaultValue: service.description,
+      })}
+      status={
+        service.status === "ACTIVE"
+          ? t("services.status.active")
+          : t("services.status.disabled")
+      }
+      statusColor={meta.statusColor}
+      icon={meta.icon}
+      actionLabel={
+        service.status === "ACTIVE" && service.key === "PERSONAL_FINANCE"
+          ? t("services.actions.open")
+          : service.status === "ACTIVE"
+            ? t("services.actions.disable")
+            : t("services.actions.configure")
+      }
+      disabled={!isAdmin || isPending}
+      onAction={() => onAction(service)}
+      {...(showSettings ? { onSettings: () => onOpenConfig(service) } : {})}
+    />
+  );
+}
+
+function isServiceMutationPending(
+  serviceKey: ServiceKey,
+  mutations: ServiceMutations,
+): boolean {
+  return (
+    (mutations.enable.isPending &&
+      mutations.enable.variables?.key === serviceKey) ||
+    (mutations.configure.isPending &&
+      mutations.configure.variables?.key === serviceKey) ||
+    (mutations.disable.isPending &&
+      mutations.disable.variables === serviceKey)
+  );
+}
+
+function ServiceConfigModal({
+  service,
+  opened,
+  isPending,
+  onClose,
+  onSave,
+}: {
+  readonly service: ServiceWithCapabilities;
+  readonly opened: boolean;
+  readonly isPending: boolean;
+  readonly onClose: () => void;
+  readonly onSave: (
+    capabilities: string[],
+    ledgerMode: ServiceLedgerMode,
+  ) => void;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const cardKey = serviceCardKey[service.key] ?? service.key.toLowerCase();
+  const localizedName = t(`services.cards.${cardKey}.name`, {
+    defaultValue: service.name,
+  });
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    const initial = new Set(service.selectedCapabilities);
+    for (const capability of service.capabilities) {
+      if (capability.required) {
+        initial.add(capability.key);
+      }
+    }
+    return initial;
+  });
+  const [ledgerMode, setLedgerMode] = useState<ServiceLedgerMode>(
+    service.ledgerMode,
+  );
+
+  function toggleCapability(key: string): void {
+    const next = new Set(selected);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    setSelected(next);
+  }
+
+  return (
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title={t("services.configure.title", { name: localizedName })}
+      size="lg"
+    >
+      <Stack gap="md">
+        <Text size="sm" c="dimmed">
+          {t("services.configure.description")}
+        </Text>
+        <Stack gap="xs">
+          {service.capabilities.map((capability) => {
+            const required = capability.required;
             return (
-              <ServiceCard
-                key={service.key}
-                name={t(`services.cards.${cardKey}.name`, {
-                  defaultValue: service.name,
-                })}
-                description={t(`services.cards.${cardKey}.description`, {
-                  defaultValue: service.description,
-                })}
-                status={statusFor(service)}
-                statusColor={meta.statusColor}
-                icon={meta.icon}
-                actionLabel={actionLabel(service)}
-                disabled={isActionDisabled(service) || pending}
-                onAction={() => handleAction(service)}
+              <Checkbox
+                key={capability.key}
+                label={t(
+                  `services.capabilities.${cardKey}.${capability.key}.name`,
+                  { defaultValue: capability.name },
+                )}
+                description={t(
+                  `services.capabilities.${cardKey}.${capability.key}.description`,
+                  { defaultValue: capability.description },
+                )}
+                checked={required || selected.has(capability.key)}
+                disabled={required}
+                onChange={() => toggleCapability(capability.key)}
               />
             );
           })}
-        </SimpleGrid>
-      )}
-    </Stack>
+        </Stack>
+        {service.key === "ENTREPRENEURSHIP" ? (
+          <Select
+            label={t("services.configure.ledgerModeLabel")}
+            description={t("services.configure.ledgerModeDescription")}
+            value={ledgerMode}
+            onChange={(value) =>
+              setLedgerMode((value ?? "SHARED") as ServiceLedgerMode)
+            }
+            data={[
+              { value: "SHARED", label: t("services.ledgerModes.SHARED") },
+              {
+                value: "SEPARATE",
+                label: t("services.ledgerModes.SEPARATE"),
+              },
+            ]}
+          />
+        ) : null}
+        <Group justify="flex-end">
+          <Button variant="default" onClick={onClose}>
+            {t("services.configure.cancel")}
+          </Button>
+          <Button
+            color="signal"
+            loading={isPending}
+            onClick={() => onSave([...selected], ledgerMode)}
+          >
+            {service.status === "ACTIVE"
+              ? t("services.configure.save")
+              : t("services.configure.enable")}
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
   );
 }

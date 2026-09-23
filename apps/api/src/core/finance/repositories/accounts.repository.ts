@@ -16,7 +16,11 @@ export class AccountsRepository {
 
   async list(
     tenantId: string,
-    options: { page: number; pageSize: number; orderBy: Record<string, string> },
+    options: {
+      page: number;
+      pageSize: number;
+      orderBy: Record<string, string>;
+    },
   ) {
     const [items, total] = await Promise.all([
       this.prisma.client.financialAccount.findMany({
@@ -41,10 +45,14 @@ export class AccountsRepository {
 
   async create(
     tenantId: string,
-    data: Omit<Prisma.FinancialAccountUncheckedCreateInput, "tenantId">,
+    ledgerId: string,
+    data: Omit<
+      Prisma.FinancialAccountUncheckedCreateInput,
+      "tenantId" | "ledgerId"
+    >,
   ) {
     return this.prisma.client.financialAccount.create({
-      data: { ...data, tenantId },
+      data: { ...data, tenantId, ledgerId },
     });
   }
 

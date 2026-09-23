@@ -50,7 +50,8 @@
     "settings": "Configuracion",
     "workspace": "Espacio personal",
     "accounts": "Cuentas",
-    "categories": "Categorias"
+    "categories": "Categorias",
+    "transactions": "Transacciones"
   },
   "shell": {
     "overview": "Vista general",
@@ -252,13 +253,181 @@
     "title": "Servicios activos",
     "pageTitle": "Construye tu propio sistema financiero.",
     "pageDescription": "Empieza con una base personal y activa nuevos espacios solo cuando aporten valor.",
-    "activeCount": "1 activo",
+    "activeCount": "{{count}} activos",
     "introEyebrow": "Catalogo de Fondo",
     "introDescription": "Cada servicio tendra sus propios limites de dominio. Por ahora, Personal Finance es el unico modulo operativo.",
     "actions": {
       "open": "Abrir modulo",
       "enable": "Activar",
-      "disable": "Desactivar"
+      "disable": "Desactivar",
+      "configure": "Configurar"
+    },
+    "configure": {
+      "title": "Configurar {{name}}",
+      "description": "Selecciona las capacidades que quieres usar en este servicio. Las capacidades principales siempre estan activas.",
+      "ledgerModeLabel": "Libro financiero",
+      "ledgerModeDescription": "Elige si tu negocio usa el libro personal compartido o un libro empresarial separado.",
+      "save": "Guardar cambios",
+      "enable": "Activar servicio",
+      "cancel": "Cancelar"
+    },
+    "ledgerModes": {
+      "SHARED": "Compartido con finanzas personales",
+      "SEPARATE": "Libro empresarial separado"
+    },
+    "capabilities": {
+      "personalFinance": {
+        "accounts": {
+          "name": "Cuentas y saldos",
+          "description": "Gestiona las cuentas y saldos financieros"
+        },
+        "categories": {
+          "name": "Categorías",
+          "description": "Organiza los movimientos por categorías"
+        },
+        "income": {
+          "name": "Ingresos",
+          "description": "Registra movimientos de ingreso"
+        },
+        "expenses": {
+          "name": "Gastos",
+          "description": "Registra movimientos de gasto"
+        },
+        "transfers": {
+          "name": "Transferencias",
+          "description": "Mueve dinero entre cuentas"
+        },
+        "budgets": {
+          "name": "Presupuestos",
+          "description": "Define presupuestos por categoría y período"
+        },
+        "cashflow": {
+          "name": "Flujo de caja",
+          "description": "Consulta el flujo de caja en el tiempo"
+        },
+        "reports": {
+          "name": "Reportes",
+          "description": "Reportes y análisis por período"
+        },
+        "recurring": {
+          "name": "Movimientos recurrentes",
+          "description": "Repite movimientos programados"
+        }
+      },
+      "vehicle": {
+        "vehicles": {
+          "name": "Vehículos",
+          "description": "Registra y administra vehículos"
+        },
+        "expenses": {
+          "name": "Gastos del vehículo",
+          "description": "Registra gastos vinculados a un vehículo"
+        },
+        "mileage": {
+          "name": "Seguimiento de kilometraje",
+          "description": "Registra odómetro y distancia"
+        },
+        "fuel": {
+          "name": "Combustible y consumo",
+          "description": "Registra cargas de combustible y consumo"
+        },
+        "maintenance": {
+          "name": "Mantenimiento",
+          "description": "Programa y registra mantenimiento"
+        },
+        "documents": {
+          "name": "Documentos y vencimientos",
+          "description": "Guarda documentos y vencimientos"
+        },
+        "reminders": {
+          "name": "Recordatorios",
+          "description": "Recordatorios de mantenimiento y vencimientos"
+        }
+      },
+      "home": {
+        "properties": {
+          "name": "Viviendas",
+          "description": "Registra y administra viviendas"
+        },
+        "expenses": {
+          "name": "Gastos del hogar",
+          "description": "Registra gastos del hogar"
+        },
+        "recurring": {
+          "name": "Servicios recurrentes",
+          "description": "Registra electricidad, agua, internet y más"
+        },
+        "maintenance": {
+          "name": "Mantenimiento",
+          "description": "Registra mantenimiento y reparaciones"
+        },
+        "inventory": {
+          "name": "Inventario de bienes",
+          "description": "Inventario de bienes del hogar"
+        },
+        "documents": {
+          "name": "Documentos de la vivienda",
+          "description": "Guarda documentos y garantías"
+        }
+      },
+      "insurance": {
+        "policies": {
+          "name": "Pólizas",
+          "description": "Registra y administra pólizas de seguro"
+        },
+        "insuredItems": {
+          "name": "Elementos asegurados",
+          "description": "Registra qué está asegurado"
+        },
+        "premiums": {
+          "name": "Primas",
+          "description": "Registra pagos de primas"
+        },
+        "coverage": {
+          "name": "Coberturas, límites y deducibles",
+          "description": "Detalles de cobertura por póliza"
+        },
+        "renewals": {
+          "name": "Renovaciones",
+          "description": "Registra renovaciones próximas"
+        },
+        "claims": {
+          "name": "Siniestros",
+          "description": "Registra siniestros con estado y montos"
+        },
+        "documents": {
+          "name": "Documentos de pólizas",
+          "description": "Guarda documentos de pólizas"
+        }
+      },
+      "entrepreneurship": {
+        "business": {
+          "name": "Perfil del negocio",
+          "description": "Registra el negocio"
+        },
+        "income": {
+          "name": "Ingresos del negocio",
+          "description": "Registra ingresos del negocio"
+        },
+        "expenses": {
+          "name": "Gastos del negocio",
+          "description": "Registra gastos del negocio"
+        },
+        "accounts": {
+          "name": "Cuentas del negocio",
+          "description": "Gestiona cuentas del negocio"
+        },
+        "clients": { "name": "Clientes", "description": "Gestiona clientes" },
+        "projects": {
+          "name": "Proyectos",
+          "description": "Gestiona proyectos"
+        },
+        "invoicing": {
+          "name": "Facturación",
+          "description": "Genera facturas"
+        },
+        "taxes": { "name": "Impuestos", "description": "Registra impuestos" }
+      }
     },
     "status": {
       "active": "Activo",
@@ -275,6 +444,8 @@
       "enabledMessage": "El servicio fue activado.",
       "disabledTitle": "Servicio desactivado",
       "disabledMessage": "El servicio fue desactivado.",
+      "updatedTitle": "Servicio actualizado",
+      "updatedMessage": "La configuracion del servicio fue actualizada.",
       "actionError": "No se pudo cambiar el estado del servicio."
     },
     "cards": {
@@ -308,6 +479,45 @@
         "comingSoon": "Proximamente",
         "notify": "Aviseame"
       }
+    }
+  },
+  "transactions": {
+    "eyebrow": "Libro / 05",
+    "title": "Registra movimientos",
+    "description": "Registra ingresos, gastos y transferencias en tu espacio.",
+    "newMovement": "Nuevo movimiento",
+    "balance": "Balance",
+    "recent": "Movimientos recientes",
+    "account": "Cuenta",
+    "accountPlaceholder": "Selecciona una cuenta",
+    "category": "Categoria",
+    "categoryPlaceholder": "Selecciona una categoria",
+    "amount": "Monto",
+    "service": "Servicio",
+    "servicePlaceholder": "Servicio opcional",
+    "note": "Nota",
+    "notePlaceholder": "Nota opcional",
+    "createIncome": "Registrar ingreso",
+    "createExpense": "Registrar gasto",
+    "emptyTitle": "Aun no hay movimientos",
+    "emptyDescription": "Registra tu primer ingreso o gasto para empezar a construir tu balance.",
+    "types": {
+      "INCOME": "Ingreso",
+      "EXPENSE": "Gasto",
+      "TRANSFER": "Transferencia"
+    },
+    "table": {
+      "type": "Tipo",
+      "service": "Servicio",
+      "note": "Nota",
+      "date": "Fecha",
+      "amount": "Monto"
+    },
+    "notifications": {
+      "incomeCreatedTitle": "Ingreso registrado",
+      "expenseCreatedTitle": "Gasto registrado",
+      "createdMessage": "El movimiento fue registrado.",
+      "actionError": "No se pudo registrar el movimiento."
     }
   },
   "finance": {
