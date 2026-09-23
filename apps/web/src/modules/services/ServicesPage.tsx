@@ -282,8 +282,14 @@ function ServiceConfigModal({
             return (
               <Checkbox
                 key={capability.key}
-                label={capability.name}
-                description={capability.description}
+                label={t(
+                  `services.capabilities.${cardKey}.${capability.key}.name`,
+                  { defaultValue: capability.name },
+                )}
+                description={t(
+                  `services.capabilities.${cardKey}.${capability.key}.description`,
+                  { defaultValue: capability.description },
+                )}
                 checked={disabled || selected.has(capability.key)}
                 disabled={disabled}
                 onChange={() => toggleCapability(capability.key)}

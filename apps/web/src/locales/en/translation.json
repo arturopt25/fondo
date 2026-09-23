@@ -275,6 +275,157 @@
       "SHARED": "Shared with personal finances",
       "SEPARATE": "Separate business ledger"
     },
+    "capabilities": {
+      "personalFinance": {
+        "accounts": {
+          "name": "Accounts and balances",
+          "description": "Manage financial accounts and balances"
+        },
+        "categories": {
+          "name": "Categories",
+          "description": "Organize movements into categories"
+        },
+        "income": {
+          "name": "Income",
+          "description": "Record income movements"
+        },
+        "expenses": {
+          "name": "Expenses",
+          "description": "Record expense movements"
+        },
+        "transfers": {
+          "name": "Transfers",
+          "description": "Move money between accounts"
+        },
+        "budgets": {
+          "name": "Budgets",
+          "description": "Set budgets per category and period"
+        },
+        "cashflow": {
+          "name": "Cash flow",
+          "description": "Track cash flow over time"
+        },
+        "reports": {
+          "name": "Reports",
+          "description": "Period reports and analytics"
+        },
+        "recurring": {
+          "name": "Recurring movements",
+          "description": "Repeat scheduled movements"
+        }
+      },
+      "vehicle": {
+        "vehicles": {
+          "name": "Vehicles",
+          "description": "Register and manage vehicles"
+        },
+        "expenses": {
+          "name": "Vehicle expenses",
+          "description": "Record expenses linked to a vehicle"
+        },
+        "mileage": {
+          "name": "Mileage tracking",
+          "description": "Track odometer and distance"
+        },
+        "fuel": {
+          "name": "Fuel and consumption",
+          "description": "Log fuel ups and consumption"
+        },
+        "maintenance": {
+          "name": "Maintenance",
+          "description": "Schedule and record maintenance"
+        },
+        "documents": {
+          "name": "Documents and due dates",
+          "description": "Store documents and expirations"
+        },
+        "reminders": {
+          "name": "Reminders",
+          "description": "Reminders for maintenance and due dates"
+        }
+      },
+      "home": {
+        "properties": {
+          "name": "Properties",
+          "description": "Register and manage properties"
+        },
+        "expenses": {
+          "name": "Home expenses",
+          "description": "Record household expenses"
+        },
+        "recurring": {
+          "name": "Recurring utilities",
+          "description": "Track electricity, water, internet and more"
+        },
+        "maintenance": {
+          "name": "Maintenance",
+          "description": "Record maintenance and repairs"
+        },
+        "inventory": {
+          "name": "Asset inventory",
+          "description": "Inventory of household goods"
+        },
+        "documents": {
+          "name": "Property documents",
+          "description": "Store documents and warranties"
+        }
+      },
+      "insurance": {
+        "policies": {
+          "name": "Policies",
+          "description": "Register and manage insurance policies"
+        },
+        "insuredItems": {
+          "name": "Insured items",
+          "description": "Track what is insured"
+        },
+        "premiums": {
+          "name": "Premiums",
+          "description": "Record premium payments"
+        },
+        "coverage": {
+          "name": "Coverage, limits and deductibles",
+          "description": "Coverage details per policy"
+        },
+        "renewals": {
+          "name": "Renewals",
+          "description": "Track upcoming renewals"
+        },
+        "claims": {
+          "name": "Claims",
+          "description": "Register claims with status and amounts"
+        },
+        "documents": {
+          "name": "Policy documents",
+          "description": "Store policy documents"
+        }
+      },
+      "entrepreneurship": {
+        "business": {
+          "name": "Business profile",
+          "description": "Register the business"
+        },
+        "income": {
+          "name": "Business income",
+          "description": "Record business income"
+        },
+        "expenses": {
+          "name": "Business expenses",
+          "description": "Record business expenses"
+        },
+        "accounts": {
+          "name": "Business accounts",
+          "description": "Manage separate business accounts"
+        },
+        "clients": { "name": "Clients", "description": "Manage clients" },
+        "projects": { "name": "Projects", "description": "Manage projects" },
+        "invoicing": {
+          "name": "Invoicing",
+          "description": "Generate invoices"
+        },
+        "taxes": { "name": "Taxes", "description": "Track taxes" }
+      }
+    },
     "status": {
       "active": "Active",
       "disabled": "Disabled"
