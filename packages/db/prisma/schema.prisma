@@ -48,6 +48,11 @@ enum TransactionType {
   TRANSFER
 }
 
+enum EntryDirection {
+  DEBIT
+  CREDIT
+}
+
 enum CategoryType {
   INCOME
   EXPENSE
@@ -278,6 +283,7 @@ model FinancialAccount {
   tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   ledger       Ledger    @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  entries      TransactionEntry[]
 
   @@index([tenantId])
   @@unique([ledgerId, name])
@@ -295,39 +301,66 @@ model Category {
 
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  entries      TransactionEntry[]
 
   @@index([tenantId])
   @@unique([tenantId, name, type])
 }
 
 model Transaction {
-  id             String          @id @default(uuid()) @db.Uuid
-  tenantId       String          @db.Uuid
-  ledgerId       String          @db.Uuid
-  type           TransactionType
-  amountMinor    Int
-  categoryId     String?         @db.Uuid
-  accountId      String?         @db.Uuid
-  transferFromId String?         @db.Uuid
-  transferToId   String?         @db.Uuid
-  serviceKey     ServiceKey?
-  sourceType     String?         @db.VarChar(32)
-  sourceId       String?         @db.Uuid
-  note           String?         @db.VarChar(500)
-  occurredAt     DateTime
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  createdById    String?
-  updatedById    String?
-  deletedAt      DateTime?
+  id               String          @id @default(uuid()) @db.Uuid
+  tenantId         String          @db.Uuid
+  ledgerId         String          @db.Uuid
+  type             TransactionType
+  amountMinor      Int
+  categoryId       String?         @db.Uuid
+  accountId        String?         @db.Uuid
+  transferFromId   String?         @db.Uuid
+  transferToId     String?         @db.Uuid
+  serviceKey       ServiceKey?
+  sourceType       String?         @db.VarChar(32)
+  sourceId         String?         @db.Uuid
+  note             String?         @db.VarChar(500)
+  occurredAt       DateTime
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  createdById      String?
+  updatedById      String?
+  deletedAt        DateTime?
+  reversesId       String?         @unique @db.Uuid
+  reversedById     String?         @unique @db.Uuid
+  idempotencyKey   String?         @db.VarChar(128)
+  idempotencyHash  String?         @db.VarChar(64)
 
   tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   ledger   Ledger           @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
   category Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   account  FinancialAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  entries  TransactionEntry[]
+  reverses Transaction?      @relation("TransactionReversal")
+  reversedBy Transaction?    @relation("TransactionReversal", fields: [reversedById], references: [id], onDelete: SetNull)
 
   @@index([tenantId, occurredAt])
   @@index([ledgerId, occurredAt])
   @@index([accountId])
   @@index([serviceKey])
+  @@unique([tenantId, idempotencyKey])
+}
+
+model TransactionEntry {
+  id                 String         @id @default(uuid()) @db.Uuid
+  transactionId      String         @db.Uuid
+  financialAccountId String?        @db.Uuid
+  categoryId         String?        @db.Uuid
+  direction          EntryDirection
+  amountMinor        Int
+  createdAt          DateTime       @default(now())
+
+  transaction Transaction      @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  account     FinancialAccount? @relation(fields: [financialAccountId], references: [id], onDelete: SetNull)
+  category    Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([transactionId])
+  @@index([financialAccountId, direction])
+  @@index([categoryId])
 }

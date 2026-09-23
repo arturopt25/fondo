@@ -15,7 +15,7 @@ function uniqueEmail(): string {
 
 async function truncateAll(): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceDefinition", "ServiceSubscription", "AuditLog", "FinancialAccount", "Category", "Ledger", "Transaction" RESTART IDENTITY CASCADE',
+    'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceDefinition", "ServiceSubscription", "AuditLog", "FinancialAccount", "Category", "Ledger", "Transaction", "TransactionEntry" RESTART IDENTITY CASCADE',
   );
   await prisma.$executeRawUnsafe(
     `INSERT INTO "ServiceDefinition" ("id", "key", "name", "description", "createdAt", "updatedAt") VALUES
@@ -176,7 +176,7 @@ describe("finance e2e", () => {
         accountId,
         categoryId: incomeCategoryId,
         amountMinor: 100000,
-        serviceKey: "ENTREPRENEURSHIP",
+        serviceKey: "PERSONAL_FINANCE",
       })
       .expect(201);
 
@@ -196,5 +196,245 @@ describe("finance e2e", () => {
 
     const list = await agent.get("/api/v1/transactions").expect(200);
     expect(list.body.total).toBe(2);
+  });
+
+  it("records a transfer between accounts and keeps the ledger total stable", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const source = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Source", type: "BANK", openingBalanceMinor: 50000 })
+      .expect(201);
+    const target = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Target", type: "BANK" })
+      .expect(201);
+
+    const transfer = await agent
+      .post("/api/v1/transactions/transfer")
+      .send({
+        fromAccountId: source.body.id,
+        toAccountId: target.body.id,
+        amountMinor: 20000,
+      })
+      .expect(201);
+    expect(transfer.body.type).toBe("TRANSFER");
+    expect(transfer.body.entries).toHaveLength(2);
+
+    const balance = await agent.get("/api/v1/ledger/balance").expect(200);
+    expect(balance.body.totalMinor).toBe(50000);
+    const byName = Object.fromEntries(
+      balance.body.accounts.map(
+        (account: { name: string; balanceMinor: number }) => [
+          account.name,
+          account.balanceMinor,
+        ],
+      ),
+    );
+    expect(byName["Source"]).toBe(30000);
+    expect(byName["Target"]).toBe(20000);
+
+    const list = await agent.get("/api/v1/transactions").expect(200);
+    expect(list.body.total).toBe(1);
+    expect(list.body.items[0].type).toBe("TRANSFER");
+  });
+
+  it("rejects a transfer that would overdraw a bank account", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const source = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Source", type: "BANK", openingBalanceMinor: 1000 })
+      .expect(201);
+    const target = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Target", type: "BANK" })
+      .expect(201);
+
+    await agent
+      .post("/api/v1/transactions/transfer")
+      .send({
+        fromAccountId: source.body.id,
+        toAccountId: target.body.id,
+        amountMinor: 20000,
+      })
+      .expect(400);
+  });
+
+  it("models credit card spending as negative debt", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const card = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Card", type: "CREDIT_CARD" })
+      .expect(201);
+    const expenseCategories = await agent
+      .get("/api/v1/categories?type=EXPENSE")
+      .expect(200);
+
+    await agent
+      .post("/api/v1/transactions/expense")
+      .send({
+        accountId: card.body.id,
+        categoryId: expenseCategories.body.items[0].id,
+        amountMinor: 5000,
+      })
+      .expect(201);
+
+    const balance = await agent.get("/api/v1/ledger/balance").expect(200);
+    expect(balance.body.accounts[0].balanceMinor).toBe(-5000);
+  });
+
+  it("replays an idempotent create without duplicating", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const account = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Cash", type: "BANK" })
+      .expect(201);
+    const incomeCategories = await agent
+      .get("/api/v1/categories?type=INCOME")
+      .expect(200);
+    const payload = {
+      accountId: account.body.id,
+      categoryId: incomeCategories.body.items[0].id,
+      amountMinor: 100000,
+    };
+
+    const first = await agent
+      .post("/api/v1/transactions/income")
+      .set("Idempotency-Key", "retry-1")
+      .send(payload)
+      .expect(201);
+    const second = await agent
+      .post("/api/v1/transactions/income")
+      .set("Idempotency-Key", "retry-1")
+      .send(payload)
+      .expect(201);
+
+    expect(second.body.id).toBe(first.body.id);
+
+    const list = await agent.get("/api/v1/transactions").expect(200);
+    expect(list.body.total).toBe(1);
+  });
+
+  it("conflicts when an idempotency key is reused with different data", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const account = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Cash", type: "BANK" })
+      .expect(201);
+    const incomeCategories = await agent
+      .get("/api/v1/categories?type=INCOME")
+      .expect(200);
+
+    await agent
+      .post("/api/v1/transactions/income")
+      .set("Idempotency-Key", "conflict-1")
+      .send({
+        accountId: account.body.id,
+        categoryId: incomeCategories.body.items[0].id,
+        amountMinor: 100000,
+      })
+      .expect(201);
+
+    await agent
+      .post("/api/v1/transactions/income")
+      .set("Idempotency-Key", "conflict-1")
+      .send({
+        accountId: account.body.id,
+        categoryId: incomeCategories.body.items[0].id,
+        amountMinor: 99999,
+      })
+      .expect(409);
+  });
+
+  it("rejects a transaction for a service that is not active", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const account = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Cash", type: "BANK" })
+      .expect(201);
+    const incomeCategories = await agent
+      .get("/api/v1/categories?type=INCOME")
+      .expect(200);
+
+    await agent
+      .post("/api/v1/transactions/income")
+      .send({
+        accountId: account.body.id,
+        categoryId: incomeCategories.body.items[0].id,
+        amountMinor: 1000,
+        serviceKey: "VEHICLE",
+      })
+      .expect(400);
+  });
+
+  it("reverses an expense, restores the balance and rejects a second reversal", async () => {
+    const agent = await signUp(uniqueEmail());
+
+    const account = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Cash", type: "BANK", openingBalanceMinor: 50000 })
+      .expect(201);
+    const expenseCategories = await agent
+      .get("/api/v1/categories?type=EXPENSE")
+      .expect(200);
+
+    const expense = await agent
+      .post("/api/v1/transactions/expense")
+      .send({
+        accountId: account.body.id,
+        categoryId: expenseCategories.body.items[0].id,
+        amountMinor: 20000,
+      })
+      .expect(201);
+
+    const reversal = await agent
+      .post(`/api/v1/transactions/${expense.body.id}/reverse`)
+      .send({ note: "Duplicated by accident" })
+      .expect(201);
+    expect(reversal.body.reversesId).toBe(expense.body.id);
+    expect(reversal.body.entries).toHaveLength(2);
+
+    const balance = await agent.get("/api/v1/ledger/balance").expect(200);
+    expect(balance.body.accounts[0].balanceMinor).toBe(50000);
+
+    const list = await agent.get("/api/v1/transactions").expect(200);
+    const original = list.body.items.find(
+      (transaction: { id: string }) => transaction.id === expense.body.id,
+    );
+    expect(original.reversedById).toBe(reversal.body.id);
+
+    await agent
+      .post(`/api/v1/transactions/${expense.body.id}/reverse`)
+      .expect(400);
+  });
+
+  it("does not let another tenant reverse a transaction", async () => {
+    const agentA = await signUp(uniqueEmail());
+
+    const account = await agentA
+      .post("/api/v1/accounts")
+      .send({ name: "Cash", type: "BANK", openingBalanceMinor: 50000 })
+      .expect(201);
+    const expenseCategories = await agentA
+      .get("/api/v1/categories?type=EXPENSE")
+      .expect(200);
+    const expense = await agentA
+      .post("/api/v1/transactions/expense")
+      .send({
+        accountId: account.body.id,
+        categoryId: expenseCategories.body.items[0].id,
+        amountMinor: 1000,
+      })
+      .expect(201);
+
+    const agentB = await signUp(uniqueEmail());
+    await agentB
+      .post(`/api/v1/transactions/${expense.body.id}/reverse`)
+      .expect(404);
   });
 });
