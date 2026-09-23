@@ -15,11 +15,13 @@ function uniqueEmail(): string {
 
 async function truncateAll(): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceDefinition", "ServiceSubscription", "AuditLog" RESTART IDENTITY CASCADE',
+    'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceDefinition", "ServiceSubscription", "ServiceCapabilityDefinition", "ServiceCapabilitySelection", "AuditLog" RESTART IDENTITY CASCADE',
   );
 }
 
-async function signUp(email: string): Promise<ReturnType<typeof request.agent>> {
+async function signUp(
+  email: string,
+): Promise<ReturnType<typeof request.agent>> {
   const agent = request.agent(httpServer);
   await agent
     .post("/api/v1/auth/sign-up/email")
@@ -73,9 +75,7 @@ describe("services e2e", () => {
   it("allows an ADMIN to disable and re-enable a service", async () => {
     const agent = await signUp(uniqueEmail());
 
-    await agent
-      .post("/api/v1/services/VEHICLE/disable")
-      .expect(201);
+    await agent.post("/api/v1/services/VEHICLE/disable").expect(201);
 
     const disabledCatalog = await agent.get("/api/v1/services").expect(200);
     const vehicle = disabledCatalog.body.services.find(
@@ -91,7 +91,7 @@ describe("services e2e", () => {
     expect(vehicleEnabled.status).toBe("ACTIVE");
 
     const auditCount = await prisma.auditLog.count({
-      where: { action: "SERVICE_ENABLED", resource: "service:VEHICLE" },
+      where: { action: "SERVICE_CONFIGURED", resource: "service:VEHICLE" },
     });
     expect(auditCount).toBe(1);
   });

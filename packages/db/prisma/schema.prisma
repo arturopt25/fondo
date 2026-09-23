@@ -25,11 +25,27 @@ enum ServiceStatus {
   DISABLED
 }
 
+enum ServiceLedgerMode {
+  SHARED
+  SEPARATE
+}
+
 enum AccountType {
   CASH
   BANK
   CREDIT_CARD
   OTHER
+}
+
+enum LedgerScope {
+  PERSONAL
+  SEPARATE
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
 }
 
 enum CategoryType {
@@ -120,6 +136,8 @@ model Tenant {
   subscriptions ServiceSubscription[]
   accounts FinancialAccount[]
   categories Category[]
+  ledgers Ledger[]
+  transactions Transaction[]
 
   @@index([accountingCurrency])
 }
@@ -160,21 +178,59 @@ model ServiceDefinition {
   updatedAt   DateTime    @updatedAt
 
   subscriptions ServiceSubscription[]
+  capabilities  ServiceCapabilityDefinition[]
+}
+
+model ServiceCapabilityDefinition {
+  id             String   @id @default(uuid()) @db.Uuid
+  serviceId      String   @db.Uuid
+  key            String   @db.VarChar(64)
+  name           String   @db.VarChar(120)
+  description    String   @db.VarChar(255)
+  required       Boolean  @default(false)
+  defaultEnabled Boolean  @default(false)
+  dependsOn      String[] @default([])
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  service ServiceDefinition @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  selections ServiceCapabilitySelection[]
+
+  @@unique([serviceId, key])
+  @@index([serviceId])
 }
 
 model ServiceSubscription {
-  id        String        @id @default(uuid()) @db.Uuid
-  tenantId  String        @db.Uuid
-  serviceId String        @db.Uuid
-  status    ServiceStatus @default(ACTIVE)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id         String           @id @default(uuid()) @db.Uuid
+  tenantId   String           @db.Uuid
+  serviceId  String           @db.Uuid
+  status     ServiceStatus    @default(ACTIVE)
+  ledgerMode ServiceLedgerMode @default(SHARED)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
-  tenant  Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  service ServiceDefinition @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  tenant  Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  service ServiceDefinition            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  selections ServiceCapabilitySelection[]
 
   @@unique([tenantId, serviceId])
   @@index([serviceId])
+}
+
+model ServiceCapabilitySelection {
+  id             String   @id @default(uuid()) @db.Uuid
+  subscriptionId String   @db.Uuid
+  capabilityId   String   @db.Uuid
+  enabled        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  subscription ServiceSubscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  capability  ServiceCapabilityDefinition @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, capabilityId])
 }
 
 model AuditLog {
@@ -190,9 +246,27 @@ model AuditLog {
   @@index([createdAt])
 }
 
+model Ledger {
+  id         String      @id @default(uuid()) @db.Uuid
+  tenantId   String      @db.Uuid
+  name       String      @db.VarChar(120)
+  scope      LedgerScope @default(PERSONAL)
+  businessId String?     @db.Uuid
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accounts     FinancialAccount[]
+  transactions Transaction[]
+
+  @@unique([tenantId, businessId])
+  @@index([tenantId])
+}
+
 model FinancialAccount {
   id                  String      @id @default(uuid()) @db.Uuid
   tenantId            String      @db.Uuid
+  ledgerId            String      @db.Uuid
   name                String      @db.VarChar(120)
   type                AccountType
   currency            String      @default("USD") @db.Char(3)
@@ -201,10 +275,12 @@ model FinancialAccount {
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger       Ledger    @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 
   @@index([tenantId])
-  @@unique([tenantId, name])
+  @@unique([ledgerId, name])
 }
 
 model Category {
@@ -217,8 +293,41 @@ model Category {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 
   @@index([tenantId])
   @@unique([tenantId, name, type])
+}
+
+model Transaction {
+  id             String          @id @default(uuid()) @db.Uuid
+  tenantId       String          @db.Uuid
+  ledgerId       String          @db.Uuid
+  type           TransactionType
+  amountMinor    Int
+  categoryId     String?         @db.Uuid
+  accountId      String?         @db.Uuid
+  transferFromId String?         @db.Uuid
+  transferToId   String?         @db.Uuid
+  serviceKey     ServiceKey?
+  sourceType     String?         @db.VarChar(32)
+  sourceId       String?         @db.Uuid
+  note           String?         @db.VarChar(500)
+  occurredAt     DateTime
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger   Ledger           @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  category Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  account  FinancialAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, occurredAt])
+  @@index([ledgerId, occurredAt])
+  @@index([accountId])
+  @@index([serviceKey])
 }

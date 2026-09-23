@@ -9,6 +9,7 @@ import { fondoTheme } from "@fondo/ui";
 const servicesHooks = vi.hoisted(() => ({
   useServicesQuery: vi.fn(),
   useEnableServiceMutation: vi.fn(),
+  useConfigureServiceMutation: vi.fn(),
   useDisableServiceMutation: vi.fn(),
 }));
 const meHooks = vi.hoisted(() => ({ useMeQuery: vi.fn() }));
@@ -16,7 +17,7 @@ const meHooks = vi.hoisted(() => ({ useMeQuery: vi.fn() }));
 vi.mock("react-i18next", async () => {
   const es = (await import("../../locales/es/translation.json")).default;
 
-  const translate = (key: string, options?: { defaultValue?: string }) => {
+  const translate = (key: string, options?: Record<string, unknown>) => {
     let node: unknown = es;
     for (const segment of key.split(".")) {
       if (typeof node !== "object" || node === null) {
@@ -24,7 +25,13 @@ vi.mock("react-i18next", async () => {
       }
       node = (node as Record<string, unknown>)[segment];
     }
-    return typeof node === "string" ? node : (options?.defaultValue ?? key);
+    if (typeof node === "string") {
+      return node.replace(
+        /\{\{name\}\}/g,
+        (options?.name as string | undefined) ?? "",
+      );
+    }
+    return options?.defaultValue ?? key;
   };
 
   return { useTranslation: () => ({ t: translate }) };
@@ -35,6 +42,7 @@ vi.mock("../settings/me-hooks", () => ({
 vi.mock("./services-hooks", () => ({
   useServicesQuery: servicesHooks.useServicesQuery,
   useEnableServiceMutation: servicesHooks.useEnableServiceMutation,
+  useConfigureServiceMutation: servicesHooks.useConfigureServiceMutation,
   useDisableServiceMutation: servicesHooks.useDisableServiceMutation,
 }));
 
@@ -57,15 +65,63 @@ const catalog = {
       name: "Personal Finance",
       description: "PF",
       status: "ACTIVE",
+      ledgerMode: "SHARED",
+      capabilities: [
+        {
+          key: "accounts",
+          name: "Cuentas y saldos",
+          description: "",
+          required: true,
+          defaultEnabled: true,
+          dependsOn: [],
+        },
+        {
+          key: "budgets",
+          name: "Presupuestos",
+          description: "",
+          required: false,
+          defaultEnabled: true,
+          dependsOn: ["expenses"],
+        },
+      ],
+      selectedCapabilities: ["accounts", "budgets"],
     },
     {
       key: "VEHICLE",
       name: "Vehicle",
       description: "V",
       status: "DISABLED",
+      ledgerMode: "SHARED",
+      capabilities: [
+        {
+          key: "vehicles",
+          name: "Vehículos",
+          description: "",
+          required: true,
+          defaultEnabled: true,
+          dependsOn: [],
+        },
+        {
+          key: "fuel",
+          name: "Combustible y consumo",
+          description: "",
+          required: false,
+          defaultEnabled: true,
+          dependsOn: ["vehicles", "mileage"],
+        },
+      ],
+      selectedCapabilities: [],
     },
   ],
 };
+
+function baseMutations() {
+  return {
+    useEnableServiceMutation: () => ({ mutate: vi.fn(), isPending: false }),
+    useConfigureServiceMutation: () => ({ mutate: vi.fn(), isPending: false }),
+    useDisableServiceMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  };
+}
 
 describe("ServicesPage", () => {
   beforeEach(() => {
@@ -75,17 +131,18 @@ describe("ServicesPage", () => {
       isLoading: false,
       isError: false,
     });
-    servicesHooks.useEnableServiceMutation.mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
-    servicesHooks.useDisableServiceMutation.mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    });
+    servicesHooks.useEnableServiceMutation.mockReturnValue(
+      baseMutations().useEnableServiceMutation(),
+    );
+    servicesHooks.useConfigureServiceMutation.mockReturnValue(
+      baseMutations().useConfigureServiceMutation(),
+    );
+    servicesHooks.useDisableServiceMutation.mockReturnValue(
+      baseMutations().useDisableServiceMutation(),
+    );
   });
 
-  it("renders the catalog with localized names and descriptions", () => {
+  it("renders the catalog with localized names and statuses", () => {
     meHooks.useMeQuery.mockReturnValue({
       data: { membership: { role: "ADMIN" } },
     });
@@ -93,15 +150,11 @@ describe("ServicesPage", () => {
 
     expect(screen.getByText("Finanzas personales")).toBeInTheDocument();
     expect(screen.getByText("Vehículo")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Cuentas, movimientos, presupuestos y una lectura completa de tu balance.",
-      ),
-    ).toBeInTheDocument();
     expect(screen.getByText("Activo")).toBeInTheDocument();
+    expect(screen.getByText("Desactivado")).toBeInTheDocument();
   });
 
-  it("lets an ADMIN enable a disabled service", async () => {
+  it("lets an ADMIN configure and enable a disabled service", async () => {
     const user = userEvent.setup();
     const enable = vi.fn();
     meHooks.useMeQuery.mockReturnValue({
@@ -113,23 +166,35 @@ describe("ServicesPage", () => {
     });
     renderServices();
 
-    const enableButtons = screen.getAllByRole("button", {
-      name: "Activar",
+    const configureButtons = screen.getAllByRole("button", {
+      name: "Configurar",
     });
-    await user.click(enableButtons[0] ?? document.body);
+    await user.click(configureButtons[0] ?? document.body);
 
-    expect(enable).toHaveBeenCalledWith("VEHICLE");
+    expect(screen.getByText("Configurar Vehículo")).toBeInTheDocument();
+    expect(screen.getByText("Vehículos")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Activar servicio" }));
+
+    expect(enable).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: "VEHICLE",
+        capabilities: ["vehicles"],
+        ledgerMode: "SHARED",
+      }),
+      expect.anything(),
+    );
   });
 
-  it("prevents a MEMBER from enabling a service", () => {
+  it("prevents a MEMBER from configuring services", () => {
     meHooks.useMeQuery.mockReturnValue({
       data: { membership: { role: "MEMBER" } },
     });
     renderServices();
 
-    const enableButton = screen.getByRole("button", {
-      name: "Activar",
-    });
-    expect(enableButton).toBeDisabled();
+    const configureButton = screen.getAllByRole("button", {
+      name: "Configurar",
+    })[0];
+    expect(configureButton).toBeDisabled();
   });
 });

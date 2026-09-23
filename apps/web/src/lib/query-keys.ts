@@ -5,4 +5,6 @@ export const queryKeys = {
   services: ["services"] as const,
   accounts: ["accounts"] as const,
   categories: ["categories"] as const,
+  transactions: ["transactions"] as const,
+  ledgerBalance: ["ledger", "balance"] as const,
 };

@@ -27,6 +27,7 @@ import {
   IconSparkles,
   IconStack2,
   IconTag,
+  IconTransfer,
   IconWallet,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
@@ -40,6 +41,7 @@ import type { JSX } from "react";
 
 import { FondoBrand } from "@fondo/ui";
 import { useAuth } from "../../modules/auth/auth-context";
+import { useServicesQuery } from "../../modules/services/services-hooks";
 
 const navigation = [
   {
@@ -58,6 +60,11 @@ const navigation = [
     icon: IconTag,
   },
   {
+    to: "/app/transactions",
+    labelKey: "navigation.transactions",
+    icon: IconTransfer,
+  },
+  {
     to: "/app/reports",
     labelKey: "navigation.reports",
     icon: IconChartHistogram,
@@ -71,6 +78,11 @@ export function AppLayout(): JSX.Element {
   const navigate = useNavigate();
   const [opened, { toggle, close }] = useDisclosure(false);
   const { session, signOut } = useAuth();
+  const servicesQuery = useServicesQuery();
+  const activeServiceCount =
+    servicesQuery.data?.services.filter(
+      (service) => service.status === "ACTIVE",
+    ).length ?? 0;
 
   const userName = session?.user.name ?? "Fondo";
   const userInitials = userName
@@ -198,7 +210,9 @@ export function AppLayout(): JSX.Element {
             component={RouterLink}
             to="/app/services"
             label={t("services.title")}
-            description={t("services.activeCount")}
+            description={t("services.activeCount", {
+              count: activeServiceCount,
+            })}
             leftSection={<IconStack2 size={18} stroke={1.7} />}
             rightSection={<IconChevronRight size={15} />}
             active={pathname.startsWith("/app/services")}

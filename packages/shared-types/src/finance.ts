@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { serviceKeySchema } from "./services.js";
+
 export const accountTypeSchema = z.enum([
   "CASH",
   "BANK",
@@ -86,3 +88,80 @@ export const pageQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
 export type PageQuery = z.infer<typeof pageQuerySchema>;
+
+export const transactionTypeSchema = z.enum(["INCOME", "EXPENSE", "TRANSFER"]);
+export type TransactionType = z.infer<typeof transactionTypeSchema>;
+
+export const transactionSchema = z.object({
+  id: z.string(),
+  type: transactionTypeSchema,
+  amountMinor: z.number().int(),
+  categoryId: z.string().nullable(),
+  accountId: z.string().nullable(),
+  transferFromId: z.string().nullable(),
+  transferToId: z.string().nullable(),
+  serviceKey: serviceKeySchema.nullable(),
+  sourceType: z.string().nullable(),
+  sourceId: z.string().nullable(),
+  note: z.string().nullable(),
+  occurredAt: z.string(),
+  createdAt: z.string(),
+});
+export type Transaction = z.infer<typeof transactionSchema>;
+
+export const createIncomeSchema = z.object({
+  accountId: z.string(),
+  categoryId: z.string(),
+  amountMinor: z.number().int().positive(),
+  occurredAt: z.string().datetime().optional(),
+  note: z.string().trim().max(500).optional(),
+  serviceKey: serviceKeySchema.optional(),
+  sourceType: z.string().max(32).optional(),
+  sourceId: z.string().optional(),
+});
+export type CreateIncomeInput = z.infer<typeof createIncomeSchema>;
+
+export const createExpenseSchema = z.object({
+  accountId: z.string(),
+  categoryId: z.string(),
+  amountMinor: z.number().int().positive(),
+  occurredAt: z.string().datetime().optional(),
+  note: z.string().trim().max(500).optional(),
+  serviceKey: serviceKeySchema.optional(),
+  sourceType: z.string().max(32).optional(),
+  sourceId: z.string().optional(),
+});
+export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
+
+export const createTransferSchema = z.object({
+  fromAccountId: z.string(),
+  toAccountId: z.string(),
+  amountMinor: z.number().int().positive(),
+  occurredAt: z.string().datetime().optional(),
+  note: z.string().trim().max(500).optional(),
+});
+export type CreateTransferInput = z.infer<typeof createTransferSchema>;
+
+export const transactionListResponseSchema = z.object({
+  items: z.array(transactionSchema),
+  total: z.number().int(),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+});
+export type TransactionListResponse = z.infer<
+  typeof transactionListResponseSchema
+>;
+
+export const accountBalanceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  balanceMinor: z.number().int(),
+});
+export type AccountBalance = z.infer<typeof accountBalanceSchema>;
+
+export const ledgerBalanceResponseSchema = z.object({
+  ledgerId: z.string(),
+  totalMinor: z.number().int(),
+  accounts: z.array(accountBalanceSchema),
+});
+export type LedgerBalanceResponse = z.infer<typeof ledgerBalanceResponseSchema>;

@@ -1,13 +1,19 @@
 import {
+  Body,
   Controller,
   Get,
   Inject,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from "@nestjs/common";
 
-import { serviceKeySchema, type ServiceKey } from "@fondo/shared-types";
+import {
+  serviceKeySchema,
+  updateServiceConfigSchema,
+  type ServiceKey,
+} from "@fondo/shared-types";
 
 import { SessionAuthGuard } from "../tenant/session-auth.guard.js";
 import { RequestUser } from "../me/request-user.decorator.js";
@@ -45,12 +51,31 @@ export class ServicesController {
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
     @Param("key") key: string,
+    @Body() body: unknown,
   ) {
-    return this.services.setStatus(
+    const input = updateServiceConfigSchema.parse(body ?? {});
+    return this.services.configure(
       tenant.tenantId,
       user.id,
       parseServiceKey(key),
-      "ACTIVE",
+      input,
+    );
+  }
+
+  @Patch(":key/config")
+  @UseGuards(AdminOnlyGuard)
+  async updateConfig(
+    @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
+    @Param("key") key: string,
+    @Body() body: unknown,
+  ) {
+    const input = updateServiceConfigSchema.parse(body ?? {});
+    return this.services.configure(
+      tenant.tenantId,
+      user.id,
+      parseServiceKey(key),
+      input,
     );
   }
 
@@ -61,11 +86,10 @@ export class ServicesController {
     @RequestUser() user: CurrentUser,
     @Param("key") key: string,
   ) {
-    return this.services.setStatus(
+    return this.services.disable(
       tenant.tenantId,
       user.id,
       parseServiceKey(key),
-      "DISABLED",
     );
   }
 }

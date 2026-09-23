@@ -24,7 +24,7 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 | Phase 3: Functional Settings                | Mostly done |
 | Phase 4: Services and Feature Flags         | Mostly done |
 | Phase 5: Accounts and Categories            | Done        |
-| Phase 6: Transactions and Ledger            | Pending     |
+| Phase 6: Transactions and Ledger            | In Progress |
 | Phase 7: Dashboard and Reports              | Pending     |
 | Phase 8: Security and Production Hardening  | Pending     |
 
@@ -506,9 +506,11 @@ Declared but not yet consumed:
 - TD-049: Enable Personal Finance by default. Done.
 - TD-050: Create `ServiceAccessGuard`. Done.
 - TD-051: Add `ADMIN` / `MEMBER` permissions. Done.
-- TD-052: Add contracts for Vehicle, Home, Insurance, Entrepreneurship. Pending.
+- TD-052: Add contracts for Vehicle, Home, Insurance, Entrepreneurship. Pending. The capability catalog (TD-099) defines the configurable scope; operational domain entities remain pending (TD-102).
 - TD-053: Implement service-aware navigation. Done.
 - TD-054: Audit service enable/disable actions. Done.
+- TD-099: Create `ServiceCapabilityDefinition` and per-subscription capability selections. Done.
+- TD-100: Add ledger mode (`SHARED`/`SEPARATE`) to service subscriptions, selectable for Entrepreneurship. Done.
 
 ## Phase 5: Accounts and Categories
 
@@ -524,17 +526,19 @@ Declared but not yet consumed:
 
 ## Phase 6: Transactions and Ledger
 
-- TD-064: Create `Transaction` aggregate. Pending.
+- TD-064: Create `Transaction` aggregate. Pending. A basic single-row `Transaction` (income/expense/transfer with service context and source entity) is implemented; full double-entry entries (TD-065) remain pending.
 - TD-065: Create `TransactionEntry`. Pending.
-- TD-066: Implement income. Pending.
-- TD-067: Implement expenses. Pending.
-- TD-068: Implement atomic transfers. Pending.
+- TD-066: Implement income. Done.
+- TD-067: Implement expenses. Done.
+- TD-068: Implement atomic transfers. Done (same-ledger transfers; cross-ledger transfers pending).
 - TD-069: Prevent double booking. Pending.
 - TD-070: Reject negative asset balances. Pending.
 - TD-071: Model credit card negative debt. Pending.
 - TD-072: Add audited edit/delete. Pending.
 - TD-073: Add atomicity tests. Pending.
 - TD-074: Add concurrency tests. Pending.
+- TD-101: Create `Ledger` and attach accounts/transactions to it. Done.
+- TD-102: Implement operational domain entities for Vehicle, Home, Insurance and Entrepreneurship (vehicles, properties, policies, businesses and their expense flows). Pending.
 
 ## Phase 7: Dashboard and Reports
 
@@ -600,6 +604,7 @@ At the end of every phase:
 
 ## Changelog
 
+- 2026-09-23: Services capabilities + ledger foundation. Added `ServiceCapabilityDefinition`/`ServiceCapabilitySelection` with a per-service capability checklist on the Services page, a `ledgerMode` (shared/separate) on subscriptions for Entrepreneurship, a `Ledger` + `Transaction` model (income/expense/transfer with optional service context and source entity), transactions/ledger-balance API and a functional Transactions page. TD-099, TD-100, TD-101, TD-066, TD-067, TD-068 done.
 - 2026-09-22: Qlty CLI integrated as a non-overlapping quality layer. Added `.qlty/qlty.toml` (gitleaks, osv-scanner, knip, markdownlint, yamllint, prisma, hadolint, editorconfig-checker, smells — no eslint/prettier, which stay with `pnpm lint`/`format:check`), root `check:quality`/`check:quality:all`/`security`/`smells`/`metrics` scripts, a CI gate, and recorded osv-scanner CVE findings under TD-093.
 - 2026-09-22: Session policy + client revalidation. Configured Better Auth with an explicit idle expiration (7 days, refreshed every 24 hours), added a 30-day absolute session lifetime enforced in `SessionAuthGuard`, made the web client revalidate the session on focus/visibility, and added global `401` handling that clears the session and redirects to login. TD-097 done.
 - 2026-09-21: UI Exit Gate + Phase 5A (Accounts and Categories). Added `LoadingState`/`ErrorState` to the design system, migrated Login/Register/profile and the finance forms to React Hook Form + Zod, implemented a real custom range picker, and made Settings navigation section-driven. Shipped `FinancialAccount` and `Category` with per-tenant default-category seeding (atomic at provisioning + backfill), tenant-scoped repositories, paginated accounts/categories APIs with allowlisted sorting and audit logging, cross-tenant isolation tests, and functional Accounts/Categories pages. TD-009, TD-010, TD-011, TD-012, TD-017, TD-055–TD-063 done.

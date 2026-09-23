@@ -24,3 +24,9 @@ Sessions are stored in PostgreSQL and survive API restarts. Better Auth is confi
 ## Money
 
 The MVP uses USD as its canonical ledger currency and stores integer minor units. The web application supports USD and EUR as display currencies through an exchange-rate provider. Historical reports use the rate effective for the report period; current balances use the latest valid rate. Stored transactions are never rewritten during conversion.
+
+## Services and ledger
+
+Services are a way to organize the same financial core: every service can create transactions in a ledger. A `ServiceCapabilityDefinition` catalog describes the configurable capabilities of each service, and each tenant subscription stores its selected capabilities plus a `ledgerMode`. `Entrepreneurship` can opt into a `SEPARATE` ledger; the rest share the personal ledger by default.
+
+Transactions carry an optional `serviceKey` and an optional source entity (`sourceType`/`sourceId`), so a movement can belong to a service context and a concrete record (vehicle, property, policy, business) while remaining part of the shared balance. Categories stay global per tenant; the service is an independent dimension.

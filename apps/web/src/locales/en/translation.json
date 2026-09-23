@@ -50,7 +50,8 @@
     "settings": "Settings",
     "workspace": "Personal space",
     "accounts": "Accounts",
-    "categories": "Categories"
+    "categories": "Categories",
+    "transactions": "Transactions"
   },
   "shell": {
     "overview": "Overview",
@@ -252,13 +253,27 @@
     "title": "Active services",
     "pageTitle": "Build your own financial system.",
     "pageDescription": "Start with a personal foundation and activate new spaces only when they add value.",
-    "activeCount": "1 active",
+    "activeCount": "{{count}} active",
     "introEyebrow": "Fondo catalog",
     "introDescription": "Each service has its own domain boundaries. For now, Personal Finance is the only operational module.",
     "actions": {
       "open": "Open module",
       "enable": "Enable",
-      "disable": "Disable"
+      "disable": "Disable",
+      "configure": "Configure"
+    },
+    "configure": {
+      "title": "Configure {{name}}",
+      "description": "Select the capabilities you want to use for this service. Core capabilities are always enabled.",
+      "ledgerModeLabel": "Financial ledger",
+      "ledgerModeDescription": "Choose whether your business uses the shared personal ledger or a separate business ledger.",
+      "save": "Save changes",
+      "enable": "Enable service",
+      "cancel": "Cancel"
+    },
+    "ledgerModes": {
+      "SHARED": "Shared with personal finances",
+      "SEPARATE": "Separate business ledger"
     },
     "status": {
       "active": "Active",
@@ -275,6 +290,8 @@
       "enabledMessage": "The service was enabled.",
       "disabledTitle": "Service disabled",
       "disabledMessage": "The service was disabled.",
+      "updatedTitle": "Service updated",
+      "updatedMessage": "The service configuration was updated.",
       "actionError": "The service status could not be changed."
     },
     "cards": {
@@ -308,6 +325,45 @@
         "comingSoon": "Coming soon",
         "notify": "Notify me"
       }
+    }
+  },
+  "transactions": {
+    "eyebrow": "Ledger / 05",
+    "title": "Record movements",
+    "description": "Register income, expenses and transfers across your space.",
+    "newMovement": "New movement",
+    "balance": "Balance",
+    "recent": "Recent movements",
+    "account": "Account",
+    "accountPlaceholder": "Select an account",
+    "category": "Category",
+    "categoryPlaceholder": "Select a category",
+    "amount": "Amount",
+    "service": "Service",
+    "servicePlaceholder": "Optional service",
+    "note": "Note",
+    "notePlaceholder": "Optional note",
+    "createIncome": "Record income",
+    "createExpense": "Record expense",
+    "emptyTitle": "No movements yet",
+    "emptyDescription": "Record your first income or expense to start building your balance.",
+    "types": {
+      "INCOME": "Income",
+      "EXPENSE": "Expense",
+      "TRANSFER": "Transfer"
+    },
+    "table": {
+      "type": "Type",
+      "service": "Service",
+      "note": "Note",
+      "date": "Date",
+      "amount": "Amount"
+    },
+    "notifications": {
+      "incomeCreatedTitle": "Income recorded",
+      "expenseCreatedTitle": "Expense recorded",
+      "createdMessage": "The movement was recorded.",
+      "actionError": "The movement could not be recorded."
     }
   },
   "finance": {

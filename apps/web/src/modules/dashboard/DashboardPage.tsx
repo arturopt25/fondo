@@ -13,7 +13,6 @@ import {
   ThemeIcon,
 } from "@mantine/core";
 import { AreaChart, DonutChart } from "@mantine/charts";
-import { notifications } from "@mantine/notifications";
 import {
   IconArrowDownRight,
   IconArrowUpRight,
@@ -29,7 +28,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 
 import { DashboardSection, MetricCard, PageHeader } from "@fondo/ui";
 
@@ -53,17 +52,14 @@ import {
 
 export function DashboardPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { displayCurrency } = useAppPreferences();
   const [period, setPeriod] = useState<PeriodKey>("currentMonth");
   const [customRange, setCustomRange] = useState<DateRange>([null, null]);
   const locale = i18n.language === "en" ? "en-US" : "es-ES";
 
-  function showTransactionNotice(): void {
-    notifications.show({
-      title: t("dashboard.mockNoticeTitle"),
-      message: t("dashboard.mockNoticeDescription"),
-      color: "signal",
-    });
+  function goToTransactions(): void {
+    navigate("/app/transactions");
   }
 
   const chartData = monthlyCashFlow.map((month) => ({
@@ -94,7 +90,7 @@ export function DashboardPage(): React.JSX.Element {
             <Button
               leftSection={<IconPlus size={17} />}
               color="signal"
-              onClick={showTransactionNotice}
+              onClick={goToTransactions}
             >
               {t("dashboard.newTransaction")}
             </Button>

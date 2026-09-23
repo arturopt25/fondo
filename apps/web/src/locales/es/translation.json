@@ -50,7 +50,8 @@
     "settings": "Configuracion",
     "workspace": "Espacio personal",
     "accounts": "Cuentas",
-    "categories": "Categorias"
+    "categories": "Categorias",
+    "transactions": "Transacciones"
   },
   "shell": {
     "overview": "Vista general",
@@ -252,13 +253,27 @@
     "title": "Servicios activos",
     "pageTitle": "Construye tu propio sistema financiero.",
     "pageDescription": "Empieza con una base personal y activa nuevos espacios solo cuando aporten valor.",
-    "activeCount": "1 activo",
+    "activeCount": "{{count}} activos",
     "introEyebrow": "Catalogo de Fondo",
     "introDescription": "Cada servicio tendra sus propios limites de dominio. Por ahora, Personal Finance es el unico modulo operativo.",
     "actions": {
       "open": "Abrir modulo",
       "enable": "Activar",
-      "disable": "Desactivar"
+      "disable": "Desactivar",
+      "configure": "Configurar"
+    },
+    "configure": {
+      "title": "Configurar {{name}}",
+      "description": "Selecciona las capacidades que quieres usar en este servicio. Las capacidades principales siempre estan activas.",
+      "ledgerModeLabel": "Libro financiero",
+      "ledgerModeDescription": "Elige si tu negocio usa el libro personal compartido o un libro empresarial separado.",
+      "save": "Guardar cambios",
+      "enable": "Activar servicio",
+      "cancel": "Cancelar"
+    },
+    "ledgerModes": {
+      "SHARED": "Compartido con finanzas personales",
+      "SEPARATE": "Libro empresarial separado"
     },
     "status": {
       "active": "Activo",
@@ -275,6 +290,8 @@
       "enabledMessage": "El servicio fue activado.",
       "disabledTitle": "Servicio desactivado",
       "disabledMessage": "El servicio fue desactivado.",
+      "updatedTitle": "Servicio actualizado",
+      "updatedMessage": "La configuracion del servicio fue actualizada.",
       "actionError": "No se pudo cambiar el estado del servicio."
     },
     "cards": {
@@ -308,6 +325,45 @@
         "comingSoon": "Proximamente",
         "notify": "Aviseame"
       }
+    }
+  },
+  "transactions": {
+    "eyebrow": "Libro / 05",
+    "title": "Registra movimientos",
+    "description": "Registra ingresos, gastos y transferencias en tu espacio.",
+    "newMovement": "Nuevo movimiento",
+    "balance": "Balance",
+    "recent": "Movimientos recientes",
+    "account": "Cuenta",
+    "accountPlaceholder": "Selecciona una cuenta",
+    "category": "Categoria",
+    "categoryPlaceholder": "Selecciona una categoria",
+    "amount": "Monto",
+    "service": "Servicio",
+    "servicePlaceholder": "Servicio opcional",
+    "note": "Nota",
+    "notePlaceholder": "Nota opcional",
+    "createIncome": "Registrar ingreso",
+    "createExpense": "Registrar gasto",
+    "emptyTitle": "Aun no hay movimientos",
+    "emptyDescription": "Registra tu primer ingreso o gasto para empezar a construir tu balance.",
+    "types": {
+      "INCOME": "Ingreso",
+      "EXPENSE": "Gasto",
+      "TRANSFER": "Transferencia"
+    },
+    "table": {
+      "type": "Tipo",
+      "service": "Servicio",
+      "note": "Nota",
+      "date": "Fecha",
+      "amount": "Monto"
+    },
+    "notifications": {
+      "incomeCreatedTitle": "Ingreso registrado",
+      "expenseCreatedTitle": "Gasto registrado",
+      "createdMessage": "El movimiento fue registrado.",
+      "actionError": "No se pudo registrar el movimiento."
     }
   },
   "finance": {

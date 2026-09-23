@@ -11,10 +11,15 @@ function createMocks() {
     update: vi.fn(),
     archive: vi.fn(),
   };
+  const ledgers = { personalLedger: vi.fn() };
   const auditLogCreate = vi.fn();
   const prisma = { client: { auditLog: { create: auditLogCreate } } };
-  const service = new AccountsService(repo as never, prisma as never);
-  return { repo, auditLogCreate, service };
+  const service = new AccountsService(
+    repo as never,
+    ledgers as never,
+    prisma as never,
+  );
+  return { repo, ledgers, auditLogCreate, service };
 }
 
 describe("AccountsService", () => {
@@ -53,7 +58,8 @@ describe("AccountsService", () => {
   });
 
   it("creates an account and writes an audit log", async () => {
-    const { repo, auditLogCreate, service } = createMocks();
+    const { repo, ledgers, auditLogCreate, service } = createMocks();
+    ledgers.personalLedger.mockResolvedValue({ id: "ledger-1" });
     repo.create.mockResolvedValue({
       id: "a1",
       name: "Cash",
@@ -71,7 +77,7 @@ describe("AccountsService", () => {
       openingBalanceMinor: 0,
     });
 
-    expect(repo.create).toHaveBeenCalledWith("tenant-1", {
+    expect(repo.create).toHaveBeenCalledWith("tenant-1", "ledger-1", {
       name: "Cash",
       type: "CASH",
       currency: "USD",
