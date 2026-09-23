@@ -20,7 +20,7 @@ import type {
   Transaction,
   TransactionListResponse,
 } from "@fondo/shared-types";
-import type { $Enums } from "@fondo/db";
+import type { $Enums, PrismaClient } from "@fondo/db";
 
 import { PrismaService } from "../prisma.service.js";
 import { LedgerService } from "./ledger.service.js";
@@ -32,6 +32,13 @@ type MovementType = (typeof MOVEMENT_TYPES)[number];
 function isMovementType(value: string | undefined): value is MovementType {
   return (
     value !== undefined && (MOVEMENT_TYPES as readonly string[]).includes(value)
+  );
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
   );
 }
 
@@ -104,6 +111,19 @@ export class TransactionsService {
     };
   }
 
+  async listRecent(
+    tenantId: string,
+    ledgerId: string,
+    limit: number,
+  ): Promise<Transaction[]> {
+    const { items } = await this.transactions.list(tenantId, {
+      ledgerId,
+      page: 1,
+      pageSize: limit,
+    });
+    return items.map(toTransaction);
+  }
+
   async createIncome(
     tenantId: string,
     actorId: string,
@@ -112,8 +132,8 @@ export class TransactionsService {
   ): Promise<Transaction> {
     const payloadHash = hashPayload(input);
 
-    return this.prisma.withTransaction(async (tx) => {
-      const replay = await this.idempotentReplay(
+    return this.runCommit(tenantId, idempotencyKey, payloadHash, async (tx) => {
+      const replay = await this.replayOrNull(
         tx,
         tenantId,
         idempotencyKey,
@@ -178,8 +198,8 @@ export class TransactionsService {
   ): Promise<Transaction> {
     const payloadHash = hashPayload(input);
 
-    return this.prisma.withTransaction(async (tx) => {
-      const replay = await this.idempotentReplay(
+    return this.runCommit(tenantId, idempotencyKey, payloadHash, async (tx) => {
+      const replay = await this.replayOrNull(
         tx,
         tenantId,
         idempotencyKey,
@@ -248,8 +268,8 @@ export class TransactionsService {
 
     const payloadHash = hashPayload(input);
 
-    return this.prisma.withTransaction(async (tx) => {
-      const replay = await this.idempotentReplay(
+    return this.runCommit(tenantId, idempotencyKey, payloadHash, async (tx) => {
+      const replay = await this.replayOrNull(
         tx,
         tenantId,
         idempotencyKey,
@@ -472,17 +492,41 @@ export class TransactionsService {
     }
   }
 
-  private async idempotentReplay(
-    tx: Prisma.TransactionClient,
+  private async runCommit<T>(
     tenantId: string,
     idempotencyKey: string | undefined,
     payloadHash: string,
+    callback: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await this.prisma.withTransaction(callback);
+    } catch (error) {
+      if (idempotencyKey && isUniqueViolation(error)) {
+        const replay = await this.replayOrNull(
+          this.prisma.client,
+          tenantId,
+          idempotencyKey,
+          payloadHash,
+        );
+        if (replay) {
+          return replay as T;
+        }
+      }
+      throw error;
+    }
+  }
+
+  private async replayOrNull(
+    client: Prisma.TransactionClient | PrismaClient,
+    tenantId: string,
+    idempotencyKey: string | undefined,
+    payloadHash: string | undefined,
   ): Promise<Transaction | null> {
     if (!idempotencyKey) {
       return null;
     }
 
-    const existing = await tx.transaction.findUnique({
+    const existing = await client.transaction.findUnique({
       where: { tenantId_idempotencyKey: { tenantId, idempotencyKey } },
       include: { entries: true },
     });
@@ -520,6 +564,16 @@ export class TransactionsService {
       params.accountsForBalance,
       params.netChange,
     );
+
+    const replay = await this.replayOrNull(
+      tx,
+      tenantId,
+      params.idempotencyKey,
+      params.idempotencyHash,
+    );
+    if (replay) {
+      return replay;
+    }
 
     const transaction = await tx.transaction.create({
       data: {

@@ -1,15 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import en from "../../../../locales/en/translation.json";
-import es from "../../../../locales/es/translation.json";
-import { convertFromUsd } from "../../../../modules/personal-finance/mock-data";
+import en from "../../../locales/en/translation.json";
+import es from "../../../locales/es/translation.json";
 
-describe("mock finance data", () => {
-  it("converts USD minor units to the selected display currency", () => {
-    expect(convertFromUsd(10_000, "USD")).toBe(10_000);
-    expect(convertFromUsd(10_000, "EUR")).toBe(9_200);
-  });
-
+describe("translations", () => {
   it("keeps the English and Spanish translation trees equivalent", () => {
     expect(leafKeys(es)).toEqual(leafKeys(en));
   });

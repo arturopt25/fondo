@@ -13,6 +13,14 @@ import type {
 import { api } from "../../lib/api";
 import { queryKeys } from "../../lib/query-keys";
 
+function invalidateFinancialQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+) {
+  queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+  queryClient.invalidateQueries({ queryKey: queryKeys.ledgerBalance });
+  queryClient.invalidateQueries({ queryKey: ["reports"] });
+}
+
 export function useTransactionsQuery() {
   return useQuery({
     queryKey: queryKeys.transactions,
@@ -45,8 +53,7 @@ export function useCreateIncomeMutation() {
       return response.json<Transaction>();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-      queryClient.invalidateQueries({ queryKey: queryKeys.ledgerBalance });
+      invalidateFinancialQueries(queryClient);
       notifications.show({
         title: t("transactions.notifications.incomeCreatedTitle"),
         message: t("transactions.notifications.createdMessage"),
@@ -73,8 +80,7 @@ export function useCreateExpenseMutation() {
       return response.json<Transaction>();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-      queryClient.invalidateQueries({ queryKey: queryKeys.ledgerBalance });
+      invalidateFinancialQueries(queryClient);
       notifications.show({
         title: t("transactions.notifications.expenseCreatedTitle"),
         message: t("transactions.notifications.createdMessage"),

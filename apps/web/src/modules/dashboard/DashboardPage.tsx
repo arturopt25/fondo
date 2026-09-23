@@ -1,12 +1,10 @@
 import {
-  ActionIcon,
   Avatar,
   Badge,
   Button,
   Card,
   Group,
   Grid,
-  Progress,
   SimpleGrid,
   Stack,
   Text,
@@ -17,10 +15,8 @@ import {
   IconArrowDownRight,
   IconArrowUpRight,
   IconCalendarStats,
-  IconChartDonut3,
   IconChevronRight,
   IconCircleCheck,
-  IconDots,
   IconPlus,
   IconReceipt,
   IconSparkles,
@@ -30,7 +26,19 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 
-import { DashboardSection, MetricCard, PageHeader } from "@fondo/ui";
+import {
+  DashboardSection,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  MetricCard,
+  PageHeader,
+} from "@fondo/ui";
+import type {
+  DashboardReport,
+  ExchangeRateView,
+  Transaction,
+} from "@fondo/shared-types";
 
 import {
   DateRangeSelector,
@@ -38,17 +46,13 @@ import {
   type PeriodKey,
 } from "../../components/DateRangeSelector";
 import { useAppPreferences } from "../../app/preferences";
+import { formatDate, formatMinorAmount } from "../../lib/money";
 import {
-  budgetProgress,
-  categorySpend,
-  convertFromUsd,
-  exchangeRate,
-  financeSummary,
-  formatDate,
-  formatMinorAmount,
-  monthlyCashFlow,
-  recentTransactions,
-} from "../personal-finance/mock-data";
+  resolvePeriodRange,
+  useDashboardReportQuery,
+} from "../finance/reports-hooks";
+
+const SPEND_COLORS = ["#2ad6d7", "#a78bfa", "#f6a66a", "#f4778a", "#65777b"];
 
 export function DashboardPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
@@ -58,20 +62,13 @@ export function DashboardPage(): React.JSX.Element {
   const [customRange, setCustomRange] = useState<DateRange>([null, null]);
   const locale = i18n.language === "en" ? "en-US" : "es-ES";
 
+  const reportQuery = useDashboardReportQuery(
+    resolvePeriodRange(period, customRange),
+  );
+
   function goToTransactions(): void {
     navigate("/app/transactions");
   }
-
-  const chartData = monthlyCashFlow.map((month) => ({
-    ...month,
-    income: convertFromUsd(month.income, displayCurrency) / 100,
-    expenses: convertFromUsd(month.expenses, displayCurrency) / 100,
-  }));
-  const donutData = categorySpend.map((category) => ({
-    name: t(`finance.categories.${category.name}`),
-    value: convertFromUsd(category.amount, displayCurrency) / 100,
-    color: category.color,
-  }));
 
   return (
     <Stack className="page-stack" gap="xl">
@@ -98,6 +95,66 @@ export function DashboardPage(): React.JSX.Element {
         }
       />
 
+      {reportQuery.isLoading ? (
+        <LoadingState label={t("common.loading")} />
+      ) : reportQuery.isError ? (
+        <ErrorState title={t("finance.errors.loadFailedTitle")} />
+      ) : reportQuery.data && isEmpty(reportQuery.data) ? (
+        <EmptyState
+          title={t("dashboard.emptyTitle")}
+          description={t("dashboard.emptyDescription")}
+        />
+      ) : reportQuery.data ? (
+        <DashboardContent
+          report={reportQuery.data}
+          displayCurrency={displayCurrency}
+          locale={locale}
+        />
+      ) : null}
+    </Stack>
+  );
+}
+
+function isEmpty(report: {
+  readonly balanceMinor: number;
+  readonly cashFlow: readonly { incomeMinor: number; expenseMinor: number }[];
+  readonly recent: readonly unknown[];
+}): boolean {
+  return (
+    report.balanceMinor === 0 &&
+    report.cashFlow.every(
+      (point) => point.incomeMinor === 0 && point.expenseMinor === 0,
+    ) &&
+    report.recent.length === 0
+  );
+}
+
+function DashboardContent({
+  report,
+  displayCurrency,
+  locale,
+}: {
+  readonly report: DashboardReport;
+  readonly displayCurrency: "USD" | "EUR";
+  readonly locale: string;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const rate = report.exchangeRate;
+  const summary = report.summary;
+
+  const chartData = report.cashFlow.map((point) => ({
+    bucket: point.bucket,
+    income: convert(point.incomeMinor, rate) / 100,
+    expenses: convert(point.expenseMinor, rate) / 100,
+  }));
+  const donutData = report.categorySpend.map((category, index) => ({
+    name: categoryLabel(category.categoryName, t),
+    value: convert(category.amountMinor, rate) / 100,
+    color: SPEND_COLORS[index % SPEND_COLORS.length] ?? "#2ad6d7",
+  }));
+
+  return (
+    <>
       <Card className="balance-hero" padding={0} radius="lg" withBorder>
         <div className="balance-hero__glow" />
         <Grid gutter={0} align="stretch">
@@ -114,19 +171,13 @@ export function DashboardPage(): React.JSX.Element {
                   </Text>
                   <Text className="hero-balance" component="p">
                     {formatMinorAmount(
-                      financeSummary.balanceMinor,
+                      report.balanceMinor,
                       displayCurrency,
+                      rate,
                       locale,
                     )}
                   </Text>
                   <Group gap="xs">
-                    <Badge
-                      color="teal"
-                      variant="light"
-                      leftSection={<IconArrowUpRight size={12} />}
-                    >
-                      {t("dashboard.upFromLastMonth")}
-                    </Badge>
                     <Text c="dimmed" size="xs">
                       {t("dashboard.asOfToday")}
                     </Text>
@@ -151,17 +202,19 @@ export function DashboardPage(): React.JSX.Element {
             <div className="balance-hero__visual">
               <div className="balance-orbit balance-orbit--one" />
               <div className="balance-orbit balance-orbit--two" />
-              <div className="balance-hero__stat">
-                <Text className="eyebrow" size="xs">
-                  {t("dashboard.exchangeRate")}
-                </Text>
-                <Text className="hero-rate">
-                  1 USD = {exchangeRate.rate.toFixed(2)} EUR
-                </Text>
-                <Text c="dimmed" size="xs">
-                  {t("dashboard.mockRate")}
-                </Text>
-              </div>
+              {rate ? (
+                <div className="balance-hero__stat">
+                  <Text className="eyebrow" size="xs">
+                    {t("dashboard.exchangeRate")}
+                  </Text>
+                  <Text className="hero-rate">
+                    1 {rate.from} = {rate.rate.toFixed(2)} {rate.to}
+                  </Text>
+                  <Text c="dimmed" size="xs">
+                    {rate.source} · {formatDate(rate.effectiveAt, locale)}
+                  </Text>
+                </div>
+              ) : null}
             </div>
           </Grid.Col>
         </Grid>
@@ -171,44 +224,43 @@ export function DashboardPage(): React.JSX.Element {
         <MetricCard
           label={t("dashboard.metrics.income")}
           value={formatMinorAmount(
-            financeSummary.incomeMinor,
+            summary.incomeMinor,
             displayCurrency,
+            rate,
             locale,
           )}
           detail={t("dashboard.metrics.vsLastPeriod")}
-          trend="+8.4%"
           icon={IconArrowUpRight}
           tone="green"
         />
         <MetricCard
           label={t("dashboard.metrics.expenses")}
           value={formatMinorAmount(
-            financeSummary.expenseMinor,
+            summary.expenseMinor,
             displayCurrency,
+            rate,
             locale,
           )}
           detail={t("dashboard.metrics.vsLastPeriod")}
-          trend="-3.1%"
           icon={IconArrowDownRight}
           tone="coral"
         />
         <MetricCard
           label={t("dashboard.metrics.savings")}
           value={formatMinorAmount(
-            financeSummary.savingsMinor,
+            summary.savingsMinor,
             displayCurrency,
+            rate,
             locale,
           )}
           detail={t("dashboard.metrics.netFlow")}
-          trend="+12.8%"
           icon={IconSparkles}
           tone="violet"
         />
         <MetricCard
           label={t("dashboard.metrics.savingsRate")}
-          value={`${financeSummary.savingsRate}%`}
+          value={`${summary.savingsRate}%`}
           detail={t("dashboard.metrics.ofIncome")}
-          trend={t("dashboard.metrics.healthy")}
           icon={IconCalendarStats}
           tone="cyan"
         />
@@ -232,27 +284,34 @@ export function DashboardPage(): React.JSX.Element {
               </Button>
             }
           >
-            <AreaChart
-              h={270}
-              data={chartData}
-              dataKey="month"
-              series={[
-                {
-                  name: "income",
-                  label: t("dashboard.chart.income"),
-                  color: "signal.4",
-                },
-                {
-                  name: "expenses",
-                  label: t("dashboard.chart.expenses"),
-                  color: "orange.4",
-                },
-              ]}
-              curveType="natural"
-              gridAxis="xy"
-              withLegend
-              withTooltip
-            />
+            {chartData.length > 0 ? (
+              <AreaChart
+                h={270}
+                data={chartData}
+                dataKey="bucket"
+                series={[
+                  {
+                    name: "income",
+                    label: t("dashboard.chart.income"),
+                    color: "signal.4",
+                  },
+                  {
+                    name: "expenses",
+                    label: t("dashboard.chart.expenses"),
+                    color: "orange.4",
+                  },
+                ]}
+                curveType="natural"
+                gridAxis="xy"
+                withLegend
+                withTooltip
+              />
+            ) : (
+              <EmptyState
+                title={t("dashboard.cashFlow.emptyTitle")}
+                description={t("dashboard.cashFlow.emptyDescription")}
+              />
+            )}
           </DashboardSection>
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 4 }}>
@@ -261,38 +320,53 @@ export function DashboardPage(): React.JSX.Element {
             eyebrow={t("dashboard.spending.eyebrow")}
             className="spending-section"
           >
-            <Stack align="center" gap="lg">
-              <DonutChart
-                data={donutData}
-                size={188}
-                thickness={24}
-                paddingAngle={4}
-                withTooltip
-                tooltipDataSource="segment"
-              />
-              <Stack gap="xs" w="100%">
-                {categorySpend.slice(0, 4).map((category) => (
-                  <Group key={category.name} justify="space-between" gap="sm">
-                    <Group gap="xs">
-                      <span
-                        className="legend-dot"
-                        style={{ backgroundColor: category.color }}
-                      />
-                      <Text size="sm">
-                        {t(`finance.categories.${category.name}`)}
+            {donutData.length > 0 ? (
+              <Stack align="center" gap="lg">
+                <DonutChart
+                  data={donutData}
+                  size={188}
+                  thickness={24}
+                  paddingAngle={4}
+                  withTooltip
+                  tooltipDataSource="segment"
+                />
+                <Stack gap="xs" w="100%">
+                  {report.categorySpend.slice(0, 4).map((category, index) => (
+                    <Group
+                      key={category.categoryId}
+                      justify="space-between"
+                      gap="sm"
+                    >
+                      <Group gap="xs">
+                        <span
+                          className="legend-dot"
+                          style={{
+                            backgroundColor:
+                              SPEND_COLORS[index % SPEND_COLORS.length],
+                          }}
+                        />
+                        <Text size="sm">
+                          {categoryLabel(category.categoryName, t)}
+                        </Text>
+                      </Group>
+                      <Text ff="monospace" size="sm">
+                        {formatMinorAmount(
+                          category.amountMinor,
+                          displayCurrency,
+                          rate,
+                          locale,
+                        )}
                       </Text>
                     </Group>
-                    <Text ff="monospace" size="sm">
-                      {formatMinorAmount(
-                        category.amount,
-                        displayCurrency,
-                        locale,
-                      )}
-                    </Text>
-                  </Group>
-                ))}
+                  ))}
+                </Stack>
               </Stack>
-            </Stack>
+            ) : (
+              <EmptyState
+                title={t("dashboard.spending.emptyTitle")}
+                description={t("dashboard.spending.emptyDescription")}
+              />
+            )}
           </DashboardSection>
         </Grid.Col>
       </Grid>
@@ -302,143 +376,24 @@ export function DashboardPage(): React.JSX.Element {
           <DashboardSection
             title={t("dashboard.budgets.title")}
             eyebrow={t("dashboard.budgets.eyebrow")}
-            action={
-              <Button
-                variant="subtle"
-                color="gray"
-                size="xs"
-                rightSection={<IconChevronRight size={14} />}
-              >
-                {t("dashboard.viewAll")}
-              </Button>
-            }
           >
-            <Stack gap="lg">
-              {budgetProgress.map((budget) => {
-                const percentage = Math.round(
-                  (budget.spent / budget.limit) * 100,
-                );
-                const isOver = percentage > 100;
-
-                return (
-                  <Stack key={budget.name} gap={7}>
-                    <Group justify="space-between">
-                      <Group gap="xs">
-                        <ThemeIcon
-                          color={budget.color}
-                          variant="light"
-                          size={26}
-                          radius="sm"
-                        >
-                          <IconChartDonut3 size={14} />
-                        </ThemeIcon>
-                        <Text size="sm" fw={600}>
-                          {t(`finance.categories.${budget.name}`)}
-                        </Text>
-                      </Group>
-                      <Text
-                        ff="monospace"
-                        size="xs"
-                        c={isOver ? "orange" : "dimmed"}
-                      >
-                        {formatMinorAmount(
-                          budget.spent,
-                          displayCurrency,
-                          locale,
-                        )}{" "}
-                        /{" "}
-                        {formatMinorAmount(
-                          budget.limit,
-                          displayCurrency,
-                          locale,
-                        )}
-                      </Text>
-                    </Group>
-                    <Progress
-                      value={Math.min(percentage, 100)}
-                      color={isOver ? "orange" : budget.color}
-                      size="sm"
-                      radius="xl"
-                    />
-                    <Text size="xs" c={isOver ? "orange" : "dimmed"}>
-                      {isOver
-                        ? t("dashboard.budgets.over", {
-                            percentage: percentage - 100,
-                          })
-                        : t("dashboard.budgets.remaining", {
-                            percentage: 100 - percentage,
-                          })}
-                    </Text>
-                  </Stack>
-                );
-              })}
-            </Stack>
+            <EmptyState
+              title={t("dashboard.budgets.emptyTitle")}
+              description={t("dashboard.budgets.emptyDescription")}
+            />
           </DashboardSection>
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 5 }}>
           <DashboardSection
             title={t("dashboard.recent.title")}
             eyebrow={t("dashboard.recent.eyebrow")}
-            action={
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                aria-label={t("dashboard.moreTransactions")}
-              >
-                <IconDots size={18} />
-              </ActionIcon>
-            }
           >
-            <Stack gap="xs">
-              {recentTransactions.map((transaction) => (
-                <Group
-                  key={transaction.id}
-                  className="transaction-row"
-                  justify="space-between"
-                  wrap="nowrap"
-                >
-                  <Group gap="sm" wrap="nowrap" miw={0}>
-                    <Avatar
-                      color={transaction.type === "income" ? "teal" : "signal"}
-                      radius="md"
-                      size={34}
-                    >
-                      {transaction.type === "income" ? (
-                        <IconCircleCheck size={17} />
-                      ) : (
-                        <IconReceipt size={17} />
-                      )}
-                    </Avatar>
-                    <Stack gap={2} miw={0}>
-                      <Text size="sm" fw={600} truncate>
-                        {t(`finance.merchants.${transaction.merchantKey}`)}
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        {t(`finance.categories.${transaction.categoryKey}`)} ·{" "}
-                        {formatDate(transaction.date, locale)}
-                      </Text>
-                    </Stack>
-                  </Group>
-                  <Text
-                    className={
-                      transaction.type === "income"
-                        ? "amount-positive"
-                        : "amount-negative"
-                    }
-                    ff="monospace"
-                    size="sm"
-                    fw={600}
-                  >
-                    {transaction.amountMinor > 0 ? "+" : ""}
-                    {formatMinorAmount(
-                      transaction.amountMinor,
-                      displayCurrency,
-                      locale,
-                    )}
-                  </Text>
-                </Group>
-              ))}
-            </Stack>
+            <RecentTransactions
+              transactions={report.recent}
+              displayCurrency={displayCurrency}
+              rate={rate}
+              locale={locale}
+            />
           </DashboardSection>
         </Grid.Col>
       </Grid>
@@ -461,6 +416,96 @@ export function DashboardPage(): React.JSX.Element {
           </Badge>
         </Group>
       </Card>
+    </>
+  );
+}
+
+function RecentTransactions({
+  transactions,
+  displayCurrency,
+  rate,
+  locale,
+}: {
+  readonly transactions: readonly Transaction[];
+  readonly displayCurrency: "USD" | "EUR";
+  readonly rate: ExchangeRateView | null;
+  readonly locale: string;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+
+  if (transactions.length === 0) {
+    return (
+      <EmptyState
+        title={t("dashboard.recent.emptyTitle")}
+        description={t("dashboard.recent.emptyDescription")}
+      />
+    );
+  }
+
+  return (
+    <Stack gap="xs">
+      {transactions.map((transaction) => {
+        const isIncome = transaction.type === "INCOME";
+        const isTransfer = transaction.type === "TRANSFER";
+        return (
+          <Group
+            key={transaction.id}
+            className="transaction-row"
+            justify="space-between"
+            wrap="nowrap"
+          >
+            <Group gap="sm" wrap="nowrap" miw={0}>
+              <Avatar
+                color={isIncome ? "teal" : "signal"}
+                radius="md"
+                size={34}
+              >
+                {isIncome ? (
+                  <IconCircleCheck size={17} />
+                ) : (
+                  <IconReceipt size={17} />
+                )}
+              </Avatar>
+              <Stack gap={2} miw={0}>
+                <Text size="sm" fw={600} truncate>
+                  {transaction.note ??
+                    t(`transactions.types.${transaction.type}`)}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {formatDate(transaction.occurredAt, locale)}
+                </Text>
+              </Stack>
+            </Group>
+            <Text
+              className={isIncome ? "amount-positive" : "amount-negative"}
+              ff="monospace"
+              size="sm"
+              fw={600}
+            >
+              {isTransfer ? "↔ " : isIncome ? "+" : "-"}
+              {formatMinorAmount(
+                transaction.amountMinor,
+                displayCurrency,
+                rate,
+                locale,
+              )}
+            </Text>
+          </Group>
+        );
+      })}
     </Stack>
   );
+}
+
+function convert(amountMinor: number, rate: { rate: number } | null): number {
+  return rate ? Math.round(amountMinor * rate.rate) : amountMinor;
+}
+
+function categoryLabel(
+  name: string,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  return t(`finance.categories.${name.toLowerCase()}`, {
+    defaultValue: name,
+  });
 }

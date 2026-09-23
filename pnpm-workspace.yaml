@@ -9,6 +9,9 @@ allowBuilds:
   esbuild: true
   prisma: true
 
+overrides:
+  fastify: ^5.12.5
+
 catalog:
   "@eslint/js": ^9.34.0
   "@fastify/cookie": ^11.0.2
@@ -45,7 +48,7 @@ catalog:
   "dependency-cruiser": ^17.0.1
   "eslint": ^9.34.0
   "eslint-config-prettier": ^10.1.8
-  "fastify": ^5.5.0
+  "fastify": ^5.12.5
   "i18next": ^25.4.2
   "i18next-browser-languagedetector": ^8.2.0
   "jsdom": ^26.1.0

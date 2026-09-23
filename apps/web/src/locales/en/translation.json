@@ -82,16 +82,12 @@
     "description": "A clear read on your movement, goals and financial rhythm.",
     "newTransaction": "New transaction",
     "totalBalance": "Total balance",
-    "upFromLastMonth": "+6.8% vs. last month",
     "asOfToday": "Updated today",
     "balanceCaption": "Your balance combines every active account in your personal space.",
     "exchangeRate": "Exchange rate",
-    "mockRate": "Visual reference · mock",
     "viewReport": "View report",
-    "viewAll": "View all",
-    "moreTransactions": "More transaction actions",
-    "mockNoticeTitle": "Visual mode is active",
-    "mockNoticeDescription": "This action will connect to the API in the next phase.",
+    "emptyTitle": "No movements yet",
+    "emptyDescription": "Add your first income or expense to start building your dashboard.",
     "metrics": {
       "income": "Income",
       "expenses": "Expenses",
@@ -103,26 +99,32 @@
       "healthy": "healthy pace"
     },
     "cashFlow": {
-      "eyebrow": "Last six months",
-      "title": "Cash flow"
+      "eyebrow": "Selected period",
+      "title": "Cash flow",
+      "emptyTitle": "Nothing to show yet",
+      "emptyDescription": "Cash flow will appear once you record movements in this period."
     },
     "chart": {
       "income": "Income",
       "expenses": "Expenses"
     },
     "spending": {
-      "eyebrow": "Current period",
-      "title": "Where your money goes"
+      "eyebrow": "Selected period",
+      "title": "Where your money goes",
+      "emptyTitle": "No spending yet",
+      "emptyDescription": "Category spending will appear as you record expenses."
     },
     "budgets": {
       "eyebrow": "Monthly control",
       "title": "Budgets",
-      "remaining": "{percentage}% available",
-      "over": "{percentage}% over limit"
+      "emptyTitle": "Budgets are on the way",
+      "emptyDescription": "Set limits per category once budgets are available."
     },
     "recent": {
       "eyebrow": "Recent activity",
-      "title": "Latest movement"
+      "title": "Latest movement",
+      "emptyTitle": "No recent movement",
+      "emptyDescription": "Your latest transactions will appear here."
     },
     "insight": {
       "title": "Your savings are ahead of the previous pace.",
@@ -136,8 +138,7 @@
     "description": "Turn movement into simple signals for better personal decisions.",
     "export": "Export",
     "periodTitle": "Current period read",
-    "periodDescription": "The data is ready to connect to Fondo's real ledger.",
-    "mockData": "Sample data",
+    "periodDescription": "Based on your real ledger movements.",
     "metrics": {
       "income": "Period income",
       "expenses": "Period expenses",
@@ -149,7 +150,9 @@
     },
     "cashFlow": {
       "eyebrow": "Income vs. expenses",
-      "title": "Monthly rhythm"
+      "title": "Monthly rhythm",
+      "emptyTitle": "Nothing to show yet",
+      "emptyDescription": "Cash flow will appear once you record movements in this period."
     },
     "chart": {
       "income": "Income",
@@ -158,7 +161,9 @@
     "category": {
       "eyebrow": "Distribution",
       "title": "Spend by category",
-      "spent": "Spent"
+      "spent": "Spent",
+      "emptyTitle": "No spending yet",
+      "emptyDescription": "Category spending will appear as you record expenses."
     },
     "future": {
       "eyebrow": "Planned extensions",
@@ -260,11 +265,17 @@
       "open": "Open module",
       "enable": "Enable",
       "disable": "Disable",
-      "configure": "Configure"
+      "configure": "Configure",
+      "activate": "Activate"
+    },
+    "activate": {
+      "title": "Configure your {{name}} service",
+      "description": "Select the capabilities you want to activate for this service.",
+      "submit": "Activate service"
     },
     "configure": {
       "title": "Configure {{name}}",
-      "description": "Select the capabilities you want to use for this service. Core capabilities are always enabled.",
+      "description": "Select the capabilities you want to keep enabled for this service.",
       "ledgerModeLabel": "Financial ledger",
       "ledgerModeDescription": "Choose whether your business uses the shared personal ledger or a separate business ledger.",
       "save": "Save changes",
