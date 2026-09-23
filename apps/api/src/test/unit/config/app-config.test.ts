@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { loadAppConfig } from "./app-config.js";
+import { loadAppConfig } from "../../../core/config/app-config.js";
 
 const REQUIRED = {
   DATABASE_URL: "postgresql://localhost/fondo",

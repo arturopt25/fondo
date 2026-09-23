@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { HealthController } from "./health.controller.js";
+import { HealthController } from "../../../core/health/health.controller.js";
 
 describe("HealthController", () => {
   it("reports the database health through Terminus", async () => {

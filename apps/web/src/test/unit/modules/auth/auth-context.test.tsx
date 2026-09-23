@@ -10,15 +10,15 @@ const authClient = vi.hoisted(() => ({
 
 const unauthorizedEvent = vi.hoisted(() => "fondo:unauthorized");
 
-vi.mock("./auth-client", () => ({
+vi.mock("../../../../modules/auth/auth-client", () => ({
   fetchSession: authClient.fetchSession,
   signOut: authClient.signOut,
 }));
-vi.mock("../../lib/api", () => ({
+vi.mock("../../../../lib/api", () => ({
   UNAUTHORIZED_EVENT: unauthorizedEvent,
 }));
 
-import { AuthProvider, useAuth } from "./auth-context";
+import { AuthProvider, useAuth } from "../../../../modules/auth/auth-context";
 
 function validSession() {
   return {

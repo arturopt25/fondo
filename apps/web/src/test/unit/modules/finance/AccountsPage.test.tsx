@@ -50,13 +50,13 @@ const financeHooks = vi.hoisted(() => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
-vi.mock("./finance-hooks", () => ({
+vi.mock("../../../../modules/finance/finance-hooks", () => ({
   useAccountsQuery: financeHooks.useAccountsQuery,
   useCreateAccountMutation: financeHooks.useCreateAccountMutation,
   useArchiveAccountMutation: financeHooks.useArchiveAccountMutation,
 }));
 
-import { AccountsPage } from "./AccountsPage";
+import { AccountsPage } from "../../../../modules/finance/AccountsPage";
 
 function renderPage() {
   return render(

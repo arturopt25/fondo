@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { localeSchema, themeSchema } from "./index.js";
-import { timeZoneSchema } from "./timezone.js";
+import { localeSchema, themeSchema } from "../../index.js";
+import { timeZoneSchema } from "../../timezone.js";
 
 describe("shared schemas", () => {
   it("accepts only supported locales and themes", () => {

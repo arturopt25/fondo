@@ -18,6 +18,13 @@ import { PrismaService } from "../prisma.service.js";
 import { LedgerService } from "./ledger.service.js";
 import { TransactionsRepository } from "./repositories/transactions.repository.js";
 
+const MOVEMENT_TYPES = ["INCOME", "EXPENSE", "TRANSFER"] as const;
+type MovementType = (typeof MOVEMENT_TYPES)[number];
+
+function isMovementType(value: string | undefined): value is MovementType {
+  return value !== undefined && (MOVEMENT_TYPES as readonly string[]).includes(value);
+}
+
 @Injectable()
 export class TransactionsService {
   constructor(
@@ -35,10 +42,7 @@ export class TransactionsService {
       query.ledgerId ?? (await this.ledgers.personalLedger(tenantId)).id;
 
     const rawType = query.type;
-    const type =
-      rawType === "INCOME" || rawType === "EXPENSE" || rawType === "TRANSFER"
-        ? rawType
-        : undefined;
+    const type = isMovementType(rawType) ? rawType : undefined;
 
     const { items, total } = await this.transactions.list(tenantId, {
       ...(ledgerId ? { ledgerId } : {}),

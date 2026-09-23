@@ -7,8 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fondoTheme } from "@fondo/ui";
 
 const authClient = vi.hoisted(() => ({
-  signUpWithEmail: vi.fn(),
   signInWithEmail: vi.fn(),
+  signUpWithEmail: vi.fn(),
   signOut: vi.fn(),
 }));
 const auth = vi.hoisted(() => ({ useAuth: vi.fn() }));
@@ -16,26 +16,26 @@ const auth = vi.hoisted(() => ({ useAuth: vi.fn() }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
-vi.mock("./auth-client", () => ({
-  signUpWithEmail: authClient.signUpWithEmail,
+vi.mock("../../../../modules/auth/auth-client", () => ({
   signInWithEmail: authClient.signInWithEmail,
+  signUpWithEmail: authClient.signUpWithEmail,
   signOut: authClient.signOut,
 }));
-vi.mock("./auth-context", () => ({ useAuth: auth.useAuth }));
+vi.mock("../../../../modules/auth/auth-context", () => ({ useAuth: auth.useAuth }));
 
-import { RegisterPage } from "./RegisterPage";
+import { LoginPage } from "../../../../modules/auth/LoginPage";
 
-function renderRegister() {
+function renderLogin() {
   return render(
     <MantineProvider theme={fondoTheme}>
       <MemoryRouter>
-        <RegisterPage />
+        <LoginPage />
       </MemoryRouter>
     </MantineProvider>,
   );
 }
 
-describe("RegisterPage", () => {
+describe("LoginPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     auth.useAuth.mockReturnValue({
@@ -43,15 +43,11 @@ describe("RegisterPage", () => {
     });
   });
 
-  it("registers with name, email and password", async () => {
+  it("submits credentials on submit", async () => {
     const user = userEvent.setup();
-    authClient.signUpWithEmail.mockResolvedValue(undefined);
-    renderRegister();
+    authClient.signInWithEmail.mockResolvedValue(undefined);
+    renderLogin();
 
-    await user.type(
-      screen.getByPlaceholderText("auth.namePlaceholder"),
-      "Arturo",
-    );
     await user.type(
       screen.getByPlaceholderText("auth.emailPlaceholder"),
       "arturo@example.com",
@@ -60,36 +56,53 @@ describe("RegisterPage", () => {
       screen.getByPlaceholderText("auth.passwordPlaceholder"),
       "password123",
     );
-    await user.click(screen.getByRole("button", { name: "auth.signUp" }));
+    await user.click(screen.getByRole("button", { name: "auth.signIn" }));
 
-    expect(authClient.signUpWithEmail).toHaveBeenCalledWith(
-      "Arturo",
+    expect(authClient.signInWithEmail).toHaveBeenCalledWith(
       "arturo@example.com",
       "password123",
     );
   });
 
-  it("rejects a short password", async () => {
+  it("shows a field error for an invalid email", async () => {
     const user = userEvent.setup();
-    renderRegister();
+    renderLogin();
 
     await user.type(
-      screen.getByPlaceholderText("auth.namePlaceholder"),
-      "Arturo",
+      screen.getByPlaceholderText("auth.emailPlaceholder"),
+      "not-an-email",
     );
+    await user.type(
+      screen.getByPlaceholderText("auth.passwordPlaceholder"),
+      "password123",
+    );
+    await user.click(screen.getByRole("button", { name: "auth.signIn" }));
+
+    expect(
+      await screen.findByText("auth.validation.emailInvalid"),
+    ).toBeInTheDocument();
+    expect(authClient.signInWithEmail).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the API error message", async () => {
+    const user = userEvent.setup();
+    authClient.signInWithEmail.mockRejectedValue(
+      new Error("auth.invalidCredentials"),
+    );
+    renderLogin();
+
     await user.type(
       screen.getByPlaceholderText("auth.emailPlaceholder"),
       "arturo@example.com",
     );
     await user.type(
       screen.getByPlaceholderText("auth.passwordPlaceholder"),
-      "short",
+      "password123",
     );
-    await user.click(screen.getByRole("button", { name: "auth.signUp" }));
+    await user.click(screen.getByRole("button", { name: "auth.signIn" }));
 
     expect(
-      await screen.findByText("auth.validation.passwordMin"),
+      await screen.findByText("auth.invalidCredentials"),
     ).toBeInTheDocument();
-    expect(authClient.signUpWithEmail).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TransactionsService } from "./transactions.service.js";
+import { TransactionsService } from "../../../core/finance/transactions.service.js";
 
 function createMocks() {
   const repo = {

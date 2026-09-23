@@ -40,6 +40,7 @@ import {
   useDisableServiceMutation,
   useEnableServiceMutation,
   useServicesQuery,
+  type EnableServiceInput,
 } from "./services-hooks";
 
 const serviceMeta: Record<
@@ -60,6 +61,21 @@ const serviceCardKey: Record<ServiceKey, string> = {
   INSURANCE: "insurance",
   ENTREPRENEURSHIP: "entrepreneurship",
 };
+
+interface ServiceMutations {
+  readonly enable: {
+    readonly isPending: boolean;
+    readonly variables?: EnableServiceInput | null | undefined;
+  };
+  readonly configure: {
+    readonly isPending: boolean;
+    readonly variables?: EnableServiceInput | null | undefined;
+  };
+  readonly disable: {
+    readonly isPending: boolean;
+    readonly variables?: ServiceKey | null | undefined;
+  };
+}
 
 export function ServicesPage(): React.JSX.Element {
   const { t } = useTranslation();
@@ -82,21 +98,9 @@ export function ServicesPage(): React.JSX.Element {
     open();
   }
 
-  function statusFor(service: ServiceWithCapabilities): string {
-    if (service.status === "ACTIVE") {
-      return t("services.status.active");
-    }
-    return t("services.status.disabled");
-  }
-
-  function actionLabel(service: ServiceWithCapabilities): string {
-    if (service.status === "ACTIVE" && service.key === "PERSONAL_FINANCE") {
-      return t("services.actions.open");
-    }
-    if (service.status === "ACTIVE") {
-      return t("services.actions.disable");
-    }
-    return t("services.actions.configure");
+  function closeConfig(): void {
+    close();
+    setConfigureFor(null);
   }
 
   function handleAction(service: ServiceWithCapabilities): void {
@@ -109,6 +113,25 @@ export function ServicesPage(): React.JSX.Element {
       return;
     }
     openConfig(service);
+  }
+
+  function handleServiceConfigSave(
+    capabilities: string[],
+    ledgerMode: ServiceLedgerMode,
+  ): void {
+    if (!configureFor) {
+      return;
+    }
+    const input: EnableServiceInput = {
+      key: configureFor.key,
+      capabilities,
+      ledgerMode,
+    };
+    if (configureFor.status === "ACTIVE") {
+      configureService.mutate(input, { onSuccess: closeConfig });
+    } else {
+      enableService.mutate(input, { onSuccess: closeConfig });
+    }
   }
 
   return (
@@ -141,42 +164,20 @@ export function ServicesPage(): React.JSX.Element {
         />
       ) : (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-          {services.map((service) => {
-            const meta = serviceMeta[service.key] ?? {
-              icon: IconBuildingBank,
-              statusColor: "gray",
-            };
-            const cardKey =
-              serviceCardKey[service.key] ?? service.key.toLowerCase();
-            const pending =
-              (enableService.isPending &&
-                enableService.variables?.key === service.key) ||
-              (configureService.isPending &&
-                configureService.variables?.key === service.key) ||
-              (disableService.isPending &&
-                disableService.variables === service.key);
-
-            return (
-              <ServiceCard
-                key={service.key}
-                name={t(`services.cards.${cardKey}.name`, {
-                  defaultValue: service.name,
-                })}
-                description={t(`services.cards.${cardKey}.description`, {
-                  defaultValue: service.description,
-                })}
-                status={statusFor(service)}
-                statusColor={meta.statusColor}
-                icon={meta.icon}
-                actionLabel={actionLabel(service)}
-                disabled={!isAdmin || pending}
-                onAction={() => handleAction(service)}
-                {...(isAdmin && service.status === "ACTIVE"
-                  ? { onSettings: () => openConfig(service) }
-                  : {})}
-              />
-            );
-          })}
+          {services.map((service) => (
+            <ServiceCatalogCard
+              key={service.key}
+              service={service}
+              isAdmin={isAdmin}
+              isPending={isServiceMutationPending(service.key, {
+                enable: enableService,
+                configure: configureService,
+                disable: disableService,
+              })}
+              onAction={handleAction}
+              onOpenConfig={openConfig}
+            />
+          ))}
         </SimpleGrid>
       )}
 
@@ -185,35 +186,75 @@ export function ServicesPage(): React.JSX.Element {
           service={configureFor}
           opened={opened}
           isPending={enableService.isPending || configureService.isPending}
-          onClose={() => {
-            close();
-            setConfigureFor(null);
-          }}
-          onSave={(capabilities, ledgerMode) => {
-            const input = {
-              key: configureFor.key,
-              capabilities,
-              ledgerMode,
-            };
-            if (configureFor.status === "ACTIVE") {
-              configureService.mutate(input, {
-                onSuccess: () => {
-                  close();
-                  setConfigureFor(null);
-                },
-              });
-            } else {
-              enableService.mutate(input, {
-                onSuccess: () => {
-                  close();
-                  setConfigureFor(null);
-                },
-              });
-            }
-          }}
+          onClose={closeConfig}
+          onSave={handleServiceConfigSave}
         />
       ) : null}
     </Stack>
+  );
+}
+
+function ServiceCatalogCard({
+  service,
+  isAdmin,
+  isPending,
+  onAction,
+  onOpenConfig,
+}: {
+  readonly service: ServiceWithCapabilities;
+  readonly isAdmin: boolean;
+  readonly isPending: boolean;
+  readonly onAction: (service: ServiceWithCapabilities) => void;
+  readonly onOpenConfig: (service: ServiceWithCapabilities) => void;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const meta = serviceMeta[service.key] ?? {
+    icon: IconBuildingBank,
+    statusColor: "gray",
+  };
+  const cardKey = serviceCardKey[service.key] ?? service.key.toLowerCase();
+  const showSettings = isAdmin && service.status === "ACTIVE";
+
+  return (
+    <ServiceCard
+      name={t(`services.cards.${cardKey}.name`, {
+        defaultValue: service.name,
+      })}
+      description={t(`services.cards.${cardKey}.description`, {
+        defaultValue: service.description,
+      })}
+      status={
+        service.status === "ACTIVE"
+          ? t("services.status.active")
+          : t("services.status.disabled")
+      }
+      statusColor={meta.statusColor}
+      icon={meta.icon}
+      actionLabel={
+        service.status === "ACTIVE" && service.key === "PERSONAL_FINANCE"
+          ? t("services.actions.open")
+          : service.status === "ACTIVE"
+            ? t("services.actions.disable")
+            : t("services.actions.configure")
+      }
+      disabled={!isAdmin || isPending}
+      onAction={() => onAction(service)}
+      {...(showSettings ? { onSettings: () => onOpenConfig(service) } : {})}
+    />
+  );
+}
+
+function isServiceMutationPending(
+  serviceKey: ServiceKey,
+  mutations: ServiceMutations,
+): boolean {
+  return (
+    (mutations.enable.isPending &&
+      mutations.enable.variables?.key === serviceKey) ||
+    (mutations.configure.isPending &&
+      mutations.configure.variables?.key === serviceKey) ||
+    (mutations.disable.isPending &&
+      mutations.disable.variables === serviceKey)
   );
 }
 
@@ -261,10 +302,6 @@ function ServiceConfigModal({
     setSelected(next);
   }
 
-  function isDisabledCapability(required: boolean): boolean {
-    return required;
-  }
-
   return (
     <Modal
       opened={opened}
@@ -278,7 +315,7 @@ function ServiceConfigModal({
         </Text>
         <Stack gap="xs">
           {service.capabilities.map((capability) => {
-            const disabled = isDisabledCapability(capability.required);
+            const required = capability.required;
             return (
               <Checkbox
                 key={capability.key}
@@ -290,8 +327,8 @@ function ServiceConfigModal({
                   `services.capabilities.${cardKey}.${capability.key}.description`,
                   { defaultValue: capability.description },
                 )}
-                checked={disabled || selected.has(capability.key)}
-                disabled={disabled}
+                checked={required || selected.has(capability.key)}
+                disabled={required}
                 onChange={() => toggleCapability(capability.key)}
               />
             );

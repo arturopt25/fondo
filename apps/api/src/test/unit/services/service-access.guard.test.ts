@@ -1,7 +1,7 @@
 import { ForbiddenException, type ExecutionContext } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ServiceAccessGuard } from "./service-access.guard.js";
+import { ServiceAccessGuard } from "../../../core/services/service-access.guard.js";
 
 function buildContext(role: "ADMIN" | "MEMBER") {
   const request = {

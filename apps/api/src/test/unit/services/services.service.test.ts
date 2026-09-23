@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ServicesService } from "./services.service.js";
+import { ServicesService } from "../../../core/services/services.service.js";
 
 function createMockPrisma() {
   const client = {

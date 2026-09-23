@@ -60,11 +60,11 @@ const i18n = vi.hoisted(() => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
-vi.mock("../../i18n", () => ({ default: i18n }));
-vi.mock("../../modules/auth/auth-context", () => ({
+vi.mock("../../../../i18n", () => ({ default: i18n }));
+vi.mock("../../../../modules/auth/auth-context", () => ({
   useAuth: auth.useAuth,
 }));
-vi.mock("./me-hooks", () => ({
+vi.mock("../../../../modules/settings/me-hooks", () => ({
   useMeQuery: meHooks.useMeQuery,
   useUpdateProfileMutation: meHooks.useUpdateProfileMutation,
   useChangePasswordMutation: meHooks.useChangePasswordMutation,
@@ -75,8 +75,8 @@ vi.mock("./me-hooks", () => ({
   useUpdateSettingsMutation: meHooks.useUpdateSettingsMutation,
 }));
 
-import { AppPreferencesProvider } from "../../app/preferences";
-import { SettingsPage } from "./SettingsPage";
+import { AppPreferencesProvider } from "../../../../app/preferences";
+import { SettingsPage } from "../../../../modules/settings/SettingsPage";
 
 function renderSettings() {
   return render(

@@ -1,7 +1,7 @@
 import { NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MeService } from "./me.service.js";
+import { MeService } from "../../../core/me/me.service.js";
 
 function createMockPrisma() {
   const userFindUnique = vi.fn();

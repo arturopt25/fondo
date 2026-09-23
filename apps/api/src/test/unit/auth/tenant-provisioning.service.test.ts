@@ -1,7 +1,7 @@
 import { Prisma } from "@fondo/db";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TenantProvisioningService } from "./tenant-provisioning.service.js";
+import { TenantProvisioningService } from "../../../core/auth/tenant-provisioning.service.js";
 
 function createMockPrisma() {
   const tenantFindFirst = vi.fn();

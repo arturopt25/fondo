@@ -21,7 +21,7 @@ import {
   listSessions,
   revokeOtherSessions,
   revokeSession,
-} from "./auth-client";
+} from "../../../../modules/auth/auth-client";
 
 function activeSession({
   id,

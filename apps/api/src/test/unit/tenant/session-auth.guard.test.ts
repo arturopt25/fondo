@@ -5,8 +5,8 @@ import {
 } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DAY } from "../auth/session-policy.js";
-import { SessionAuthGuard } from "./session-auth.guard.js";
+import { DAY } from "../../../core/auth/session-policy.js";
+import { SessionAuthGuard } from "../../../core/tenant/session-auth.guard.js";
 
 function buildMembership() {
   return {

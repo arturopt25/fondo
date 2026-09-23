@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import en from "../../locales/en/translation.json";
-import es from "../../locales/es/translation.json";
-import { convertFromUsd } from "./mock-data";
+import en from "../../../../locales/en/translation.json";
+import es from "../../../../locales/es/translation.json";
+import { convertFromUsd } from "../../../../modules/personal-finance/mock-data";
 
 describe("mock finance data", () => {
   it("converts USD minor units to the selected display currency", () => {

@@ -12,16 +12,16 @@ const i18n = vi.hoisted(() => ({
   changeLanguage: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../i18n", () => ({ default: i18n }));
-vi.mock("../modules/auth/auth-context", () => ({
+vi.mock("../../../i18n", () => ({ default: i18n }));
+vi.mock("../../../modules/auth/auth-context", () => ({
   useAuth: auth.useAuth,
 }));
-vi.mock("../modules/settings/me-hooks", () => ({
+vi.mock("../../../modules/settings/me-hooks", () => ({
   useSettingsQuery: meHooks.useSettingsQuery,
   useUpdateSettingsMutation: meHooks.useUpdateSettingsMutation,
 }));
 
-import { AppPreferencesProvider, useAppPreferences } from "./preferences";
+import { AppPreferencesProvider, useAppPreferences } from "../../../app/preferences";
 
 function PreferencesConsumer() {
   const { theme, displayCurrency, locale, timeZone, setTheme, setLocale } =

@@ -4,7 +4,7 @@ import {
   DAY,
   isWithinAbsoluteSessionLifetime,
   sessionPolicy,
-} from "./session-policy.js";
+} from "../../../core/auth/session-policy.js";
 
 const dayMs = DAY * 1000;
 

@@ -15,7 +15,7 @@ const servicesHooks = vi.hoisted(() => ({
 const meHooks = vi.hoisted(() => ({ useMeQuery: vi.fn() }));
 
 vi.mock("react-i18next", async () => {
-  const es = (await import("../../locales/es/translation.json")).default;
+  const es = (await import("../../../../locales/es/translation.json")).default;
 
   const translate = (key: string, options?: Record<string, unknown>) => {
     let node: unknown = es;
@@ -36,17 +36,17 @@ vi.mock("react-i18next", async () => {
 
   return { useTranslation: () => ({ t: translate }) };
 });
-vi.mock("../settings/me-hooks", () => ({
+vi.mock("../../../../modules/settings/me-hooks", () => ({
   useMeQuery: meHooks.useMeQuery,
 }));
-vi.mock("./services-hooks", () => ({
+vi.mock("../../../../modules/services/services-hooks", () => ({
   useServicesQuery: servicesHooks.useServicesQuery,
   useEnableServiceMutation: servicesHooks.useEnableServiceMutation,
   useConfigureServiceMutation: servicesHooks.useConfigureServiceMutation,
   useDisableServiceMutation: servicesHooks.useDisableServiceMutation,
 }));
 
-import { ServicesPage } from "./ServicesPage";
+import { ServicesPage } from "../../../../modules/services/ServicesPage";
 
 function renderServices() {
   return render(
