@@ -42,6 +42,21 @@ export const categorySpendSchema = z.object({
 });
 export type CategorySpend = z.infer<typeof categorySpendSchema>;
 
+export const serviceCapabilityBalanceSchema = z.object({
+  key: z.string(),
+  balanceMinor: z.number().int(),
+});
+export type ServiceCapabilityBalance = z.infer<
+  typeof serviceCapabilityBalanceSchema
+>;
+
+export const serviceBalanceSchema = z.object({
+  serviceKey: serviceKeySchema,
+  balanceMinor: z.number().int(),
+  capabilities: z.array(serviceCapabilityBalanceSchema),
+});
+export type ServiceBalance = z.infer<typeof serviceBalanceSchema>;
+
 export const dashboardReportSchema = z.object({
   period: z.object({ from: z.string(), to: z.string() }),
   balanceMinor: z.number().int(),
@@ -50,6 +65,7 @@ export const dashboardReportSchema = z.object({
   categorySpend: z.array(categorySpendSchema),
   recent: z.array(transactionSchema),
   exchangeRate: exchangeRateViewSchema.nullable(),
+  serviceBalances: z.array(serviceBalanceSchema),
 });
 export type DashboardReport = z.infer<typeof dashboardReportSchema>;
 

@@ -9,14 +9,7 @@ import {
   Text,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import {
-  IconBuildingBank,
-  IconCar,
-  IconHome2,
-  IconReceiptTax,
-  IconShieldCheck,
-} from "@tabler/icons-react";
-import type { TablerIcon } from "@tabler/icons-react";
+import { IconBuildingBank } from "@tabler/icons-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +28,7 @@ import {
 } from "@fondo/ui";
 
 import { useMeQuery } from "../settings/me-hooks";
+import { cardKeyOf, serviceMeta } from "./service-presentation";
 import {
   useConfigureServiceMutation,
   useDisableServiceMutation,
@@ -42,25 +36,6 @@ import {
   useServicesQuery,
   type EnableServiceInput,
 } from "./services-hooks";
-
-const serviceMeta: Record<
-  ServiceKey,
-  { readonly icon: TablerIcon; readonly statusColor: string }
-> = {
-  PERSONAL_FINANCE: { icon: IconBuildingBank, statusColor: "teal" },
-  VEHICLE: { icon: IconCar, statusColor: "gray" },
-  HOME: { icon: IconHome2, statusColor: "gray" },
-  INSURANCE: { icon: IconShieldCheck, statusColor: "gray" },
-  ENTREPRENEURSHIP: { icon: IconReceiptTax, statusColor: "gray" },
-};
-
-const serviceCardKey: Record<ServiceKey, string> = {
-  PERSONAL_FINANCE: "personalFinance",
-  VEHICLE: "vehicle",
-  HOME: "home",
-  INSURANCE: "insurance",
-  ENTREPRENEURSHIP: "entrepreneurship",
-};
 
 interface ServiceMutations {
   readonly enable: {
@@ -212,7 +187,7 @@ function ServiceCatalogCard({
     icon: IconBuildingBank,
     statusColor: "gray",
   };
-  const cardKey = serviceCardKey[service.key] ?? service.key.toLowerCase();
+  const cardKey = cardKeyOf(service.key);
   const showSettings = isAdmin && service.status === "ACTIVE";
 
   return (
@@ -274,7 +249,7 @@ function ServiceConfigModal({
   ) => void;
 }): React.JSX.Element {
   const { t } = useTranslation();
-  const cardKey = serviceCardKey[service.key] ?? service.key.toLowerCase();
+  const cardKey = cardKeyOf(service.key);
   const localizedName = t(`services.cards.${cardKey}.name`, {
     defaultValue: service.name,
   });
@@ -282,7 +257,10 @@ function ServiceConfigModal({
   const [selected, setSelected] = useState<Set<string>>(() => {
     const initial = new Set(service.selectedCapabilities);
     for (const capability of service.capabilities) {
-      if (capability.required) {
+      if (
+        capability.required ||
+        (isActivating && capability.defaultEnabled)
+      ) {
         initial.add(capability.key);
       }
     }

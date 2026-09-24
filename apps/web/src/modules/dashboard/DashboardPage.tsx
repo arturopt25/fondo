@@ -3,19 +3,25 @@ import {
   Badge,
   Button,
   Card,
-  Group,
+  Divider,
   Grid,
+  Group,
   SimpleGrid,
   Stack,
+  Table,
   Text,
   ThemeIcon,
+  Title,
 } from "@mantine/core";
 import { AreaChart, DonutChart } from "@mantine/charts";
 import {
   IconArrowDownRight,
   IconArrowUpRight,
+  IconBuildingBank,
   IconCalendarStats,
+  IconChevronDown,
   IconChevronRight,
+  IconChevronUp,
   IconCircleCheck,
   IconPlus,
   IconReceipt,
@@ -37,6 +43,7 @@ import {
 import type {
   DashboardReport,
   ExchangeRateView,
+  ServiceWithCapabilities,
   Transaction,
 } from "@fondo/shared-types";
 
@@ -51,6 +58,12 @@ import {
   resolvePeriodRange,
   useDashboardReportQuery,
 } from "../finance/reports-hooks";
+import {
+  activeCapabilities,
+  cardKeyOf,
+  serviceMeta,
+} from "../services/service-presentation";
+import { useServicesQuery } from "../services/services-hooks";
 
 const SPEND_COLORS = ["#2ad6d7", "#a78bfa", "#f6a66a", "#f4778a", "#65777b"];
 
@@ -65,6 +78,8 @@ export function DashboardPage(): React.JSX.Element {
   const reportQuery = useDashboardReportQuery(
     resolvePeriodRange(period, customRange),
   );
+  const servicesQuery = useServicesQuery();
+  const services = servicesQuery.data?.services ?? [];
 
   function goToTransactions(): void {
     navigate("/app/transactions");
@@ -99,17 +114,27 @@ export function DashboardPage(): React.JSX.Element {
         <LoadingState label={t("common.loading")} />
       ) : reportQuery.isError ? (
         <ErrorState title={t("finance.errors.loadFailedTitle")} />
-      ) : reportQuery.data && isEmpty(reportQuery.data) ? (
-        <EmptyState
-          title={t("dashboard.emptyTitle")}
-          description={t("dashboard.emptyDescription")}
-        />
       ) : reportQuery.data ? (
-        <DashboardContent
-          report={reportQuery.data}
-          displayCurrency={displayCurrency}
-          locale={locale}
-        />
+        <>
+          <BalanceSheet
+            report={reportQuery.data}
+            services={services}
+            displayCurrency={displayCurrency}
+            locale={locale}
+          />
+          {isEmpty(reportQuery.data) ? (
+            <EmptyState
+              title={t("dashboard.emptyTitle")}
+              description={t("dashboard.emptyDescription")}
+            />
+          ) : (
+            <DashboardContent
+              report={reportQuery.data}
+              displayCurrency={displayCurrency}
+              locale={locale}
+            />
+          )}
+        </>
       ) : null}
     </Stack>
   );
@@ -155,71 +180,6 @@ function DashboardContent({
 
   return (
     <>
-      <Card className="balance-hero" padding={0} radius="lg" withBorder>
-        <div className="balance-hero__glow" />
-        <Grid gutter={0} align="stretch">
-          <Grid.Col span={{ base: 12, md: 7 }}>
-            <Stack
-              className="balance-hero__content"
-              gap="md"
-              p={{ base: "lg", sm: "xl" }}
-            >
-              <Group justify="space-between" align="flex-start">
-                <Stack gap={5}>
-                  <Text className="eyebrow" size="xs">
-                    {t("dashboard.totalBalance")}
-                  </Text>
-                  <Text className="hero-balance" component="p">
-                    {formatMinorAmount(
-                      report.balanceMinor,
-                      displayCurrency,
-                      rate,
-                      locale,
-                    )}
-                  </Text>
-                  <Group gap="xs">
-                    <Text c="dimmed" size="xs">
-                      {t("dashboard.asOfToday")}
-                    </Text>
-                  </Group>
-                </Stack>
-                <ThemeIcon
-                  className="hero-icon"
-                  color="signal"
-                  variant="light"
-                  size={44}
-                  radius="md"
-                >
-                  <IconWallet size={22} stroke={1.5} />
-                </ThemeIcon>
-              </Group>
-              <Text c="dimmed" size="sm" maw={390} lh={1.55}>
-                {t("dashboard.balanceCaption")}
-              </Text>
-            </Stack>
-          </Grid.Col>
-          <Grid.Col span={{ base: 12, md: 5 }}>
-            <div className="balance-hero__visual">
-              <div className="balance-orbit balance-orbit--one" />
-              <div className="balance-orbit balance-orbit--two" />
-              {rate ? (
-                <div className="balance-hero__stat">
-                  <Text className="eyebrow" size="xs">
-                    {t("dashboard.exchangeRate")}
-                  </Text>
-                  <Text className="hero-rate">
-                    1 {rate.from} = {rate.rate.toFixed(2)} {rate.to}
-                  </Text>
-                  <Text c="dimmed" size="xs">
-                    {rate.source} · {formatDate(rate.effectiveAt, locale)}
-                  </Text>
-                </div>
-              ) : null}
-            </div>
-          </Grid.Col>
-        </Grid>
-      </Card>
-
       <SimpleGrid cols={{ base: 1, xs: 2, lg: 4 }} spacing="md">
         <MetricCard
           label={t("dashboard.metrics.income")}
@@ -418,6 +378,354 @@ function DashboardContent({
       </Card>
     </>
   );
+}
+
+function BalanceSheet({
+  report,
+  services,
+  displayCurrency,
+  locale,
+}: {
+  readonly report: DashboardReport;
+  readonly services: readonly ServiceWithCapabilities[];
+  readonly displayCurrency: "USD" | "EUR";
+  readonly locale: string;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const rate = report.exchangeRate;
+  const active = services.filter((service) => service.status === "ACTIVE");
+  const personalFinance = active.find(
+    (service) => service.key === "PERSONAL_FINANCE",
+  );
+  const others = active.filter(
+    (service) => service.key !== "PERSONAL_FINANCE",
+  );
+
+  return (
+    <>
+      <Card className="balance-hero" padding={0} radius="lg" withBorder>
+        <div className="balance-hero__glow" />
+        <Grid gutter={0} align="stretch">
+          <Grid.Col span={{ base: 12, md: 7 }}>
+            <Stack
+              className="balance-hero__content"
+              gap="md"
+              p={{ base: "lg", sm: "xl" }}
+            >
+              <Group justify="space-between" align="flex-start">
+                <Stack gap={5}>
+                  <Text className="eyebrow" size="xs">
+                    {t("dashboard.totalBalance")}
+                  </Text>
+                  <Text className="hero-balance" component="p">
+                    {formatMinorAmount(
+                      report.balanceMinor,
+                      displayCurrency,
+                      rate,
+                      locale,
+                    )}
+                  </Text>
+                  <Group gap="xs">
+                    <Text c="dimmed" size="xs">
+                      {t("dashboard.asOfToday")}
+                    </Text>
+                  </Group>
+                </Stack>
+                <ThemeIcon
+                  className="hero-icon"
+                  color="signal"
+                  variant="light"
+                  size={44}
+                  radius="md"
+                >
+                  <IconWallet size={22} stroke={1.5} />
+                </ThemeIcon>
+              </Group>
+              <Text c="dimmed" size="sm" maw={390} lh={1.55}>
+                {t("dashboard.balanceCaption")}
+              </Text>
+            </Stack>
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 5 }}>
+            <div className="balance-hero__visual">
+              <div className="balance-orbit balance-orbit--one" />
+              <div className="balance-orbit balance-orbit--two" />
+              {rate ? (
+                <div className="balance-hero__stat">
+                  <Text className="eyebrow" size="xs">
+                    {t("dashboard.exchangeRate")}
+                  </Text>
+                  <Text className="hero-rate">
+                    1 {rate.from} = {rate.rate.toFixed(2)} {rate.to}
+                  </Text>
+                  <Text c="dimmed" size="xs">
+                    {rate.source} · {formatDate(rate.effectiveAt, locale)}
+                  </Text>
+                </div>
+              ) : null}
+            </div>
+          </Grid.Col>
+        </Grid>
+        {personalFinance ? (
+          <PersonalFinanceSheet
+            report={report}
+            service={personalFinance}
+            displayCurrency={displayCurrency}
+            rate={rate}
+            locale={locale}
+          />
+        ) : null}
+      </Card>
+
+      {others.length > 0 ? (
+        <Stack gap="sm">
+          <Group justify="space-between" align="flex-end">
+            <Stack gap={4}>
+              <Text className="eyebrow" size="xs">
+                {t("dashboard.services.eyebrow")}
+              </Text>
+              <Title order={3} className="section-title">
+                {t("dashboard.services.title")}
+              </Title>
+            </Stack>
+            <Button
+              component={RouterLink}
+              to="/app/services"
+              variant="subtle"
+              color="gray"
+              size="xs"
+              rightSection={<IconChevronRight size={14} />}
+            >
+              {t("dashboard.services.manage")}
+            </Button>
+          </Group>
+          <Stack gap="md">
+            {others.map((service) => (
+              <ServiceSheetCard
+                key={service.key}
+                service={service}
+                report={report}
+                displayCurrency={displayCurrency}
+                rate={rate}
+                locale={locale}
+              />
+            ))}
+          </Stack>
+        </Stack>
+      ) : null}
+    </>
+  );
+}
+
+function PersonalFinanceSheet({
+  report,
+  service,
+  displayCurrency,
+  rate,
+  locale,
+}: {
+  readonly report: DashboardReport;
+  readonly service: ServiceWithCapabilities;
+  readonly displayCurrency: "USD" | "EUR";
+  readonly rate: ExchangeRateView | null;
+  readonly locale: string;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const total = activeCapabilities(service).length;
+  const collapsedLimit = 3;
+
+  return (
+    <Stack
+      className="balance-hero__sheet"
+      gap="xs"
+      px={{ base: "lg", sm: "xl" }}
+      pb={{ base: "lg", sm: "xl" }}
+    >
+      <Divider mb="sm" />
+      <ServiceSheetHeader service={service} />
+      <SheetTable
+        service={service}
+        balancesByKey={serviceBalanceMap(report, service.key)}
+        totalMinor={report.balanceMinor}
+        totalLabel={t("dashboard.services.total", {
+          name: serviceName(service, t),
+        })}
+        displayCurrency={displayCurrency}
+        rate={rate}
+        locale={locale}
+        limit={expanded ? undefined : collapsedLimit}
+      />
+      {total > collapsedLimit ? (
+        <Button
+          variant="subtle"
+          color="signal"
+          size="xs"
+          fullWidth
+          mt={6}
+          onClick={() => setExpanded((value) => !value)}
+          rightSection={
+            expanded ? (
+              <IconChevronUp size={14} />
+            ) : (
+              <IconChevronDown size={14} />
+            )
+          }
+        >
+          {expanded
+            ? t("dashboard.services.showLess")
+            : t("dashboard.services.showMore")}
+        </Button>
+      ) : null}
+    </Stack>
+  );
+}
+
+function ServiceSheetCard({
+  service,
+  report,
+  displayCurrency,
+  rate,
+  locale,
+}: {
+  readonly service: ServiceWithCapabilities;
+  readonly report: DashboardReport;
+  readonly displayCurrency: "USD" | "EUR";
+  readonly rate: ExchangeRateView | null;
+  readonly locale: string;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const balance = report.serviceBalances.find(
+    (item) => item.serviceKey === service.key,
+  );
+
+  return (
+    <Card className="service-sheet" padding="lg" radius="lg" withBorder>
+      <ServiceSheetHeader service={service} />
+      <SheetTable
+        service={service}
+        balancesByKey={serviceBalanceMap(report, service.key)}
+        totalMinor={balance?.balanceMinor ?? 0}
+        totalLabel={t("dashboard.services.total", {
+          name: serviceName(service, t),
+        })}
+        displayCurrency={displayCurrency}
+        rate={rate}
+        locale={locale}
+      />
+    </Card>
+  );
+}
+
+function ServiceSheetHeader({
+  service,
+}: {
+  readonly service: ServiceWithCapabilities;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const meta = serviceMeta[service.key] ?? {
+    icon: IconBuildingBank,
+    statusColor: "gray",
+  };
+
+  return (
+    <Group justify="space-between" align="center" mb="sm">
+      <Group gap="sm">
+        <ThemeIcon color="signal" variant="light" size={30} radius="md">
+          <meta.icon size={16} stroke={1.6} />
+        </ThemeIcon>
+        <Text fw={700}>{serviceName(service, t)}</Text>
+      </Group>
+      <Badge color="teal" variant="light" size="sm">
+        {t("services.status.active")}
+      </Badge>
+    </Group>
+  );
+}
+
+function SheetTable({
+  service,
+  balancesByKey,
+  totalMinor,
+  totalLabel,
+  displayCurrency,
+  rate,
+  locale,
+  limit,
+}: {
+  readonly service: ServiceWithCapabilities;
+  readonly balancesByKey: ReadonlyMap<string, number>;
+  readonly totalMinor: number;
+  readonly totalLabel: string;
+  readonly displayCurrency: "USD" | "EUR";
+  readonly rate: ExchangeRateView | null;
+  readonly locale: string;
+  readonly limit?: number | undefined;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const cardKey = cardKeyOf(service.key);
+  const capabilities = activeCapabilities(service);
+  const visible = limit ? capabilities.slice(0, limit) : capabilities;
+
+  return (
+    <Table className="service-sheet__table" variant="unstyled">
+      <Table.Tbody>
+        {visible.map((capability) => (
+          <Table.Tr key={capability.key}>
+            <Table.Td>{t(
+              `services.capabilities.${cardKey}.${capability.key}.name`,
+              { defaultValue: capability.name },
+            )}</Table.Td>
+            <Table.Td ta="right" ff="monospace">
+              {formatMinorAmount(
+                balancesByKey.get(capability.key) ?? 0,
+                displayCurrency,
+                rate,
+                locale,
+              )}
+            </Table.Td>
+          </Table.Tr>
+        ))}
+      </Table.Tbody>
+      <Table.Tfoot>
+        <Table.Tr>
+          <Table.Td fw={700}>{totalLabel}</Table.Td>
+          <Table.Td ta="right" fw={700} ff="monospace">
+            {formatMinorAmount(
+              totalMinor,
+              displayCurrency,
+              rate,
+              locale,
+            )}
+          </Table.Td>
+        </Table.Tr>
+      </Table.Tfoot>
+    </Table>
+  );
+}
+
+function serviceBalanceMap(
+  report: DashboardReport,
+  serviceKey: string,
+): Map<string, number> {
+  const balance = report.serviceBalances.find(
+    (item) => item.serviceKey === serviceKey,
+  );
+  return new Map(
+    (balance?.capabilities ?? []).map((capability) => [
+      capability.key,
+      capability.balanceMinor,
+    ]),
+  );
+}
+
+function serviceName(
+  service: ServiceWithCapabilities,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  return t(`services.cards.${cardKeyOf(service.key)}.name`, {
+    defaultValue: service.name,
+  });
 }
 
 function RecentTransactions({

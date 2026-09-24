@@ -3,13 +3,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReportsService } from "../../../core/finance/reports.service.js";
 
 function createContext() {
-  const repo = { categoryRows: vi.fn() };
+  const repo = {
+    categoryRows: vi.fn(),
+    serviceMovements: vi.fn().mockResolvedValue([]),
+  };
   const transactions = { entryBalanceDelta: vi.fn() };
   const transactionService = { listRecent: vi.fn() };
   const ledgers = { personalLedger: vi.fn() };
   const prisma = {
     client: {
       ledger: { findFirst: vi.fn() },
+      serviceSubscription: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
     },
   };
   const service = new ReportsService(
@@ -182,5 +188,71 @@ describe("ReportsService", () => {
         ledgerId: "ledger-1",
       }),
     );
+  });
+
+  it("returns net balances per active capability with zero defaults", async () => {
+    const { repo, transactions, transactionService, ledgers, prisma, service } =
+      createContext();
+    ledgers.personalLedger.mockResolvedValue({ id: "ledger-1" });
+    repo.categoryRows.mockResolvedValue([]);
+    transactions.entryBalanceDelta.mockResolvedValue(new Map());
+    transactionService.listRecent.mockResolvedValue([]);
+    prisma.client.ledger.findFirst.mockResolvedValue({
+      id: "ledger-1",
+      accounts: [],
+    });
+    prisma.client.serviceSubscription.findMany.mockResolvedValue([
+      {
+        service: {
+          key: "HOME",
+          capabilities: [
+            { id: "cap-1", key: "properties", required: true },
+            { id: "cap-2", key: "expenses", required: true },
+            { id: "cap-3", key: "inventory", required: false },
+          ],
+        },
+        selections: [
+          { capabilityId: "cap-1", enabled: true },
+          { capabilityId: "cap-3", enabled: true },
+        ],
+      },
+    ]);
+    repo.serviceMovements.mockResolvedValue([
+      {
+        serviceKey: "HOME",
+        capabilityKey: "properties",
+        categoryType: "EXPENSE",
+        direction: "DEBIT",
+        amountMinor: 25000,
+      },
+      {
+        serviceKey: "HOME",
+        capabilityKey: "expenses",
+        categoryType: "INCOME",
+        direction: "CREDIT",
+        amountMinor: 100000,
+      },
+      {
+        serviceKey: "HOME",
+        capabilityKey: null,
+        categoryType: "EXPENSE",
+        direction: "DEBIT",
+        amountMinor: 5000,
+      },
+    ]);
+
+    const result = await service.dashboard("tenant-1", "UTC", {});
+
+    expect(result.serviceBalances).toEqual([
+      {
+        serviceKey: "HOME",
+        balanceMinor: 70000,
+        capabilities: [
+          { key: "properties", balanceMinor: -25000 },
+          { key: "expenses", balanceMinor: 100000 },
+          { key: "inventory", balanceMinor: 0 },
+        ],
+      },
+    ]);
   });
 });

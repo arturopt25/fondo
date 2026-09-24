@@ -6,6 +6,8 @@ import type {
   DashboardReport,
   ExchangeRateView,
   PeriodQuery,
+  ServiceBalance,
+  ServiceKey,
 } from "@fondo/shared-types";
 
 import { PrismaService } from "../prisma.service.js";
@@ -68,6 +70,7 @@ export class ReportsService {
       categorySpend: categorySpendOf(rows),
       recent: await this.transactionService.listRecent(tenantId, ledgerId, 5),
       exchangeRate: DEFAULT_EXCHANGE_RATE,
+      serviceBalances: await this.serviceBalances(tenantId),
     };
   }
 
@@ -148,6 +151,63 @@ export class ReportsService {
       0,
     );
   }
+
+  private async serviceBalances(tenantId: string): Promise<ServiceBalance[]> {
+    const subscriptions =
+      await this.prisma.client.serviceSubscription.findMany({
+        where: { tenantId, status: "ACTIVE" },
+        include: {
+          service: { include: { capabilities: true } },
+          selections: true,
+        },
+      });
+    const movements = await this.reports.serviceMovements(tenantId);
+
+    return subscriptions.map((subscription) => {
+      const serviceKey = subscription.service.key as ServiceKey;
+      const activeCapabilityIds = new Set(
+        subscription.selections
+          .filter((selection) => selection.enabled)
+          .map((selection) => selection.capabilityId),
+      );
+      const capabilities = subscription.service.capabilities
+        .filter(
+          (capability) =>
+            capability.required || activeCapabilityIds.has(capability.id),
+        )
+        .map((capability) => ({ key: capability.key, balanceMinor: 0 }));
+
+      const balanceByKey = new Map<string, number>();
+      let unclassifiedMinor = 0;
+
+      for (const movement of movements) {
+        if (movement.serviceKey !== serviceKey) {
+          continue;
+        }
+        const signed = capabilityNetSign(movement);
+        if (movement.capabilityKey) {
+          balanceByKey.set(
+            movement.capabilityKey,
+            (balanceByKey.get(movement.capabilityKey) ?? 0) + signed,
+          );
+        } else {
+          unclassifiedMinor += signed;
+        }
+      }
+
+      const capabilityBalances = capabilities.map((capability) => ({
+        key: capability.key,
+        balanceMinor: balanceByKey.get(capability.key) ?? 0,
+      }));
+      const balanceMinor =
+        capabilityBalances.reduce(
+          (sum, capability) => sum + capability.balanceMinor,
+          0,
+        ) + unclassifiedMinor;
+
+      return { serviceKey, balanceMinor, capabilities: capabilityBalances };
+    });
+  }
 }
 
 function monthStart(date: Date): Date {
@@ -161,6 +221,15 @@ function signedAmount(row: CategoryRow): number {
     return isCredit ? -row.amountMinor : row.amountMinor;
   }
   return isCredit ? row.amountMinor : -row.amountMinor;
+}
+
+function capabilityNetSign(movement: {
+  readonly direction: string;
+  readonly amountMinor: number;
+}): number {
+  return movement.direction === "CREDIT"
+    ? movement.amountMinor
+    : -movement.amountMinor;
 }
 
 function aggregateMovements(rows: readonly CategoryRow[]): {

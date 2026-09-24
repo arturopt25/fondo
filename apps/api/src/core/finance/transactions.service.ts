@@ -64,6 +64,7 @@ interface CommitParams {
   readonly transferFromId?: string;
   readonly transferToId?: string;
   readonly serviceKey?: ServiceKey | null;
+  readonly capabilityKey?: string | null;
   readonly sourceType?: string | null;
   readonly sourceId?: string | null;
   readonly note?: string | null;
@@ -155,6 +156,12 @@ export class TransactionsService {
         "INCOME",
       );
       await this.requireActiveService(tx, tenantId, input.serviceKey);
+      await this.requireActiveServiceCapability(
+        tx,
+        tenantId,
+        input.serviceKey,
+        input.capabilityKey,
+      );
 
       const entries: readonly EntryInput[] = [
         {
@@ -176,6 +183,7 @@ export class TransactionsService {
         accountId: account.id,
         categoryId: category.id,
         serviceKey: input.serviceKey ?? null,
+        capabilityKey: input.capabilityKey ?? null,
         sourceType: input.sourceType ?? null,
         sourceId: input.sourceId ?? null,
         note: input.note ?? null,
@@ -221,6 +229,12 @@ export class TransactionsService {
         "EXPENSE",
       );
       await this.requireActiveService(tx, tenantId, input.serviceKey);
+      await this.requireActiveServiceCapability(
+        tx,
+        tenantId,
+        input.serviceKey,
+        input.capabilityKey,
+      );
 
       const entries: readonly EntryInput[] = [
         {
@@ -242,6 +256,7 @@ export class TransactionsService {
         accountId: account.id,
         categoryId: category.id,
         serviceKey: input.serviceKey ?? null,
+        capabilityKey: input.capabilityKey ?? null,
         sourceType: input.sourceType ?? null,
         sourceId: input.sourceId ?? null,
         note: input.note ?? null,
@@ -492,6 +507,49 @@ export class TransactionsService {
     }
   }
 
+  private async requireActiveServiceCapability(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    serviceKey: ServiceKey | undefined,
+    capabilityKey: string | undefined,
+  ): Promise<void> {
+    if (!capabilityKey) {
+      return;
+    }
+    if (!serviceKey) {
+      throw new BadRequestException(
+        "A capability requires a service to be selected",
+      );
+    }
+    const definition = await tx.serviceDefinition.findUnique({
+      where: { key: serviceKey },
+      include: { capabilities: true },
+    });
+    const capability = definition?.capabilities.find(
+      (item) => item.key === capabilityKey,
+    );
+    if (!capability) {
+      throw new BadRequestException(
+        `Capability ${capabilityKey} does not belong to service ${serviceKey}`,
+      );
+    }
+    const subscription = await tx.serviceSubscription.findFirst({
+      where: { tenantId, status: "ACTIVE", service: { key: serviceKey } },
+      include: { selections: true },
+    });
+    const active =
+      capability.required ||
+      (subscription?.selections.some(
+        (selection) =>
+          selection.enabled && selection.capabilityId === capability.id,
+      ) ?? false);
+    if (!active) {
+      throw new BadRequestException(
+        `Capability ${capabilityKey} is not active for service ${serviceKey}`,
+      );
+    }
+  }
+
   private async runCommit<T>(
     tenantId: string,
     idempotencyKey: string | undefined,
@@ -586,6 +644,7 @@ export class TransactionsService {
         transferFromId: params.transferFromId ?? null,
         transferToId: params.transferToId ?? null,
         serviceKey: params.serviceKey ?? null,
+        capabilityKey: params.capabilityKey ?? null,
         sourceType: params.sourceType ?? null,
         sourceId: params.sourceId ?? null,
         note: params.note ?? null,
@@ -730,6 +789,7 @@ function toTransaction(transaction: {
   transferFromId: string | null;
   transferToId: string | null;
   serviceKey: string | null;
+  capabilityKey: string | null;
   sourceType: string | null;
   sourceId: string | null;
   note: string | null;
@@ -754,6 +814,7 @@ function toTransaction(transaction: {
     transferFromId: transaction.transferFromId,
     transferToId: transaction.transferToId,
     serviceKey: transaction.serviceKey as Transaction["serviceKey"],
+    capabilityKey: transaction.capabilityKey ?? null,
     sourceType: transaction.sourceType,
     sourceId: transaction.sourceId,
     note: transaction.note,

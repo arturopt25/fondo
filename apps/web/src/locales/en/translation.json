@@ -130,6 +130,14 @@
       "title": "Your savings are ahead of the previous pace.",
       "description": "Keeping this rhythm leaves room for next month's goals.",
       "badge": "Positive signal"
+    },
+    "services": {
+      "eyebrow": "Active modules",
+      "title": "Active services",
+      "manage": "Manage services",
+      "total": "{{name}} total",
+      "showMore": "See more",
+      "showLess": "See less"
     }
   },
   "reports": {
@@ -503,6 +511,8 @@
     "amount": "Amount",
     "service": "Service",
     "servicePlaceholder": "Optional service",
+    "capability": "Capability",
+    "capabilityPlaceholder": "Optional capability",
     "note": "Note",
     "notePlaceholder": "Optional note",
     "createIncome": "Record income",

@@ -318,6 +318,7 @@ model Transaction {
   transferFromId   String?         @db.Uuid
   transferToId     String?         @db.Uuid
   serviceKey       ServiceKey?
+  capabilityKey    String?         @db.VarChar(64)
   sourceType       String?         @db.VarChar(32)
   sourceId         String?         @db.Uuid
   note             String?         @db.VarChar(500)
@@ -344,6 +345,7 @@ model Transaction {
   @@index([ledgerId, occurredAt])
   @@index([accountId])
   @@index([serviceKey])
+  @@index([serviceKey, capabilityKey])
   @@unique([tenantId, idempotencyKey])
 }
 

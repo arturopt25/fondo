@@ -130,6 +130,14 @@
       "title": "Tu ahorro va por delante del ritmo anterior.",
       "description": "Mantener este ritmo te deja margen para tus objetivos del siguiente mes.",
       "badge": "Senal positiva"
+    },
+    "services": {
+      "eyebrow": "Modulos activos",
+      "title": "Servicios activos",
+      "manage": "Gestionar servicios",
+      "total": "Total {{name}}",
+      "showMore": "Ver mas",
+      "showLess": "Ver menos"
     }
   },
   "reports": {
@@ -506,6 +514,8 @@
     "amount": "Monto",
     "service": "Servicio",
     "servicePlaceholder": "Servicio opcional",
+    "capability": "Capacidad",
+    "capabilityPlaceholder": "Capacidad opcional",
     "note": "Nota",
     "notePlaceholder": "Nota opcional",
     "createIncome": "Registrar ingreso",

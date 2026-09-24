@@ -181,7 +181,7 @@ describe("ServicesPage", () => {
     expect(enable).toHaveBeenCalledWith(
       expect.objectContaining({
         key: "VEHICLE",
-        capabilities: ["vehicles"],
+        capabilities: ["vehicles", "fuel"],
         ledgerMode: "SHARED",
       }),
       expect.anything(),
