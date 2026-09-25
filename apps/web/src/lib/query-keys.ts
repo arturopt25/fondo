@@ -6,6 +6,11 @@ export interface ReportQueryParams {
   readonly serviceKey?: ServiceKey | undefined;
 }
 
+export interface BudgetQueryParams {
+  readonly from?: string | undefined;
+  readonly to?: string | undefined;
+}
+
 export const queryKeys = {
   me: ["me"] as const,
   meSettings: ["me", "settings"] as const,
@@ -13,6 +18,7 @@ export const queryKeys = {
   services: ["services"] as const,
   accounts: ["accounts"] as const,
   categories: ["categories"] as const,
+  budgets: (params: BudgetQueryParams) => ["budgets", params] as const,
   transactions: ["transactions"] as const,
   ledgerBalance: ["ledger", "balance"] as const,
   reports: {

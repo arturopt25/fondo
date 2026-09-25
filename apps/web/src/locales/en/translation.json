@@ -117,8 +117,23 @@
     "budgets": {
       "eyebrow": "Monthly control",
       "title": "Budgets",
-      "emptyTitle": "Budgets are on the way",
-      "emptyDescription": "Set limits per category once budgets are available."
+      "emptyTitle": "No expense categories",
+      "emptyDescription": "Create an expense category to start defining budgets.",
+      "configure": "Configure",
+      "edit": "Edit",
+      "save": "Save budget",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "category": "Category",
+      "amount": "Monthly limit",
+      "spent": "Spent",
+      "remaining": "Remaining",
+      "noBudget": "No budget configured",
+      "multiMonthHint": "Budgets are edited month by month; this summary aggregates the selected period.",
+      "savedTitle": "Budget saved",
+      "savedMessage": "The monthly limit was updated.",
+      "deletedTitle": "Budget deleted",
+      "deletedMessage": "The monthly limit was deleted."
     },
     "recent": {
       "eyebrow": "Recent activity",

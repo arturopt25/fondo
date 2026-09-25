@@ -15,6 +15,12 @@ const reportsHooks = vi.hoisted(() => ({
 const preferences = vi.hoisted(() => ({
   useAppPreferences: vi.fn(),
 }));
+const budgetsHooks = vi.hoisted(() => ({
+  resolveBudgetPeriodRange: vi.fn(),
+  useBudgetsQuery: vi.fn(),
+  useUpsertBudgetMutation: vi.fn(),
+  useDeleteBudgetMutation: vi.fn(),
+}));
 
 vi.mock("react-i18next", async () => {
   const es = (await import("../../../../locales/es/translation.json")).default;
@@ -52,6 +58,12 @@ vi.mock("../../../../modules/finance/reports-hooks", async (importOriginal) => {
 });
 vi.mock("../../../../app/preferences", () => ({
   useAppPreferences: preferences.useAppPreferences,
+}));
+vi.mock("../../../../modules/finance/budgets-hooks", () => ({
+  resolveBudgetPeriodRange: budgetsHooks.resolveBudgetPeriodRange,
+  useBudgetsQuery: budgetsHooks.useBudgetsQuery,
+  useUpsertBudgetMutation: budgetsHooks.useUpsertBudgetMutation,
+  useDeleteBudgetMutation: budgetsHooks.useDeleteBudgetMutation,
 }));
 
 import { DashboardPage } from "../../../../modules/dashboard/DashboardPage";
@@ -212,20 +224,59 @@ describe("DashboardPage", () => {
       isLoading: false,
       isError: false,
     });
+    budgetsHooks.resolveBudgetPeriodRange.mockReturnValue({
+      from: "2026-09",
+      to: "2026-09",
+    });
+    budgetsHooks.useBudgetsQuery.mockReturnValue({
+      data: {
+        period: { from: "2026-09", to: "2026-09" },
+        items: [
+          {
+            categoryId: "budget-category",
+            categoryName: "Comida",
+            budgetId: null,
+            budgetMinor: null,
+            actualMinor: 0,
+            remainingMinor: null,
+            utilizationPercent: null,
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    });
+    budgetsHooks.useUpsertBudgetMutation.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    });
+    budgetsHooks.useDeleteBudgetMutation.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    });
   });
 
-  it("shows the total balance at the top with the personal finance sheet integrated", () => {
+  it("shows the total balance at the top and renders personal finance as a service card", () => {
     renderDashboard();
 
     expect(screen.getByText("Balance total")).toBeInTheDocument();
     expect(screen.getAllByText(/1250\s*US\$/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Ingresos")).toBeInTheDocument();
+    expect(screen.getByText("Gastos")).toBeInTheDocument();
+    expect(screen.getByText("Ahorro neto")).toBeInTheDocument();
+    expect(screen.getByText("Tasa de ahorro")).toBeInTheDocument();
     expect(screen.getAllByText("Finanzas personales")).toHaveLength(1);
-    expect(screen.getAllByText("Cuentas y saldos").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Presupuestos").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText("Cuentas y saldos").length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Presupuestos").length).toBeGreaterThanOrEqual(
+      1,
+    );
     expect(screen.getByText("Total Finanzas personales")).toBeInTheDocument();
   });
 
-  it("renders each active service as a balance sheet with capability rows and a total", () => {
+  it("renders each active service as a compact card with capability rows and a total", async () => {
+    const user = userEvent.setup();
     renderDashboard();
 
     expect(screen.getByText("Servicios activos")).toBeInTheDocument();
@@ -233,20 +284,27 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Viviendas")).toBeInTheDocument();
     expect(screen.getByText("Gastos del hogar")).toBeInTheDocument();
     expect(screen.getByText("Servicios recurrentes")).toBeInTheDocument();
-    expect(screen.getByText("Inventario de bienes")).toBeInTheDocument();
+    expect(screen.queryByText("Inventario de bienes")).not.toBeInTheDocument();
     expect(screen.getByText("Total Hogar")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Ver mas"));
+
+    expect(screen.getByText("Inventario de bienes")).toBeInTheDocument();
+    expect(screen.getByText("Ver menos")).toBeInTheDocument();
   });
 
   it("shows a zero balance for active capabilities without movements", () => {
     renderDashboard();
 
-    expect(screen.getAllByText(/0\s*US\$/).length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByText(/0\s*US\$/).length).toBeGreaterThanOrEqual(2);
   });
 
   it("excludes unselected capabilities and disabled services", () => {
     renderDashboard();
 
-    expect(screen.queryByText("Documentos de la vivienda")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Documentos de la vivienda"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("Vehículo")).not.toBeInTheDocument();
   });
 
@@ -262,11 +320,46 @@ describe("DashboardPage", () => {
             status: "ACTIVE",
             ledgerMode: "SHARED",
             capabilities: [
-              { key: "accounts", name: "Accounts", description: "", required: true, defaultEnabled: true, dependsOn: [] },
-              { key: "budgets", name: "Budgets", description: "", required: false, defaultEnabled: true, dependsOn: [] },
-              { key: "cashflow", name: "Cash flow", description: "", required: false, defaultEnabled: true, dependsOn: [] },
-              { key: "recurring", name: "Recurring", description: "", required: false, defaultEnabled: false, dependsOn: [] },
-              { key: "reports", name: "Reports", description: "", required: false, defaultEnabled: false, dependsOn: [] },
+              {
+                key: "accounts",
+                name: "Accounts",
+                description: "",
+                required: true,
+                defaultEnabled: true,
+                dependsOn: [],
+              },
+              {
+                key: "budgets",
+                name: "Budgets",
+                description: "",
+                required: false,
+                defaultEnabled: true,
+                dependsOn: [],
+              },
+              {
+                key: "cashflow",
+                name: "Cash flow",
+                description: "",
+                required: false,
+                defaultEnabled: true,
+                dependsOn: [],
+              },
+              {
+                key: "recurring",
+                name: "Recurring",
+                description: "",
+                required: false,
+                defaultEnabled: false,
+                dependsOn: [],
+              },
+              {
+                key: "reports",
+                name: "Reports",
+                description: "",
+                required: false,
+                defaultEnabled: false,
+                dependsOn: [],
+              },
             ],
             selectedCapabilities: [
               "accounts",
@@ -308,7 +401,9 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Ver mas")).toBeInTheDocument();
     expect(screen.getByText("Cuentas y saldos")).toBeInTheDocument();
     expect(screen.getByText("Flujo de caja")).toBeInTheDocument();
-    expect(screen.queryByText("Movimientos recurrentes")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Movimientos recurrentes"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("Reportes")).not.toBeInTheDocument();
 
     await user.click(screen.getByText("Ver mas"));
@@ -357,6 +452,8 @@ describe("DashboardPage", () => {
     renderDashboard();
 
     expect(screen.getByText("Todavia no hay movimientos")).toBeInTheDocument();
+    expect(screen.getByText("Tasa de ahorro")).toBeInTheDocument();
+    expect(screen.getByText("0%")).toBeInTheDocument();
     expect(screen.getByText("Hogar")).toBeInTheDocument();
     expect(screen.getByText("Total Hogar")).toBeInTheDocument();
   });

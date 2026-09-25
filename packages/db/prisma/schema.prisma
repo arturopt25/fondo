@@ -141,6 +141,7 @@ model Tenant {
   subscriptions ServiceSubscription[]
   accounts FinancialAccount[]
   categories Category[]
+  budgets    Budget[]
   ledgers Ledger[]
   transactions Transaction[]
 
@@ -302,9 +303,26 @@ model Category {
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   entries      TransactionEntry[]
+  budgets     Budget[]
 
   @@index([tenantId])
   @@unique([tenantId, name, type])
+}
+
+model Budget {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  categoryId  String   @db.Uuid
+  periodStart DateTime @db.Date
+  amountMinor Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, categoryId, periodStart])
+  @@index([tenantId, periodStart])
 }
 
 model Transaction {

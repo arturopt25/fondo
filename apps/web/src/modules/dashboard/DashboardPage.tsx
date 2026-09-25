@@ -3,9 +3,12 @@ import {
   Badge,
   Button,
   Card,
-  Divider,
   Grid,
   Group,
+  Modal,
+  NumberInput,
+  Progress,
+  Select,
   SimpleGrid,
   Stack,
   Table,
@@ -13,6 +16,7 @@ import {
   ThemeIcon,
   Title,
 } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import { AreaChart, DonutChart } from "@mantine/charts";
 import {
   IconArrowDownRight,
@@ -41,6 +45,7 @@ import {
   PageHeader,
 } from "@fondo/ui";
 import type {
+  BudgetProgress,
   DashboardReport,
   ExchangeRateView,
   ServiceWithCapabilities,
@@ -58,6 +63,13 @@ import {
   resolvePeriodRange,
   useDashboardReportQuery,
 } from "../finance/reports-hooks";
+import {
+  resolveBudgetPeriodRange,
+  useBudgetsQuery,
+  useDeleteBudgetMutation,
+  useUpsertBudgetMutation,
+  type BudgetPeriodRange,
+} from "../finance/budgets-hooks";
 import {
   activeCapabilities,
   cardKeyOf,
@@ -78,6 +90,7 @@ export function DashboardPage(): React.JSX.Element {
   const reportQuery = useDashboardReportQuery(
     resolvePeriodRange(period, customRange),
   );
+  const budgetRange = resolveBudgetPeriodRange(period, customRange);
   const servicesQuery = useServicesQuery();
   const services = servicesQuery.data?.services ?? [];
 
@@ -86,7 +99,7 @@ export function DashboardPage(): React.JSX.Element {
   }
 
   return (
-    <Stack className="page-stack" gap="xl">
+    <Stack className="page-stack" gap="lg">
       <PageHeader
         eyebrow={t("dashboard.eyebrow")}
         title={t("dashboard.title")}
@@ -123,15 +136,24 @@ export function DashboardPage(): React.JSX.Element {
             locale={locale}
           />
           {isEmpty(reportQuery.data) ? (
-            <EmptyState
-              title={t("dashboard.emptyTitle")}
-              description={t("dashboard.emptyDescription")}
-            />
+            <>
+              <EmptyState
+                title={t("dashboard.emptyTitle")}
+                description={t("dashboard.emptyDescription")}
+              />
+              <BudgetSection
+                range={budgetRange}
+                displayCurrency={displayCurrency}
+                locale={locale}
+                rate={reportQuery.data.exchangeRate}
+              />
+            </>
           ) : (
             <DashboardContent
               report={reportQuery.data}
               displayCurrency={displayCurrency}
               locale={locale}
+              budgetRange={budgetRange}
             />
           )}
         </>
@@ -158,14 +180,15 @@ function DashboardContent({
   report,
   displayCurrency,
   locale,
+  budgetRange,
 }: {
   readonly report: DashboardReport;
   readonly displayCurrency: "USD" | "EUR";
   readonly locale: string;
+  readonly budgetRange: BudgetPeriodRange;
 }): React.JSX.Element {
   const { t } = useTranslation();
   const rate = report.exchangeRate;
-  const summary = report.summary;
 
   const chartData = report.cashFlow.map((point) => ({
     bucket: point.bucket,
@@ -180,52 +203,6 @@ function DashboardContent({
 
   return (
     <>
-      <SimpleGrid cols={{ base: 1, xs: 2, lg: 4 }} spacing="md">
-        <MetricCard
-          label={t("dashboard.metrics.income")}
-          value={formatMinorAmount(
-            summary.incomeMinor,
-            displayCurrency,
-            rate,
-            locale,
-          )}
-          detail={t("dashboard.metrics.vsLastPeriod")}
-          icon={IconArrowUpRight}
-          tone="green"
-        />
-        <MetricCard
-          label={t("dashboard.metrics.expenses")}
-          value={formatMinorAmount(
-            summary.expenseMinor,
-            displayCurrency,
-            rate,
-            locale,
-          )}
-          detail={t("dashboard.metrics.vsLastPeriod")}
-          icon={IconArrowDownRight}
-          tone="coral"
-        />
-        <MetricCard
-          label={t("dashboard.metrics.savings")}
-          value={formatMinorAmount(
-            summary.savingsMinor,
-            displayCurrency,
-            rate,
-            locale,
-          )}
-          detail={t("dashboard.metrics.netFlow")}
-          icon={IconSparkles}
-          tone="violet"
-        />
-        <MetricCard
-          label={t("dashboard.metrics.savingsRate")}
-          value={`${summary.savingsRate}%`}
-          detail={t("dashboard.metrics.ofIncome")}
-          icon={IconCalendarStats}
-          tone="cyan"
-        />
-      </SimpleGrid>
-
       <Grid gutter="md" align="stretch">
         <Grid.Col span={{ base: 12, lg: 8 }}>
           <DashboardSection
@@ -333,15 +310,12 @@ function DashboardContent({
 
       <Grid gutter="md" align="stretch">
         <Grid.Col span={{ base: 12, lg: 7 }}>
-          <DashboardSection
-            title={t("dashboard.budgets.title")}
-            eyebrow={t("dashboard.budgets.eyebrow")}
-          >
-            <EmptyState
-              title={t("dashboard.budgets.emptyTitle")}
-              description={t("dashboard.budgets.emptyDescription")}
-            />
-          </DashboardSection>
+          <BudgetSection
+            range={budgetRange}
+            displayCurrency={displayCurrency}
+            locale={locale}
+            rate={rate}
+          />
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 5 }}>
           <DashboardSection
@@ -393,13 +367,8 @@ function BalanceSheet({
 }): React.JSX.Element {
   const { t } = useTranslation();
   const rate = report.exchangeRate;
+  const summary = report.summary;
   const active = services.filter((service) => service.status === "ACTIVE");
-  const personalFinance = active.find(
-    (service) => service.key === "PERSONAL_FINANCE",
-  );
-  const others = active.filter(
-    (service) => service.key !== "PERSONAL_FINANCE",
-  );
 
   return (
     <>
@@ -447,37 +416,83 @@ function BalanceSheet({
             </Stack>
           </Grid.Col>
           <Grid.Col span={{ base: 12, md: 5 }}>
-            <div className="balance-hero__visual">
+            <div className="balance-hero__summary">
               <div className="balance-orbit balance-orbit--one" />
               <div className="balance-orbit balance-orbit--two" />
-              {rate ? (
-                <div className="balance-hero__stat">
-                  <Text className="eyebrow" size="xs">
-                    {t("dashboard.exchangeRate")}
-                  </Text>
-                  <Text className="hero-rate">
-                    1 {rate.from} = {rate.rate.toFixed(2)} {rate.to}
-                  </Text>
-                  <Text c="dimmed" size="xs">
-                    {rate.source} · {formatDate(rate.effectiveAt, locale)}
-                  </Text>
-                </div>
-              ) : null}
+              <div className="balance-hero__summary-content">
+                <SimpleGrid cols={2} spacing="xs">
+                  <MetricCard
+                    label={t("dashboard.metrics.income")}
+                    value={formatMinorAmount(
+                      summary.incomeMinor,
+                      displayCurrency,
+                      rate,
+                      locale,
+                    )}
+                    detail={t("dashboard.metrics.vsLastPeriod")}
+                    icon={IconArrowUpRight}
+                    tone="green"
+                    compact
+                    variant="embedded"
+                  />
+                  <MetricCard
+                    label={t("dashboard.metrics.expenses")}
+                    value={formatMinorAmount(
+                      summary.expenseMinor,
+                      displayCurrency,
+                      rate,
+                      locale,
+                    )}
+                    detail={t("dashboard.metrics.vsLastPeriod")}
+                    icon={IconArrowDownRight}
+                    tone="coral"
+                    compact
+                    variant="embedded"
+                  />
+                  <MetricCard
+                    label={t("dashboard.metrics.savings")}
+                    value={formatMinorAmount(
+                      summary.savingsMinor,
+                      displayCurrency,
+                      rate,
+                      locale,
+                    )}
+                    detail={t("dashboard.metrics.netFlow")}
+                    icon={IconSparkles}
+                    tone="violet"
+                    compact
+                    variant="embedded"
+                  />
+                  <MetricCard
+                    label={t("dashboard.metrics.savingsRate")}
+                    value={`${summary.savingsRate}%`}
+                    detail={t("dashboard.metrics.ofIncome")}
+                    icon={IconCalendarStats}
+                    tone="cyan"
+                    compact
+                    variant="embedded"
+                  />
+                </SimpleGrid>
+                {rate ? (
+                  <div className="balance-hero__rate">
+                    <Text className="eyebrow" size="xs">
+                      {t("dashboard.exchangeRate")}
+                    </Text>
+                    <Text className="hero-rate">
+                      1 {rate.from} = {rate.rate.toFixed(2)} {rate.to}
+                    </Text>
+                    <Text c="dimmed" size="xs">
+                      {rate.source} · {formatDate(rate.effectiveAt, locale)}
+                    </Text>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </Grid.Col>
         </Grid>
-        {personalFinance ? (
-          <PersonalFinanceSheet
-            report={report}
-            service={personalFinance}
-            displayCurrency={displayCurrency}
-            rate={rate}
-            locale={locale}
-          />
-        ) : null}
       </Card>
 
-      {others.length > 0 ? (
+      {active.length > 0 ? (
         <Stack gap="sm">
           <Group justify="space-between" align="flex-end">
             <Stack gap={4}>
@@ -499,9 +514,9 @@ function BalanceSheet({
               {t("dashboard.services.manage")}
             </Button>
           </Group>
-          <Stack gap="md">
-            {others.map((service) => (
-              <ServiceSheetCard
+          <SimpleGrid cols={{ base: 1, sm: 2, xl: 3 }} spacing="md">
+            {active.map((service) => (
+              <ServiceSummaryCard
                 key={service.key}
                 service={service}
                 report={report}
@@ -510,22 +525,22 @@ function BalanceSheet({
                 locale={locale}
               />
             ))}
-          </Stack>
+          </SimpleGrid>
         </Stack>
       ) : null}
     </>
   );
 }
 
-function PersonalFinanceSheet({
-  report,
+function ServiceSummaryCard({
   service,
+  report,
   displayCurrency,
   rate,
   locale,
 }: {
-  readonly report: DashboardReport;
   readonly service: ServiceWithCapabilities;
+  readonly report: DashboardReport;
   readonly displayCurrency: "USD" | "EUR";
   readonly rate: ExchangeRateView | null;
   readonly locale: string;
@@ -534,20 +549,17 @@ function PersonalFinanceSheet({
   const [expanded, setExpanded] = useState(false);
   const total = activeCapabilities(service).length;
   const collapsedLimit = 3;
+  const balance = report.serviceBalances.find(
+    (item) => item.serviceKey === service.key,
+  );
 
   return (
-    <Stack
-      className="balance-hero__sheet"
-      gap="xs"
-      px={{ base: "lg", sm: "xl" }}
-      pb={{ base: "lg", sm: "xl" }}
-    >
-      <Divider mb="sm" />
+    <Card className="service-sheet" padding="md" radius="lg" withBorder>
       <ServiceSheetHeader service={service} />
       <SheetTable
         service={service}
         balancesByKey={serviceBalanceMap(report, service.key)}
-        totalMinor={report.balanceMinor}
+        totalMinor={balance?.balanceMinor ?? 0}
         totalLabel={t("dashboard.services.total", {
           name: serviceName(service, t),
         })}
@@ -562,7 +574,7 @@ function PersonalFinanceSheet({
           color="signal"
           size="xs"
           fullWidth
-          mt={6}
+          mt={4}
           onClick={() => setExpanded((value) => !value)}
           rightSection={
             expanded ? (
@@ -577,42 +589,6 @@ function PersonalFinanceSheet({
             : t("dashboard.services.showMore")}
         </Button>
       ) : null}
-    </Stack>
-  );
-}
-
-function ServiceSheetCard({
-  service,
-  report,
-  displayCurrency,
-  rate,
-  locale,
-}: {
-  readonly service: ServiceWithCapabilities;
-  readonly report: DashboardReport;
-  readonly displayCurrency: "USD" | "EUR";
-  readonly rate: ExchangeRateView | null;
-  readonly locale: string;
-}): React.JSX.Element {
-  const { t } = useTranslation();
-  const balance = report.serviceBalances.find(
-    (item) => item.serviceKey === service.key,
-  );
-
-  return (
-    <Card className="service-sheet" padding="lg" radius="lg" withBorder>
-      <ServiceSheetHeader service={service} />
-      <SheetTable
-        service={service}
-        balancesByKey={serviceBalanceMap(report, service.key)}
-        totalMinor={balance?.balanceMinor ?? 0}
-        totalLabel={t("dashboard.services.total", {
-          name: serviceName(service, t),
-        })}
-        displayCurrency={displayCurrency}
-        rate={rate}
-        locale={locale}
-      />
     </Card>
   );
 }
@@ -672,10 +648,11 @@ function SheetTable({
       <Table.Tbody>
         {visible.map((capability) => (
           <Table.Tr key={capability.key}>
-            <Table.Td>{t(
-              `services.capabilities.${cardKey}.${capability.key}.name`,
-              { defaultValue: capability.name },
-            )}</Table.Td>
+            <Table.Td>
+              {t(`services.capabilities.${cardKey}.${capability.key}.name`, {
+                defaultValue: capability.name,
+              })}
+            </Table.Td>
             <Table.Td ta="right" ff="monospace">
               {formatMinorAmount(
                 balancesByKey.get(capability.key) ?? 0,
@@ -691,12 +668,7 @@ function SheetTable({
         <Table.Tr>
           <Table.Td fw={700}>{totalLabel}</Table.Td>
           <Table.Td ta="right" fw={700} ff="monospace">
-            {formatMinorAmount(
-              totalMinor,
-              displayCurrency,
-              rate,
-              locale,
-            )}
+            {formatMinorAmount(totalMinor, displayCurrency, rate, locale)}
           </Table.Td>
         </Table.Tr>
       </Table.Tfoot>
@@ -726,6 +698,283 @@ function serviceName(
   return t(`services.cards.${cardKeyOf(service.key)}.name`, {
     defaultValue: service.name,
   });
+}
+
+function BudgetSection({
+  range,
+  displayCurrency,
+  locale,
+  rate,
+}: {
+  readonly range: BudgetPeriodRange;
+  readonly displayCurrency: "USD" | "EUR";
+  readonly locale: string;
+  readonly rate: ExchangeRateView | null;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const budgetsQuery = useBudgetsQuery(range);
+  const upsertBudget = useUpsertBudgetMutation();
+  const deleteBudget = useDeleteBudgetMutation();
+  const [opened, { open, close }] = useDisclosure(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
+  const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+  const [amount, setAmount] = useState<number | string>(0);
+
+  const items = budgetsQuery.data?.items ?? [];
+  const isSingleMonth =
+    budgetsQuery.data?.period.from === budgetsQuery.data?.period.to;
+
+  function openEditor(item: BudgetProgress): void {
+    setSelectedCategoryId(item.categoryId);
+    setEditingBudgetId(item.budgetId);
+    setAmount(item.budgetMinor === null ? 0 : item.budgetMinor / 100);
+    open();
+  }
+
+  function closeEditor(): void {
+    close();
+    setSelectedCategoryId(null);
+    setEditingBudgetId(null);
+    setAmount(0);
+  }
+
+  function saveBudget(): void {
+    const period = budgetsQuery.data?.period.from ?? range.from;
+    if (
+      !selectedCategoryId ||
+      !period ||
+      typeof amount !== "number" ||
+      amount <= 0
+    ) {
+      return;
+    }
+
+    upsertBudget.mutate(
+      {
+        categoryId: selectedCategoryId,
+        period,
+        amountMinor: Math.round(amount * 100),
+      },
+      { onSuccess: closeEditor },
+    );
+  }
+
+  function removeBudget(): void {
+    if (!editingBudgetId) {
+      return;
+    }
+    deleteBudget.mutate(editingBudgetId, { onSuccess: closeEditor });
+  }
+
+  const action = isSingleMonth ? (
+    <Button
+      size="xs"
+      color="signal"
+      onClick={() => openEditor(items[0] ?? emptyBudgetItem())}
+    >
+      {t("dashboard.budgets.configure")}
+    </Button>
+  ) : null;
+
+  return (
+    <>
+      <DashboardSection
+        title={t("dashboard.budgets.title")}
+        eyebrow={t("dashboard.budgets.eyebrow")}
+        action={action}
+      >
+        {budgetsQuery.isLoading ? (
+          <LoadingState label={t("common.loading")} />
+        ) : budgetsQuery.isError ? (
+          <ErrorState title={t("finance.errors.loadFailedTitle")} />
+        ) : items.length === 0 ? (
+          <EmptyState
+            title={t("dashboard.budgets.emptyTitle")}
+            description={t("dashboard.budgets.emptyDescription")}
+          />
+        ) : (
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+            {items.map((item) => (
+              <BudgetProgressCard
+                key={item.categoryId}
+                item={item}
+                displayCurrency={displayCurrency}
+                locale={locale}
+                rate={rate}
+                editable={isSingleMonth}
+                onEdit={() => openEditor(item)}
+                t={t}
+              />
+            ))}
+          </SimpleGrid>
+        )}
+        {!isSingleMonth && items.length > 0 ? (
+          <Text c="dimmed" size="xs" mt="md">
+            {t("dashboard.budgets.multiMonthHint")}
+          </Text>
+        ) : null}
+      </DashboardSection>
+      <Modal
+        opened={opened}
+        onClose={closeEditor}
+        title={
+          editingBudgetId
+            ? t("dashboard.budgets.edit")
+            : t("dashboard.budgets.configure")
+        }
+      >
+        <Stack gap="md">
+          <Select
+            label={t("dashboard.budgets.category")}
+            data={items.map((item) => ({
+              value: item.categoryId,
+              label: item.categoryName,
+            }))}
+            value={selectedCategoryId}
+            onChange={setSelectedCategoryId}
+            disabled={Boolean(editingBudgetId)}
+          />
+          <NumberInput
+            label={t("dashboard.budgets.amount")}
+            min={0.01}
+            decimalScale={2}
+            fixedDecimalScale
+            value={amount}
+            onChange={setAmount}
+          />
+          <Group justify="space-between">
+            {editingBudgetId ? (
+              <Button
+                color="red"
+                variant="subtle"
+                onClick={removeBudget}
+                loading={deleteBudget.isPending}
+              >
+                {t("dashboard.budgets.delete")}
+              </Button>
+            ) : (
+              <span />
+            )}
+            <Group gap="sm">
+              <Button variant="default" onClick={closeEditor}>
+                {t("dashboard.budgets.cancel")}
+              </Button>
+              <Button
+                color="signal"
+                onClick={saveBudget}
+                loading={upsertBudget.isPending}
+              >
+                {t("dashboard.budgets.save")}
+              </Button>
+            </Group>
+          </Group>
+        </Stack>
+      </Modal>
+    </>
+  );
+}
+
+function BudgetProgressCard({
+  item,
+  displayCurrency,
+  locale,
+  rate,
+  editable,
+  onEdit,
+  t,
+}: {
+  readonly item: BudgetProgress;
+  readonly displayCurrency: "USD" | "EUR";
+  readonly locale: string;
+  readonly rate: ExchangeRateView | null;
+  readonly editable: boolean;
+  readonly onEdit: () => void;
+  readonly t: ReturnType<typeof useTranslation>["t"];
+}): React.JSX.Element {
+  const utilization = item.utilizationPercent ?? 0;
+  const progress = Math.min(100, Math.max(0, utilization));
+
+  return (
+    <Card padding="sm" radius="md" withBorder>
+      <Group justify="space-between" align="flex-start" gap="sm">
+        <Stack gap={2} miw={0}>
+          <Text fw={700} truncate>
+            {item.categoryName}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {item.budgetMinor === null
+              ? t("dashboard.budgets.noBudget")
+              : `${t("dashboard.budgets.spent")}: ${formatMinorAmount(
+                  item.actualMinor,
+                  displayCurrency,
+                  rate,
+                  locale,
+                )} / ${formatMinorAmount(
+                  item.budgetMinor,
+                  displayCurrency,
+                  rate,
+                  locale,
+                )}`}
+          </Text>
+        </Stack>
+        {editable ? (
+          <Button variant="subtle" color="gray" size="xs" onClick={onEdit}>
+            {item.budgetId
+              ? t("dashboard.budgets.edit")
+              : t("dashboard.budgets.configure")}
+          </Button>
+        ) : null}
+      </Group>
+      {item.budgetMinor !== null ? (
+        <>
+          <Progress
+            value={progress}
+            color={budgetProgressColor(utilization)}
+            size="sm"
+            mt="sm"
+          />
+          <Group justify="space-between" mt={5}>
+            <Text size="xs" c="dimmed">
+              {t("dashboard.budgets.remaining")}:{" "}
+              {formatMinorAmount(
+                item.remainingMinor ?? 0,
+                displayCurrency,
+                rate,
+                locale,
+              )}
+            </Text>
+            <Text size="xs" fw={700}>
+              {utilization}%
+            </Text>
+          </Group>
+        </>
+      ) : null}
+    </Card>
+  );
+}
+
+function budgetProgressColor(utilization: number): string {
+  if (utilization >= 100) {
+    return "red";
+  }
+  if (utilization >= 80) {
+    return "orange";
+  }
+  return "signal";
+}
+
+function emptyBudgetItem(): BudgetProgress {
+  return {
+    categoryId: "",
+    categoryName: "",
+    budgetId: null,
+    budgetMinor: null,
+    actualMinor: 0,
+    remainingMinor: null,
+    utilizationPercent: null,
+  };
 }
 
 function RecentTransactions({

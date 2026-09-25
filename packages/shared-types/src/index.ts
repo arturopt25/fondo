@@ -4,6 +4,7 @@ export interface HealthResponse {
 }
 
 export * from "./enums.js";
+export * from "./budgets.js";
 export * from "./finance.js";
 export * from "./me.js";
 export * from "./reports.js";
