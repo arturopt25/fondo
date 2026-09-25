@@ -55,7 +55,26 @@ describe("TenantProvisioningService", () => {
     const { client, fns } = createMockPrisma();
     fns.tenantFindFirst.mockResolvedValue(null);
     fns.tenantCreate.mockResolvedValue({ id: "tenant-1" });
-    fns.serviceDefinitionFindUnique.mockResolvedValue({ id: "svc-1" });
+    fns.serviceDefinitionFindUnique.mockResolvedValue({
+      id: "svc-1",
+      capabilities: [
+        {
+          id: "cap-accounts",
+          required: true,
+          defaultEnabled: true,
+        },
+        {
+          id: "cap-budgets",
+          required: false,
+          defaultEnabled: true,
+        },
+        {
+          id: "cap-recurring",
+          required: false,
+          defaultEnabled: false,
+        },
+      ],
+    });
     const service = new TenantProvisioningService({ client } as never);
 
     await service.provisionForUser("user-1", "Arturo");
@@ -75,12 +94,19 @@ describe("TenantProvisioningService", () => {
     });
     expect(fns.serviceDefinitionFindUnique).toHaveBeenCalledWith({
       where: { key: "PERSONAL_FINANCE" },
+      include: { capabilities: true },
     });
     expect(fns.serviceSubscriptionCreate).toHaveBeenCalledWith({
       data: {
         tenantId: "tenant-1",
         serviceId: "svc-1",
         status: "ACTIVE",
+        selections: {
+          create: [
+            { capabilityId: "cap-accounts", enabled: true },
+            { capabilityId: "cap-budgets", enabled: true },
+          ],
+        },
       },
     });
     expect(fns.categoryCreateMany).toHaveBeenCalledWith({

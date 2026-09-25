@@ -31,7 +31,7 @@ The project focuses on the engineering foundations that keep a SaaS product main
 - ✅ **Automated quality:** Shared linting, typechecking, testing and builds orchestrated by Turborepo.
 
 > [!NOTE]
-> The repository is under active development. Authentication, personal tenant provisioning, settings and the service catalog are implemented. The dashboard and reports currently render typed mock data — replacing mocks with real API queries, accounts and categories, the transaction ledger and production hardening are part of the roadmap.
+> The repository is under active development. Authentication, personal tenant provisioning, settings, the service catalog, the transaction ledger, reports, dashboard data and monthly budgets are implemented. Production hardening, historical exchange-rate support and operational service domains remain on the roadmap.
 
 ## Current Status
 
@@ -40,7 +40,7 @@ The project focuses on the engineering foundations that keep a SaaS product main
 | Monorepo foundation                | Stable                                                     |
 | Authentication and personal tenant | Stabilized                                                 |
 | Settings and preferences           | Partially connected to the API                             |
-| Dashboard and reports              | Functional UI on typed mock data                           |
+| Dashboard and reports              | Functional UI backed by reporting APIs and monthly budgets |
 | Service catalog                    | Visual catalog with Personal Finance enabled               |
 | Testing                            | Vitest configured; UI and integration coverage in progress |
 | CI/CD and release pipeline         | Not yet configured                                         |

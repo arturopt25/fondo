@@ -33,6 +33,10 @@ import {
   useTransactionsQuery,
 } from "./transactions-hooks";
 import { useServicesQuery } from "../services/services-hooks";
+import {
+  activeCapabilities,
+  cardKeyOf,
+} from "../services/service-presentation";
 
 type FormValues = {
   amount: number;
@@ -40,6 +44,7 @@ type FormValues = {
   accountId: string;
   categoryId: string;
   serviceKey: ServiceKey | null;
+  capabilityKey: string | null;
 };
 
 export function TransactionsPage(): React.JSX.Element {
@@ -62,6 +67,7 @@ export function TransactionsPage(): React.JSX.Element {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema) as unknown as Resolver<FormValues>,
@@ -71,6 +77,7 @@ export function TransactionsPage(): React.JSX.Element {
       accountId: "",
       categoryId: "",
       serviceKey: null,
+      capabilityKey: null,
     },
   });
 
@@ -81,6 +88,12 @@ export function TransactionsPage(): React.JSX.Element {
     servicesQuery.data?.services.filter(
       (service) => service.status === "ACTIVE",
     ) ?? [];
+  const selectedService = activeServices.find(
+    (service) => service.key === watch("serviceKey"),
+  );
+  const capabilities = selectedService
+    ? activeCapabilities(selectedService)
+    : [];
 
   const submitting = createIncome.isPending || createExpense.isPending;
 
@@ -91,6 +104,9 @@ export function TransactionsPage(): React.JSX.Element {
       amountMinor: Math.round((values.amount ?? 0) * 100),
       note: values.note || undefined,
       ...(values.serviceKey ? { serviceKey: values.serviceKey } : {}),
+      ...(values.capabilityKey
+        ? { capabilityKey: values.capabilityKey }
+        : {}),
     };
     if (type === "income") {
       createIncome.mutate(base, { onSuccess: () => reset() });
@@ -165,10 +181,31 @@ export function TransactionsPage(): React.JSX.Element {
                   value: service.key,
                   label: service.name,
                 }))}
-                onChange={(value) =>
-                  setValue("serviceKey", (value ?? null) as ServiceKey | null)
-                }
+                onChange={(value) => {
+                  setValue(
+                    "serviceKey",
+                    (value ?? null) as ServiceKey | null,
+                  );
+                  setValue("capabilityKey", null);
+                }}
               />
+              {selectedService ? (
+                <Select
+                  label={t("transactions.capability")}
+                  placeholder={t("transactions.capabilityPlaceholder")}
+                  clearable
+                  data={capabilities.map((capability) => ({
+                    value: capability.key,
+                    label: t(
+                      `services.capabilities.${cardKeyOf(selectedService.key)}.${capability.key}.name`,
+                      { defaultValue: capability.name },
+                    ),
+                  }))}
+                  onChange={(value) =>
+                    setValue("capabilityKey", (value ?? null) as string | null)
+                  }
+                />
+              ) : null}
               <TextInput
                 label={t("transactions.note")}
                 placeholder={t("transactions.notePlaceholder")}

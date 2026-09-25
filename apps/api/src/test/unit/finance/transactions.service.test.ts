@@ -16,6 +16,7 @@ function createTx() {
     financialAccount: { findFirst: vi.fn(), findMany: vi.fn() },
     category: { findFirst: vi.fn() },
     serviceSubscription: { findFirst: vi.fn() },
+    serviceDefinition: { findUnique: vi.fn() },
     transaction: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
@@ -501,5 +502,107 @@ describe("TransactionsService", () => {
       name: "Savings",
       balanceMinor: 8000,
     });
+  });
+
+  it("rejects a capability without a service", async () => {
+    const { tx, service } = createContext();
+    tx.financialAccount.findFirst.mockResolvedValue(account("acc-1"));
+    tx.category.findFirst.mockResolvedValue(category("cat-1", "INCOME"));
+
+    await expect(
+      service.createIncome("tenant-1", "user-1", {
+        accountId: "acc-1",
+        categoryId: "cat-1",
+        amountMinor: 1000,
+        capabilityKey: "expenses",
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("rejects a capability that does not belong to the service", async () => {
+    const { tx, service } = createContext();
+    tx.financialAccount.findFirst.mockResolvedValue(account("acc-1"));
+    tx.category.findFirst.mockResolvedValue(category("cat-1", "INCOME"));
+    tx.serviceDefinition.findUnique.mockResolvedValue({
+      key: "HOME",
+      capabilities: [{ id: "cap-1", key: "expenses", required: false }],
+    });
+
+    await expect(
+      service.createIncome("tenant-1", "user-1", {
+        accountId: "acc-1",
+        categoryId: "cat-1",
+        amountMinor: 1000,
+        serviceKey: "HOME",
+        capabilityKey: "vehicles",
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("rejects a capability that is not active for the service", async () => {
+    const { tx, service } = createContext();
+    tx.financialAccount.findFirst.mockResolvedValue(account("acc-1"));
+    tx.category.findFirst.mockResolvedValue(category("cat-1", "INCOME"));
+    tx.serviceDefinition.findUnique.mockResolvedValue({
+      key: "HOME",
+      capabilities: [{ id: "cap-1", key: "expenses", required: false }],
+    });
+    tx.serviceSubscription.findFirst.mockResolvedValue({
+      id: "sub-1",
+      selections: [],
+    });
+
+    await expect(
+      service.createIncome("tenant-1", "user-1", {
+        accountId: "acc-1",
+        categoryId: "cat-1",
+        amountMinor: 1000,
+        serviceKey: "HOME",
+        capabilityKey: "expenses",
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("persists an active capability on an income", async () => {
+    const { tx, service } = createContext();
+    tx.financialAccount.findFirst.mockResolvedValue(account("acc-1"));
+    tx.category.findFirst.mockResolvedValue(category("cat-1", "INCOME"));
+    tx.serviceDefinition.findUnique.mockResolvedValue({
+      key: "HOME",
+      capabilities: [{ id: "cap-1", key: "expenses", required: false }],
+    });
+    tx.serviceSubscription.findFirst.mockResolvedValue({
+      id: "sub-1",
+      selections: [{ capabilityId: "cap-1", enabled: true }],
+    });
+    tx.transaction.findUnique.mockResolvedValue(null);
+    tx.transactionEntry.groupBy.mockResolvedValue([]);
+    tx.$queryRaw.mockResolvedValue([]);
+    tx.transaction.create.mockResolvedValue(
+      txRow("tx-1", {
+        accountId: "acc-1",
+        categoryId: "cat-1",
+        serviceKey: "HOME",
+        capabilityKey: "expenses",
+      }),
+    );
+
+    const result = await service.createIncome("tenant-1", "user-1", {
+      accountId: "acc-1",
+      categoryId: "cat-1",
+      amountMinor: 1000,
+      serviceKey: "HOME",
+      capabilityKey: "expenses",
+    });
+
+    expect(result.capabilityKey).toBe("expenses");
+    expect(tx.transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          serviceKey: "HOME",
+          capabilityKey: "expenses",
+        }),
+      }),
+    );
   });
 });

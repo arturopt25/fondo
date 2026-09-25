@@ -46,6 +46,7 @@ export class TenantProvisioningService {
 
         const personalFinance = await tx.serviceDefinition.findUnique({
           where: { key: "PERSONAL_FINANCE" },
+          include: { capabilities: true },
         });
 
         if (personalFinance) {
@@ -54,6 +55,17 @@ export class TenantProvisioningService {
               tenantId: tenant.id,
               serviceId: personalFinance.id,
               status: "ACTIVE",
+              selections: {
+                create: personalFinance.capabilities
+                  .filter(
+                    (capability) =>
+                      capability.required || capability.defaultEnabled,
+                  )
+                  .map((capability) => ({
+                    capabilityId: capability.id,
+                    enabled: true,
+                  })),
+              },
             },
           });
         }

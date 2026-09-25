@@ -6,6 +6,8 @@ import { AccountsController } from "./accounts.controller.js";
 import { AccountsService } from "./accounts.service.js";
 import { CategoriesController } from "./categories.controller.js";
 import { CategoriesService } from "./categories.service.js";
+import { BudgetsController } from "./budgets.controller.js";
+import { BudgetsService } from "./budgets.service.js";
 import {
   LedgerController,
   TransactionsController,
@@ -18,6 +20,7 @@ import { AccountsRepository } from "./repositories/accounts.repository.js";
 import { CategoriesRepository } from "./repositories/categories.repository.js";
 import { TransactionsRepository } from "./repositories/transactions.repository.js";
 import { ReportsRepository } from "./repositories/reports.repository.js";
+import { BudgetsRepository } from "./repositories/budgets.repository.js";
 
 @Module({
   imports: [AuthModule],
@@ -27,6 +30,7 @@ import { ReportsRepository } from "./repositories/reports.repository.js";
     TransactionsController,
     LedgerController,
     ReportsController,
+    BudgetsController,
   ],
   providers: [
     AccountsService,
@@ -34,10 +38,12 @@ import { ReportsRepository } from "./repositories/reports.repository.js";
     LedgerService,
     TransactionsService,
     ReportsService,
+    BudgetsService,
     AccountsRepository,
     CategoriesRepository,
     TransactionsRepository,
     ReportsRepository,
+    BudgetsRepository,
     SessionAuthGuard,
   ],
 })

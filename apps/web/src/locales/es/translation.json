@@ -117,8 +117,23 @@
     "budgets": {
       "eyebrow": "Control mensual",
       "title": "Presupuestos",
-      "emptyTitle": "Presupuestos en camino",
-      "emptyDescription": "Define limites por categoria cuando los presupuestos esten disponibles."
+      "emptyTitle": "Sin categorias de gasto",
+      "emptyDescription": "Crea una categoria de gasto para comenzar a definir presupuestos.",
+      "configure": "Configurar",
+      "edit": "Editar",
+      "save": "Guardar presupuesto",
+      "delete": "Eliminar",
+      "cancel": "Cancelar",
+      "category": "Categoria",
+      "amount": "Limite mensual",
+      "spent": "Gastado",
+      "remaining": "Restante",
+      "noBudget": "Sin presupuesto configurado",
+      "multiMonthHint": "Los presupuestos se editan mes a mes; este resumen agrupa el periodo seleccionado.",
+      "savedTitle": "Presupuesto guardado",
+      "savedMessage": "El limite mensual se actualizo.",
+      "deletedTitle": "Presupuesto eliminado",
+      "deletedMessage": "El limite mensual se elimino."
     },
     "recent": {
       "eyebrow": "Actividad reciente",
@@ -130,6 +145,14 @@
       "title": "Tu ahorro va por delante del ritmo anterior.",
       "description": "Mantener este ritmo te deja margen para tus objetivos del siguiente mes.",
       "badge": "Senal positiva"
+    },
+    "services": {
+      "eyebrow": "Modulos activos",
+      "title": "Servicios activos",
+      "manage": "Gestionar servicios",
+      "total": "Total {{name}}",
+      "showMore": "Ver mas",
+      "showLess": "Ver menos"
     }
   },
   "reports": {
@@ -506,6 +529,8 @@
     "amount": "Monto",
     "service": "Servicio",
     "servicePlaceholder": "Servicio opcional",
+    "capability": "Capacidad",
+    "capabilityPlaceholder": "Capacidad opcional",
     "note": "Nota",
     "notePlaceholder": "Nota opcional",
     "createIncome": "Registrar ingreso",

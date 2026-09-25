@@ -113,6 +113,7 @@ export const transactionSchema = z.object({
   transferFromId: z.string().nullable(),
   transferToId: z.string().nullable(),
   serviceKey: serviceKeySchema.nullable(),
+  capabilityKey: z.string().nullable(),
   sourceType: z.string().nullable(),
   sourceId: z.string().nullable(),
   note: z.string().nullable(),
@@ -136,6 +137,7 @@ export const createIncomeSchema = z.object({
   occurredAt: z.string().datetime().optional(),
   note: z.string().trim().max(500).optional(),
   serviceKey: serviceKeySchema.optional(),
+  capabilityKey: z.string().trim().max(64).optional(),
   sourceType: z.string().max(32).optional(),
   sourceId: z.string().optional(),
 });
@@ -148,6 +150,7 @@ export const createExpenseSchema = z.object({
   occurredAt: z.string().datetime().optional(),
   note: z.string().trim().max(500).optional(),
   serviceKey: serviceKeySchema.optional(),
+  capabilityKey: z.string().trim().max(64).optional(),
   sourceType: z.string().max(32).optional(),
   sourceId: z.string().optional(),
 });

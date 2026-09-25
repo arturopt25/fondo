@@ -117,8 +117,23 @@
     "budgets": {
       "eyebrow": "Monthly control",
       "title": "Budgets",
-      "emptyTitle": "Budgets are on the way",
-      "emptyDescription": "Set limits per category once budgets are available."
+      "emptyTitle": "No expense categories",
+      "emptyDescription": "Create an expense category to start defining budgets.",
+      "configure": "Configure",
+      "edit": "Edit",
+      "save": "Save budget",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "category": "Category",
+      "amount": "Monthly limit",
+      "spent": "Spent",
+      "remaining": "Remaining",
+      "noBudget": "No budget configured",
+      "multiMonthHint": "Budgets are edited month by month; this summary aggregates the selected period.",
+      "savedTitle": "Budget saved",
+      "savedMessage": "The monthly limit was updated.",
+      "deletedTitle": "Budget deleted",
+      "deletedMessage": "The monthly limit was deleted."
     },
     "recent": {
       "eyebrow": "Recent activity",
@@ -130,6 +145,14 @@
       "title": "Your savings are ahead of the previous pace.",
       "description": "Keeping this rhythm leaves room for next month's goals.",
       "badge": "Positive signal"
+    },
+    "services": {
+      "eyebrow": "Active modules",
+      "title": "Active services",
+      "manage": "Manage services",
+      "total": "{{name}} total",
+      "showMore": "See more",
+      "showLess": "See less"
     }
   },
   "reports": {
@@ -503,6 +526,8 @@
     "amount": "Amount",
     "service": "Service",
     "servicePlaceholder": "Optional service",
+    "capability": "Capability",
+    "capabilityPlaceholder": "Optional capability",
     "note": "Note",
     "notePlaceholder": "Optional note",
     "createIncome": "Record income",

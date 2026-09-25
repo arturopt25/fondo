@@ -69,4 +69,50 @@ export class ReportsRepository {
       ];
     });
   }
+
+  async serviceMovements(
+    tenantId: string,
+  ): Promise<
+    {
+      readonly serviceKey: string | null;
+      readonly capabilityKey: string | null;
+      readonly categoryType: string;
+      readonly direction: string;
+      readonly amountMinor: number;
+    }[]
+  > {
+    const rows = await this.prisma.client.transactionEntry.findMany({
+      where: {
+        transaction: {
+          tenantId,
+          deletedAt: null,
+          serviceKey: { not: null },
+        },
+        categoryId: { not: null },
+      },
+      select: {
+        direction: true,
+        amountMinor: true,
+        transaction: {
+          select: { serviceKey: true, capabilityKey: true },
+        },
+        category: { select: { type: true } },
+      },
+    });
+
+    return rows.flatMap((row) => {
+      if (!row.category) {
+        return [];
+      }
+      return [
+        {
+          serviceKey: row.transaction.serviceKey ?? null,
+          capabilityKey: row.transaction.capabilityKey ?? null,
+          categoryType: row.category.type,
+          direction: row.direction,
+          amountMinor: row.amountMinor,
+        },
+      ];
+    });
+  }
 }

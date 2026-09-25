@@ -8,6 +8,8 @@ export interface MetricCardProps {
   readonly trend?: string;
   readonly icon: TablerIcon;
   readonly tone?: "cyan" | "green" | "coral" | "violet";
+  readonly compact?: boolean;
+  readonly variant?: "card" | "embedded";
 }
 
 const toneClass: Record<NonNullable<MetricCardProps["tone"]>, string> = {
@@ -24,9 +26,20 @@ export function MetricCard({
   trend,
   icon: Icon,
   tone = "cyan",
+  compact = false,
+  variant = "card",
 }: MetricCardProps): React.JSX.Element {
+  const isEmbedded = variant === "embedded";
+
   return (
-    <Card className="metric-card" padding="lg" radius="lg" withBorder>
+    <Card
+      className={`metric-card${compact ? " metric-card--compact" : ""}${
+        isEmbedded ? " metric-card--embedded" : ""
+      }`}
+      padding={isEmbedded ? "sm" : compact ? "md" : "lg"}
+      radius="lg"
+      withBorder={!isEmbedded}
+    >
       <Group justify="space-between" align="flex-start" wrap="nowrap">
         <Stack gap={6}>
           <Text className="eyebrow" size="xs">
@@ -43,7 +56,7 @@ export function MetricCard({
           </Group>
         </Stack>
         <div className={toneClass[tone]} aria-hidden="true">
-          <Icon size={19} stroke={1.8} />
+          <Icon size={compact ? 17 : 19} stroke={1.8} />
         </div>
       </Group>
     </Card>

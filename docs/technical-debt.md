@@ -24,8 +24,8 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 | Phase 3: Functional Settings                | Mostly done |
 | Phase 4: Services and Feature Flags         | Mostly done |
 | Phase 5: Accounts and Categories            | Done        |
-| Phase 6: Transactions and Ledger            | In Progress |
-| Phase 7: Dashboard and Reports              | Pending     |
+| Phase 6: Transactions and Ledger            | Mostly done |
+| Phase 7: Dashboard and Reports              | Mostly done |
 | Phase 8: Security and Production Hardening  | Pending     |
 
 ## Phase 0: Repository Foundation
@@ -536,7 +536,7 @@ Declared but not yet consumed:
 - TD-071: Model credit card negative debt. Done. `CREDIT_CARD` accounts are liabilities and carry debt as a negative balance.
 - TD-072: Add audited edit/delete. Done. Transactions are immutable; `POST /transactions/:id/reverse` creates an audited reversal and marks the original. Edit is modelled as reverse + recreate (TD-105).
 - TD-073: Add atomicity tests. Done. Transaction, entries and audit log commit in a single Prisma transaction; balance and idempotency invariants are unit- and e2e-tested.
-- TD-074: Add concurrency tests. Pending. Parallel transfers and concurrent idempotent creates are not yet asserted.
+- TD-074: Add concurrency tests. Done. Parallel transfers and concurrent idempotent creates are covered by finance e2e tests.
 - TD-101: Create `Ledger` and attach accounts/transactions to it. Done.
 - TD-102: Implement operational domain entities for Vehicle, Home, Insurance and Entrepreneurship (vehicles, properties, policies, businesses and their expense flows). Pending.
 - TD-103: Enforce financial write invariants. Done. Writes validate tenant-scoped active accounts, category type vs movement type, active service subscriptions and same-ledger transfers.
@@ -550,7 +550,7 @@ Declared but not yet consumed:
 - TD-077: Implement financial dashboard. Done. Balance, summary, cash flow, category spend and recent movements from the reporting API.
 - TD-078: Implement category spending. Done. `ReportsService.categorySpend` with unit and e2e coverage.
 - TD-079: Implement cash flow. Done. Monthly buckets computed in the tenant timezone.
-- TD-080: Implement budgets vs actual. Pending. Requires a `Budget` model and API; the dashboard shows an empty state meanwhile.
+- TD-080: Implement budgets vs actual. Done. Monthly budgets are tenant-scoped by expense category, support CRUD operations, aggregate actual spending across selected months and render progress states in the dashboard.
 - TD-081: Implement real period selector. Done. `DateRangeSelector` drives `from`/`to` query parameters on both pages.
 - TD-082: Apply USD/EUR conversion. Done. `lib/money.ts` converts with the report `ExchangeRateView`.
 - TD-083: Use latest rate for current balances. Done. The configured rate applies to current balance presentation.
@@ -608,6 +608,7 @@ At the end of every phase:
 
 ## Changelog
 
+- 2026-09-25: Added monthly budgets vs. actuals (TD-080). Introduced tenant-scoped `Budget` persistence, shared contracts, CRUD API with audit events, period aggregation, Dashboard progress cards and monthly budget editing/deletion. Added budget e2e coverage for CRUD, aggregation and tenant isolation. Updated dashboard summary layout to embed period metrics in the balance hero and compact active services into a responsive grid.
 - 2026-09-23: Real dashboard and reports + services copy. Added a reporting API (`GET /reports/dashboard|cash-flow|category-spend`) that aggregates from `TransactionEntry` with reversal compensation, tenant-timezone monthly buckets, `serviceKey` filters and an `ExchangeRateView`; migrated Dashboard and Reports off `mock-data.ts` to parameterized query keys with loading/empty/error states; budgets show an empty state until TD-080. Services cards now say `Activate` and the modal uses activation/config copy (i18n ES/EN). Hardened idempotency under concurrency (`FOR UPDATE` + replay on P2002) with concurrency e2e tests (TD-074). Unified `fastify` to 5.12.5 via `pnpm-workspace.yaml` `overrides` (TD-093 partial). TD-008, TD-014–016, TD-075–079, TD-081–083, TD-085, TD-106, TD-107 done.
 - 2026-09-23: Double-entry ledger core. Added `TransactionEntry` with DEBIT/CREDIT partidas (backfilled from existing transactions), atomic writes (transaction + entries + audit in a single Prisma transaction with `FOR UPDATE` account locks), `Idempotency-Key` deduplication (TD-069), balance rules that reject negative asset balances (TD-070) and model credit-card debt (TD-071), audited reversals via `POST /transactions/:id/reverse` (TD-072), financial write invariants (active account, category type, active service, same-ledger transfer) (TD-103), and unit/e2e coverage. TD-064, TD-065, TD-069, TD-070, TD-071, TD-072, TD-073, TD-103 done.
 - 2026-09-23: Services capabilities + ledger foundation. Added `ServiceCapabilityDefinition`/`ServiceCapabilitySelection` with a per-service capability checklist on the Services page, a `ledgerMode` (shared/separate) on subscriptions for Entrepreneurship, a `Ledger` + `Transaction` model (income/expense/transfer with optional service context and source entity), transactions/ledger-balance API and a functional Transactions page. TD-099, TD-100, TD-101, TD-066, TD-067, TD-068 done.

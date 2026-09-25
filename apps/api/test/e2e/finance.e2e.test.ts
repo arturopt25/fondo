@@ -15,7 +15,7 @@ function uniqueEmail(): string {
 
 async function truncateAll(): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceDefinition", "ServiceSubscription", "AuditLog", "FinancialAccount", "Category", "Ledger", "Transaction", "TransactionEntry" RESTART IDENTITY CASCADE',
+    'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceDefinition", "ServiceSubscription", "AuditLog", "FinancialAccount", "Category", "Budget", "Ledger", "Transaction", "TransactionEntry" RESTART IDENTITY CASCADE',
   );
   await prisma.$executeRawUnsafe(
     `INSERT INTO "ServiceDefinition" ("id", "key", "name", "description", "createdAt", "updatedAt") VALUES
@@ -196,6 +196,94 @@ describe("finance e2e", () => {
 
     const list = await agent.get("/api/v1/transactions").expect(200);
     expect(list.body.total).toBe(2);
+  });
+
+  it("creates, aggregates, updates and deletes a monthly budget", async () => {
+    const agent = await signUp(uniqueEmail());
+    const account = await agent
+      .post("/api/v1/accounts")
+      .send({ name: "Cash", type: "CASH", openingBalanceMinor: 50000 })
+      .expect(201);
+    const expenseCategories = await agent
+      .get("/api/v1/categories?type=EXPENSE")
+      .expect(200);
+    const categoryId = expenseCategories.body.items[0].id as string;
+
+    await agent
+      .post("/api/v1/transactions/expense")
+      .send({
+        accountId: account.body.id,
+        categoryId,
+        amountMinor: 25000,
+      })
+      .expect(201);
+
+    const created = await agent
+      .put("/api/v1/budgets")
+      .send({ categoryId, period: "2026-09", amountMinor: 50000 })
+      .expect(200);
+    expect(created.body.categoryId).toBe(categoryId);
+    expect(created.body.amountMinor).toBe(50000);
+
+    const listed = await agent
+      .get("/api/v1/budgets?from=2026-09&to=2026-09")
+      .expect(200);
+    const progress = listed.body.items.find(
+      (item: { categoryId: string }) => item.categoryId === categoryId,
+    );
+    expect(progress).toMatchObject({
+      budgetMinor: 50000,
+      actualMinor: 25000,
+      remainingMinor: 25000,
+      utilizationPercent: 50,
+    });
+
+    await agent
+      .put("/api/v1/budgets")
+      .send({ categoryId, period: "2026-09", amountMinor: 60000 })
+      .expect(200);
+    const updated = await agent
+      .get("/api/v1/budgets?from=2026-09&to=2026-09")
+      .expect(200);
+    expect(
+      updated.body.items.find(
+        (item: { categoryId: string }) => item.categoryId === categoryId,
+      ).budgetMinor,
+    ).toBe(60000);
+
+    await agent.delete(`/api/v1/budgets/${created.body.id}`).expect(200);
+    const afterDelete = await agent
+      .get("/api/v1/budgets?from=2026-09&to=2026-09")
+      .expect(200);
+    expect(
+      afterDelete.body.items.find(
+        (item: { categoryId: string }) => item.categoryId === categoryId,
+      ).budgetMinor,
+    ).toBeNull();
+  });
+
+  it("isolates budgets across tenants", async () => {
+    const agentA = await signUp(uniqueEmail());
+    const agentB = await signUp(uniqueEmail());
+    const categoriesA = await agentA
+      .get("/api/v1/categories?type=EXPENSE")
+      .expect(200);
+    const categoryId = categoriesA.body.items[0].id as string;
+
+    await agentA
+      .put("/api/v1/budgets")
+      .send({ categoryId, period: "2026-09", amountMinor: 50000 })
+      .expect(200);
+
+    const budgetsB = await agentB
+      .get("/api/v1/budgets?from=2026-09&to=2026-09")
+      .expect(200);
+    expect(
+      budgetsB.body.items.some(
+        (item: { budgetMinor: number | null }) => item.budgetMinor !== null,
+      ),
+    ).toBe(false);
+    await agentB.delete(`/api/v1/budgets/${categoryId}`).expect(404);
   });
 
   it("records a transfer between accounts and keeps the ledger total stable", async () => {
