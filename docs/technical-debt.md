@@ -102,7 +102,7 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 
 Declared but not yet consumed:
 
-- API (`apps/api`): `@fastify/cookie`, `@fastify/helmet`, `@fastify/static`, `@fastify/middie`, `nestjs-zod` — candidates for Phase 8 security/hardening or removal.
+- API (`apps/api`): `@fastify/cookie`, `@fastify/static`, `@fastify/middie`, `nestjs-zod` — candidates for Phase 8 security/hardening or removal. `@fastify/helmet` is now consumed by TD-116.
 - Web (`apps/web`): `@fondo/i18n`, `@tanstack/react-query-devtools`, `@mantine/dates` (TD-009), `react-hook-form` and `@hookform/resolvers` (TD-017).
 - `@nestjs/terminus` is now consumed by TD-003.
 
@@ -542,6 +542,11 @@ Declared but not yet consumed:
 - TD-103: Enforce financial write invariants. Done. Writes validate tenant-scoped active accounts, category type vs movement type, active service subscriptions and same-ledger transfers.
 - TD-104: Support cross-ledger transfers. Pending. Needs a bridge-account or explicit settlement rule once `SEPARATE` ledgers exist.
 - TD-105: Add edit-as-replacement UX. Pending. UI flow that reverses the original and creates a corrected transaction in one action.
+- TD-108: Send `Idempotency-Key` from the web client. Done. Income, expense and transfer mutations generate a key per submit attempt and send it as a header, so React Query retries are deduplicated by the server. Verified by the web hook tests and the `TransactionsPage` transfer flow test.
+- TD-109: Add transfer creation UI. Done. The `TransactionsPage` form gained a `TRANSFER` segment with from/to account selects wired to `POST /transactions/transfer`; category/service/capability are hidden for transfers.
+- TD-110: Add reversal UI. Done. The movements table shows a reverse action for reversible rows (hidden when already reversed or when the row is itself a reversal), with a confirmation modal and an optional note wired to `POST /transactions/:id/reverse`. Reverted rows render a `Reversed` badge and reversal rows a `Reversal` badge.
+- TD-111: Surface transaction pagination. Done. `queryKeys.transactions` is now a parameterized factory and `useTransactionsQuery` sends `page`/`pageSize`; the page renders a Mantine `Pagination` control driven by the server `total`.
+- TD-117: Fix transactions form validation mismatch. Done. The RHF forms validated against the shared create schemas (`amountMinor`) while the form manages `amount` (major units) and null service/capability keys, so submit never passed validation. The page now uses form-level schemas derived from the shared contracts with an `amount` field and nullable service/capability; amount errors render on the input.
 
 ## Phase 7: Dashboard and Reports
 
@@ -557,6 +562,7 @@ Declared but not yet consumed:
 - TD-084: Use effective rate for historical reports. Pending. Needs a persisted rate history and a real provider; currently a single configured rate is used for both current and historical.
 - TD-085: Add aggregation tests. Done. Unit tests for `ReportsService` and e2e for dashboard, reversal compensation and service filters.
 - TD-107: Define general vs service-specific reports. Done. `serviceKey` filters movements per active service; domain-specific reports still wait on TD-102.
+- TD-112: Unify money formatting and only convert when the display currency matches the rate. Done. `TransactionsPage` now uses `lib/money.ts` `formatMinorAmount` instead of a local hardcoded USD formatter, and the balance response carries the `exchangeRate` so the page can convert. A `rateFor` guard in `lib/money.ts` ensures the USD→EUR rate is only applied when the display currency is EUR (the dashboard hero keeps showing the raw rate source/date for TD-015). `LedgerBalanceResponse` gained `exchangeRate` in the shared contract.
 
 ## Phase 8: Security and Production Hardening
 
@@ -564,7 +570,8 @@ Declared but not yet consumed:
 - TD-087: Verify `SET LOCAL` inside transactions. Pending. `set_config('app.tenant_id', ..., true)` must be set as the first statement of each tenant-scoped transaction; verify rollback restores it.
 - TD-088: Add cross-tenant tests. Pending. Prove an under-scoped query returns nothing under the restricted role; the existing cross-tenant e2e suite must keep passing on the app role.
 - TD-089: Apply per-endpoint rate limiting. Pending.
-- TD-090: Complete payload size limits. Pending.
+- TD-090: Complete payload size limits. Done. Fastify is configured with an explicit 1 MB `bodyLimit` shared between the runtime and the e2e app via `http-hardening.ts`; e2e asserts oversized bodies return `413`. Auth routes are handled by Better Auth's `onRequest` hook and bypass the Fastify body parser, so the limit applies to NestJS routes.
+- TD-116: Register security headers. Done. `@fastify/helmet` is registered on both the runtime and the e2e app (CSP disabled for Swagger, `cross-origin` CORP so the web origin can fetch); e2e asserts `X-Content-Type-Options`, `X-Frame-Options`, `X-Download-Options` and `Cross-Origin-Resource-Policy`.
 - TD-091: Review production CORS. Pending.
 - TD-092: Add basic observability. Pending.
 - TD-093: Run dependency audit. Partially done. osv-scanner findings: `fastify` unified to 5.12.5 via `pnpm-workspace.yaml` `overrides` (pinned by `@nestjs/platform-fastify@11.2.3`), resolving CVE-2026-16732 / CVE-2026-18504. Remaining: CVE-2026-84373 (`vitest@3.2.7`) requires a major 3→4/5 upgrade, and CVE-2026-40345 (`deepmerge-ts@7.1.5`, transitive via `prisma`) requires a major Prisma 6→7 upgrade — both are dedicated migrations with breaking changes.
@@ -608,6 +615,7 @@ At the end of every phase:
 
 ## Changelog
 
+- 2026-09-28: Wave 1 — connect the web client to the ledger. `Idempotency-Key` sent from web mutations (TD-108), transfer creation UI (TD-109), audited reversal UI with a confirmation modal and optional note (TD-110), movement pagination with parameterized query keys (TD-111), unified money formatting on `TransactionsPage` plus a rate guard in `lib/money.ts` so the USD→EUR rate only applies when the display currency is EUR (TD-112), and shared HTTP hardening (`@fastify/helmet` + a 1 MB `bodyLimit`) on both the runtime and the e2e app (TD-116, closes TD-090). Fixed a pre-existing bug where the movement forms never passed validation (TD-117). `LedgerBalanceResponse` now includes `exchangeRate`.
 - 2026-09-25: Added monthly budgets vs. actuals (TD-080). Introduced tenant-scoped `Budget` persistence, shared contracts, CRUD API with audit events, period aggregation, Dashboard progress cards and monthly budget editing/deletion. Added budget e2e coverage for CRUD, aggregation and tenant isolation. Updated dashboard summary layout to embed period metrics in the balance hero and compact active services into a responsive grid.
 - 2026-09-23: Real dashboard and reports + services copy. Added a reporting API (`GET /reports/dashboard|cash-flow|category-spend`) that aggregates from `TransactionEntry` with reversal compensation, tenant-timezone monthly buckets, `serviceKey` filters and an `ExchangeRateView`; migrated Dashboard and Reports off `mock-data.ts` to parameterized query keys with loading/empty/error states; budgets show an empty state until TD-080. Services cards now say `Activate` and the modal uses activation/config copy (i18n ES/EN). Hardened idempotency under concurrency (`FOR UPDATE` + replay on P2002) with concurrency e2e tests (TD-074). Unified `fastify` to 5.12.5 via `pnpm-workspace.yaml` `overrides` (TD-093 partial). TD-008, TD-014–016, TD-075–079, TD-081–083, TD-085, TD-106, TD-107 done.
 - 2026-09-23: Double-entry ledger core. Added `TransactionEntry` with DEBIT/CREDIT partidas (backfilled from existing transactions), atomic writes (transaction + entries + audit in a single Prisma transaction with `FOR UPDATE` account locks), `Idempotency-Key` deduplication (TD-069), balance rules that reject negative asset balances (TD-070) and model credit-card debt (TD-071), audited reversals via `POST /transactions/:id/reverse` (TD-072), financial write invariants (active account, category type, active service, same-ledger transfer) (TD-103), and unit/e2e coverage. TD-064, TD-065, TD-069, TD-070, TD-071, TD-072, TD-073, TD-103 done.

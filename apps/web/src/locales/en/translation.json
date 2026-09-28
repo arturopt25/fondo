@@ -532,6 +532,20 @@
     "notePlaceholder": "Optional note",
     "createIncome": "Record income",
     "createExpense": "Record expense",
+    "createTransfer": "Record transfer",
+    "fromAccount": "From account",
+    "fromAccountPlaceholder": "Select the source account",
+    "toAccount": "To account",
+    "toAccountPlaceholder": "Select the destination account",
+    "reverse": "Reverse",
+    "reverseModal": {
+      "title": "Reverse movement",
+      "description": "This creates an audited reversal that cancels the original movement. The original is kept for history.",
+      "note": "Note (optional)",
+      "notePlaceholder": "Why are you reversing this movement?",
+      "confirm": "Reverse movement",
+      "cancel": "Cancel"
+    },
     "emptyTitle": "No movements yet",
     "emptyDescription": "Record your first income or expense to start building your balance.",
     "types": {
@@ -544,13 +558,20 @@
       "service": "Service",
       "note": "Note",
       "date": "Date",
-      "amount": "Amount"
+      "amount": "Amount",
+      "actions": "Actions",
+      "reversed": "Reversed",
+      "reversal": "Reversal"
     },
     "notifications": {
       "incomeCreatedTitle": "Income recorded",
       "expenseCreatedTitle": "Expense recorded",
+      "transferCreatedTitle": "Transfer recorded",
       "createdMessage": "The movement was recorded.",
-      "actionError": "The movement could not be recorded."
+      "actionError": "The movement could not be recorded.",
+      "reversedTitle": "Movement reversed",
+      "reversedMessage": "An audited reversal was created.",
+      "reverseError": "The movement could not be reversed."
     }
   },
   "finance": {

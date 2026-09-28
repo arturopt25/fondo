@@ -535,6 +535,20 @@
     "notePlaceholder": "Nota opcional",
     "createIncome": "Registrar ingreso",
     "createExpense": "Registrar gasto",
+    "createTransfer": "Registrar transferencia",
+    "fromAccount": "Cuenta origen",
+    "fromAccountPlaceholder": "Selecciona la cuenta origen",
+    "toAccount": "Cuenta destino",
+    "toAccountPlaceholder": "Selecciona la cuenta destino",
+    "reverse": "Revertir",
+    "reverseModal": {
+      "title": "Revertir movimiento",
+      "description": "Esto crea una reversión auditada que cancela el movimiento original. El original se conserva para el historial.",
+      "note": "Nota (opcional)",
+      "notePlaceholder": "¿Por qué reviertes este movimiento?",
+      "confirm": "Revertir movimiento",
+      "cancel": "Cancelar"
+    },
     "emptyTitle": "Aun no hay movimientos",
     "emptyDescription": "Registra tu primer ingreso o gasto para empezar a construir tu balance.",
     "types": {
@@ -547,13 +561,20 @@
       "service": "Servicio",
       "note": "Nota",
       "date": "Fecha",
-      "amount": "Monto"
+      "amount": "Monto",
+      "actions": "Acciones",
+      "reversed": "Revertida",
+      "reversal": "Reversión"
     },
     "notifications": {
       "incomeCreatedTitle": "Ingreso registrado",
       "expenseCreatedTitle": "Gasto registrado",
+      "transferCreatedTitle": "Transferencia registrada",
       "createdMessage": "El movimiento fue registrado.",
-      "actionError": "No se pudo registrar el movimiento."
+      "actionError": "No se pudo registrar el movimiento.",
+      "reversedTitle": "Movimiento revertido",
+      "reversedMessage": "Se creó una reversión auditada.",
+      "reverseError": "No se pudo revertir el movimiento."
     }
   },
   "finance": {

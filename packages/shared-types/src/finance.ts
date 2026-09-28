@@ -182,9 +182,19 @@ export const accountBalanceSchema = z.object({
 });
 export type AccountBalance = z.infer<typeof accountBalanceSchema>;
 
+export const exchangeRateViewSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  rate: z.number().positive(),
+  effectiveAt: z.string(),
+  source: z.string(),
+});
+export type ExchangeRateView = z.infer<typeof exchangeRateViewSchema>;
+
 export const ledgerBalanceResponseSchema = z.object({
   ledgerId: z.string(),
   totalMinor: z.number().int(),
   accounts: z.array(accountBalanceSchema),
+  exchangeRate: exchangeRateViewSchema.nullable(),
 });
 export type LedgerBalanceResponse = z.infer<typeof ledgerBalanceResponseSchema>;

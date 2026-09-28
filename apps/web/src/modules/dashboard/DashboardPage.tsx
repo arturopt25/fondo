@@ -58,7 +58,7 @@ import {
   type PeriodKey,
 } from "../../components/DateRangeSelector";
 import { useAppPreferences } from "../../app/preferences";
-import { formatDate, formatMinorAmount } from "../../lib/money";
+import { formatDate, formatMinorAmount, rateFor } from "../../lib/money";
 import {
   resolvePeriodRange,
   useDashboardReportQuery,
@@ -145,7 +145,7 @@ export function DashboardPage(): React.JSX.Element {
                 range={budgetRange}
                 displayCurrency={displayCurrency}
                 locale={locale}
-                rate={reportQuery.data.exchangeRate}
+                rate={rateFor(reportQuery.data.exchangeRate, displayCurrency)}
               />
             </>
           ) : (
@@ -188,7 +188,7 @@ function DashboardContent({
   readonly budgetRange: BudgetPeriodRange;
 }): React.JSX.Element {
   const { t } = useTranslation();
-  const rate = report.exchangeRate;
+  const rate = rateFor(report.exchangeRate, displayCurrency);
 
   const chartData = report.cashFlow.map((point) => ({
     bucket: point.bucket,
@@ -366,7 +366,8 @@ function BalanceSheet({
   readonly locale: string;
 }): React.JSX.Element {
   const { t } = useTranslation();
-  const rate = report.exchangeRate;
+  const rate = rateFor(report.exchangeRate, displayCurrency);
+  const rateInfo = report.exchangeRate;
   const summary = report.summary;
   const active = services.filter((service) => service.status === "ACTIVE");
 
@@ -473,16 +474,16 @@ function BalanceSheet({
                     variant="embedded"
                   />
                 </SimpleGrid>
-                {rate ? (
+                {rateInfo ? (
                   <div className="balance-hero__rate">
                     <Text className="eyebrow" size="xs">
                       {t("dashboard.exchangeRate")}
                     </Text>
                     <Text className="hero-rate">
-                      1 {rate.from} = {rate.rate.toFixed(2)} {rate.to}
+                      1 {rateInfo.from} = {rateInfo.rate.toFixed(2)} {rateInfo.to}
                     </Text>
                     <Text c="dimmed" size="xs">
-                      {rate.source} · {formatDate(rate.effectiveAt, locale)}
+                      {rateInfo.source} · {formatDate(rateInfo.effectiveAt, locale)}
                     </Text>
                   </div>
                 ) : null}

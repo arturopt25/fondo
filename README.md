@@ -39,11 +39,11 @@ The project focuses on the engineering foundations that keep a SaaS product main
 | ---------------------------------- | ---------------------------------------------------------- |
 | Monorepo foundation                | Stable                                                     |
 | Authentication and personal tenant | Stabilized                                                 |
-| Settings and preferences           | Partially connected to the API                             |
+| Settings and preferences           | Connected to the API                                       |
 | Dashboard and reports              | Functional UI backed by reporting APIs and monthly budgets |
 | Service catalog                    | Visual catalog with Personal Finance enabled               |
 | Testing                            | Vitest configured; UI and integration coverage in progress |
-| CI/CD and release pipeline         | Not yet configured                                         |
+| CI/CD                              | CI gate active (lint, typecheck, test, e2e, build, Qlty)   |
 
 For a detailed, itemized inventory of known gaps and planned work, see [`docs/technical-debt.md`](docs/technical-debt.md).
 

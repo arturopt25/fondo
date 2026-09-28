@@ -1,16 +1,7 @@
 import { z } from "zod";
 
-import { transactionSchema } from "./finance.js";
+import { exchangeRateViewSchema, transactionSchema } from "./finance.js";
 import { serviceKeySchema } from "./services.js";
-
-export const exchangeRateViewSchema = z.object({
-  from: z.string(),
-  to: z.string(),
-  rate: z.number().positive(),
-  effectiveAt: z.string(),
-  source: z.string(),
-});
-export type ExchangeRateView = z.infer<typeof exchangeRateViewSchema>;
 
 export const periodQuerySchema = z.object({
   from: z.string().datetime().optional(),

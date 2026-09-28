@@ -4,7 +4,6 @@ import type {
   CashFlowResponse,
   CategorySpendResponse,
   DashboardReport,
-  ExchangeRateView,
   PeriodQuery,
   ServiceBalance,
   ServiceKey,
@@ -12,20 +11,13 @@ import type {
 
 import { PrismaService } from "../prisma.service.js";
 import { LedgerService } from "./ledger.service.js";
+import { CONFIGURED_EXCHANGE_RATE } from "./exchange-rate.js";
 import { TransactionsService } from "./transactions.service.js";
 import { TransactionsRepository } from "./repositories/transactions.repository.js";
 import {
   ReportsRepository,
   type CategoryRow,
 } from "./repositories/reports.repository.js";
-
-const DEFAULT_EXCHANGE_RATE: ExchangeRateView = {
-  from: "USD",
-  to: "EUR",
-  rate: 0.92,
-  effectiveAt: "2026-09-01T00:00:00.000Z",
-  source: "configured",
-};
 
 @Injectable()
 export class ReportsService {
@@ -69,7 +61,7 @@ export class ReportsService {
       cashFlow: bucketByMonth(rows, timeZone),
       categorySpend: categorySpendOf(rows),
       recent: await this.transactionService.listRecent(tenantId, ledgerId, 5),
-      exchangeRate: DEFAULT_EXCHANGE_RATE,
+      exchangeRate: CONFIGURED_EXCHANGE_RATE,
       serviceBalances: await this.serviceBalances(tenantId),
     };
   }

@@ -1,10 +1,13 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { FastifyAdapter } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
 
 import { AppModule } from "../../src/app.module.js";
 import { registerBetterAuth } from "../../src/core/auth/fastify-auth.js";
 import type { BetterAuthInstance } from "../../src/core/auth/better-auth.config.js";
+import {
+  applyHttpHardening,
+  createFastifyAdapter,
+} from "../../src/core/config/http-hardening.js";
 import { ApiErrorFilter } from "../../src/core/errors/api-error.filter.js";
 
 export async function createTestApp(): Promise<NestFastifyApplication> {
@@ -13,14 +16,11 @@ export async function createTestApp(): Promise<NestFastifyApplication> {
   }).compile();
 
   const app = moduleRef.createNestApplication<NestFastifyApplication>(
-    new FastifyAdapter(),
+    createFastifyAdapter(),
   );
 
   app.setGlobalPrefix("api/v1");
-  app.enableCors({
-    credentials: true,
-    origin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
-  });
+  await applyHttpHardening(app);
   app.useGlobalFilters(new ApiErrorFilter());
 
   const auth = app.get<BetterAuthInstance>("BETTER_AUTH");

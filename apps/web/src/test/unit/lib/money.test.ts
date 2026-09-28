@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { convertMinor, formatMinorAmount } from "../../../lib/money";
+import {
+  convertMinor,
+  formatMinorAmount,
+  rateFor,
+} from "../../../lib/money";
 
 const rate = {
   from: "USD",
@@ -17,8 +21,18 @@ describe("money helpers", () => {
     expect(convertMinor(10_000, rate)).toBe(9_200);
   });
 
+  it("only applies a rate that matches the display currency", () => {
+    expect(rateFor(rate, "EUR")).toEqual(rate);
+    expect(rateFor(rate, "USD")).toBeNull();
+    expect(rateFor(null, "EUR")).toBeNull();
+  });
+
   it("formats amounts with the selected currency", () => {
     expect(formatMinorAmount(1_000, "USD", null, "en-US")).toBe("$10");
-    expect(formatMinorAmount(10_000, "EUR", rate, "es-ES")).toBe("92 €");
+    expect(formatMinorAmount(10_000, "EUR", rate, "es-ES")).toBe("92\u00a0€");
+  });
+  it("does not convert USD amounts when a USD-to-EUR rate is configured", () => {
+    expect(formatMinorAmount(10_000, "USD", rate, "en-US")).toBe("$100");
   });
 });
+

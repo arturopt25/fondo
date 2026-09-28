@@ -32,7 +32,7 @@ import {
   type PeriodKey,
 } from "../../components/DateRangeSelector";
 import { useAppPreferences } from "../../app/preferences";
-import { formatMinorAmount } from "../../lib/money";
+import { formatMinorAmount, rateFor } from "../../lib/money";
 import {
   resolvePeriodRange,
   useCategorySpendQuery,
@@ -107,7 +107,7 @@ function ReportsContent({
   readonly locale: string;
 }): React.JSX.Element {
   const { t } = useTranslation();
-  const rate = report.exchangeRate;
+  const rate = rateFor(report.exchangeRate, displayCurrency);
   const summary = report.summary;
 
   const reportData = report.cashFlow.map((point) => ({

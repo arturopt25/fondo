@@ -1,5 +1,12 @@
 import type { DisplayCurrency, ExchangeRateView } from "@fondo/shared-types";
 
+export function rateFor(
+  rate: ExchangeRateView | null | undefined,
+  currency: DisplayCurrency,
+): ExchangeRateView | null {
+  return rate && rate.to === currency ? rate : null;
+}
+
 export function convertMinor(
   amountMinor: number,
   rate?: ExchangeRateView | null,
@@ -20,7 +27,7 @@ export function formatMinorAmount(
     style: "currency",
     currency,
     maximumFractionDigits: 0,
-  }).format(convertMinor(amountMinor, rate) / 100);
+  }).format(convertMinor(amountMinor, rateFor(rate, currency)) / 100);
 }
 
 export function formatDate(
