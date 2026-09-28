@@ -492,6 +492,9 @@ describe("TransactionsService", () => {
     const result = await service.balance("tenant-1");
 
     expect(result.totalMinor).toBe(11000);
+    expect(result.exchangeRate).toEqual(
+      expect.objectContaining({ from: "USD", to: "EUR", source: "configured" }),
+    );
     expect(result.accounts[0]).toEqual({
       id: "acc-1",
       name: "Cash",

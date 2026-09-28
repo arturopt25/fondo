@@ -11,6 +11,11 @@ export interface BudgetQueryParams {
   readonly to?: string | undefined;
 }
 
+export interface TransactionListQueryParams {
+  readonly page: number;
+  readonly pageSize: number;
+}
+
 export const queryKeys = {
   me: ["me"] as const,
   meSettings: ["me", "settings"] as const,
@@ -19,7 +24,8 @@ export const queryKeys = {
   accounts: ["accounts"] as const,
   categories: ["categories"] as const,
   budgets: (params: BudgetQueryParams) => ["budgets", params] as const,
-  transactions: ["transactions"] as const,
+  transactions: (params: TransactionListQueryParams) =>
+    ["transactions", params] as const,
   ledgerBalance: ["ledger", "balance"] as const,
   reports: {
     dashboard: (params: ReportQueryParams) =>

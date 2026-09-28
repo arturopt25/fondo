@@ -24,6 +24,7 @@ import type { $Enums, PrismaClient } from "@fondo/db";
 
 import { PrismaService } from "../prisma.service.js";
 import { LedgerService } from "./ledger.service.js";
+import { CONFIGURED_EXCHANGE_RATE } from "./exchange-rate.js";
 import { TransactionsRepository } from "./repositories/transactions.repository.js";
 
 const MOVEMENT_TYPES = ["INCOME", "EXPENSE", "TRANSFER"] as const;
@@ -443,6 +444,7 @@ export class TransactionsService {
         0,
       ),
       accounts,
+      exchangeRate: CONFIGURED_EXCHANGE_RATE,
     };
   }
 
