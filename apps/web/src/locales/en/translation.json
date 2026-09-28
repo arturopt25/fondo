@@ -524,6 +524,7 @@
     "category": "Category",
     "categoryPlaceholder": "Select a category",
     "amount": "Amount",
+    "amountPlaceholder": "Enter amount",
     "service": "Service",
     "servicePlaceholder": "Optional service",
     "capability": "Capability",
