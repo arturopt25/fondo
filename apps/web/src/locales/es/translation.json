@@ -527,6 +527,7 @@
     "category": "Categoria",
     "categoryPlaceholder": "Selecciona una categoria",
     "amount": "Monto",
+    "amountPlaceholder": "Ingresa el monto",
     "service": "Servicio",
     "servicePlaceholder": "Servicio opcional",
     "capability": "Capacidad",

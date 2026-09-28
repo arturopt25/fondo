@@ -56,6 +56,7 @@ export function AccountsPage(): React.JSX.Element {
 
   const accounts = accountsQuery.data?.items ?? [];
   const type = watch("type");
+  const openingBalance = watch("openingBalanceMinor") ?? 0;
 
   function onCreate(values: AccountFormInput): void {
     const input: CreateAccountInput = {
@@ -115,6 +116,7 @@ export function AccountsPage(): React.JSX.Element {
                 <NumberInput
                   label={t("finance.accounts.openingBalance")}
                   min={0}
+                  value={openingBalance / 100}
                   onChange={(value) =>
                     setValue(
                       "openingBalanceMinor",

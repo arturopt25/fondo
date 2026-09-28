@@ -1,5 +1,5 @@
 import { MantineProvider } from "@mantine/core";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,9 +7,11 @@ import { fondoTheme } from "@fondo/ui";
 
 vi.mock("@mantine/core", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
+  const { useEffect, useState } = await import("react");
 
   const Select = ({
     label,
+    value,
     onChange,
     data,
   }: {
@@ -20,38 +22,67 @@ vi.mock("@mantine/core", async (importOriginal) => {
       readonly value: string;
       readonly label: string;
     }>;
-  }) => (
-    <div>
-      <span>{label ?? ""}</span>
-      <select
-        data-testid={`select-${String(label)}`}
-        onChange={(event) => onChange?.(event.currentTarget.value)}
-      >
-        {(data ?? []).map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
+  }) => {
+    const [display, setDisplay] = useState(value ?? "");
+    useEffect(() => {
+      setDisplay(value === null ? "" : value ?? "");
+    }, [value]);
+
+    return (
+      <div>
+        <span>{label ?? ""}</span>
+        <select
+          data-testid={`select-${String(label)}`}
+          data-display={display}
+          data-value-prop={value === null || value === undefined ? "null" : value}
+          value={display}
+          onChange={(event) => {
+            setDisplay(event.currentTarget.value);
+            onChange?.(event.currentTarget.value);
+          }}
+        >
+          {(data ?? []).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  };
 
   const NumberInput = ({
     label,
+    value,
     onChange,
   }: {
     readonly label?: string;
+    readonly value?: number | string;
     readonly onChange?: (value: number | string) => void;
-  }) => (
-    <div>
-      <span>{label ?? ""}</span>
-      <input
-        type="number"
-        data-testid={`number-${String(label)}`}
-        onChange={(event) => onChange?.(Number(event.currentTarget.value))}
-      />
-    </div>
-  );
+  }) => {
+    const [display, setDisplay] = useState<number | string>(value ?? "");
+    useEffect(() => {
+      setDisplay(value ?? "");
+    }, [value]);
+
+    return (
+      <div>
+        <span>{label ?? ""}</span>
+        <input
+          type="number"
+          data-testid={`number-${String(label)}`}
+          data-display={display}
+          value={display}
+          onChange={(event) => {
+            const raw = event.currentTarget.value;
+            const next = raw === "" ? "" : Number(raw);
+            setDisplay(next);
+            onChange?.(next);
+          }}
+        />
+      </div>
+    );
+  };
 
   const SegmentedControl = ({
     data,
@@ -211,7 +242,20 @@ describe("TransactionsPage", () => {
       isError: false,
     });
     financeHooks.useCategoriesQuery.mockReturnValue({
-      data: { items: [], total: 0, page: 1, pageSize: 20 },
+      data: {
+        items: [
+          {
+            id: "cat-1",
+            name: "Food",
+            type: "EXPENSE",
+            isDefault: true,
+            isActive: true,
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      },
       isLoading: false,
       isError: false,
     });
@@ -375,6 +419,91 @@ describe("TransactionsPage", () => {
     expect(reverse).toHaveBeenCalledWith(
       { id: "t1", note: "Wrong amount" },
       expect.anything(),
+    );
+  });
+
+  it("clears the form after a movement is recorded", async () => {
+    const user = userEvent.setup();
+    const createExpense = vi.fn();
+    transactionsHooks.useCreateExpenseMutation.mockReturnValue({
+      mutate: createExpense,
+      isPending: false,
+    });
+    renderPage();
+
+    await user.selectOptions(
+      screen.getByTestId("select-transactions.account"),
+      "acc-1",
+    );
+    await user.selectOptions(
+      screen.getByTestId("select-transactions.category"),
+      "cat-1",
+    );
+    await user.type(
+      screen.getByTestId("number-transactions.amount"),
+      "250",
+    );
+    await user.type(
+      screen.getByPlaceholderText("transactions.notePlaceholder"),
+      "Lunch",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "transactions.createExpense" }),
+    );
+
+    await waitFor(() => expect(createExpense).toHaveBeenCalled());
+    const options = createExpense.mock.calls[0]?.[1] as {
+      onSuccess?: () => void;
+    };
+    await act(async () => {
+      options.onSuccess?.();
+    });
+
+    expect(
+      screen.getByTestId("select-transactions.account"),
+    ).toHaveAttribute("data-display", "");
+    expect(
+      screen.getByTestId("select-transactions.account"),
+    ).toHaveAttribute("data-value-prop", "null");
+    expect(
+      screen.getByTestId("select-transactions.category"),
+    ).toHaveAttribute("data-display", "");
+    expect(
+      screen.getByTestId("select-transactions.category"),
+    ).toHaveAttribute("data-value-prop", "null");
+    expect(screen.getByTestId("number-transactions.amount")).toHaveAttribute(
+      "data-display",
+      "",
+    );
+    expect(
+      screen.getByPlaceholderText("transactions.notePlaceholder"),
+    ).toHaveValue("");
+  });
+
+  it("keeps the entered data until the mutation succeeds", async () => {
+    const user = userEvent.setup();
+    const createExpense = vi.fn();
+    transactionsHooks.useCreateExpenseMutation.mockReturnValue({
+      mutate: createExpense,
+      isPending: false,
+    });
+    renderPage();
+
+    await user.selectOptions(
+      screen.getByTestId("select-transactions.account"),
+      "acc-1",
+    );
+    await user.type(
+      screen.getByTestId("number-transactions.amount"),
+      "250",
+    );
+
+    expect(
+      screen.getByTestId("select-transactions.account"),
+    ).toHaveAttribute("data-display", "acc-1");
+    expect(screen.getByTestId("number-transactions.amount")).toHaveAttribute(
+      "data-display",
+      "250",
     );
   });
 

@@ -74,7 +74,7 @@ const transferFormSchema = z.object({
 });
 
 type FormValues = {
-  amount: number;
+  amount: number | null;
   note: string;
   accountId: string;
   categoryId: string;
@@ -82,6 +82,17 @@ type FormValues = {
   toAccountId: string;
   serviceKey: ServiceKey | null;
   capabilityKey: string | null;
+};
+
+const EMPTY_FORM_VALUES: FormValues = {
+  amount: null,
+  note: "",
+  accountId: "",
+  categoryId: "",
+  fromAccountId: "",
+  toAccountId: "",
+  serviceKey: null,
+  capabilityKey: null,
 };
 
 export function TransactionsPage(): React.JSX.Element {
@@ -122,17 +133,16 @@ export function TransactionsPage(): React.JSX.Element {
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema) as unknown as Resolver<FormValues>,
-    defaultValues: {
-      amount: 0,
-      note: "",
-      accountId: "",
-      categoryId: "",
-      fromAccountId: "",
-      toAccountId: "",
-      serviceKey: null,
-      capabilityKey: null,
-    },
+    defaultValues: EMPTY_FORM_VALUES,
   });
+
+  const accountId = watch("accountId");
+  const categoryId = watch("categoryId");
+  const fromAccountId = watch("fromAccountId");
+  const toAccountId = watch("toAccountId");
+  const serviceKey = watch("serviceKey");
+  const capabilityKey = watch("capabilityKey");
+  const amount = watch("amount");
 
   const accounts = accountsQuery.data?.items ?? [];
   const categories = categoriesQuery.data?.items ?? [];
@@ -144,7 +154,7 @@ export function TransactionsPage(): React.JSX.Element {
       (service) => service.status === "ACTIVE",
     ) ?? [];
   const selectedService = activeServices.find(
-    (service) => service.key === watch("serviceKey"),
+    (service) => service.key === serviceKey,
   );
   const capabilities = selectedService
     ? activeCapabilities(selectedService)
@@ -168,7 +178,7 @@ export function TransactionsPage(): React.JSX.Element {
           },
           idempotencyKey,
         },
-        { onSuccess: () => reset() },
+        { onSuccess: () => reset(EMPTY_FORM_VALUES) },
       );
       return;
     }
@@ -185,12 +195,12 @@ export function TransactionsPage(): React.JSX.Element {
     if (type === "income") {
       createIncome.mutate(
         { input: base, idempotencyKey },
-        { onSuccess: () => reset() },
+        { onSuccess: () => reset(EMPTY_FORM_VALUES) },
       );
     } else {
       createExpense.mutate(
         { input: base, idempotencyKey },
-        { onSuccess: () => reset() },
+        { onSuccess: () => reset(EMPTY_FORM_VALUES) },
       );
     }
   }
@@ -259,6 +269,7 @@ export function TransactionsPage(): React.JSX.Element {
                     label={t("transactions.fromAccount")}
                     placeholder={t("transactions.fromAccountPlaceholder")}
                     required
+                    value={fromAccountId || null}
                     data={accounts.map((account) => ({
                       value: account.id,
                       label: account.name,
@@ -270,6 +281,7 @@ export function TransactionsPage(): React.JSX.Element {
                     label={t("transactions.toAccount")}
                     placeholder={t("transactions.toAccountPlaceholder")}
                     required
+                    value={toAccountId || null}
                     data={accounts.map((account) => ({
                       value: account.id,
                       label: account.name,
@@ -284,6 +296,7 @@ export function TransactionsPage(): React.JSX.Element {
                     label={t("transactions.account")}
                     placeholder={t("transactions.accountPlaceholder")}
                     required
+                    value={accountId || null}
                     data={accounts.map((account) => ({
                       value: account.id,
                       label: account.name,
@@ -295,6 +308,7 @@ export function TransactionsPage(): React.JSX.Element {
                     label={t("transactions.category")}
                     placeholder={t("transactions.categoryPlaceholder")}
                     required
+                    value={categoryId || null}
                     data={categories.map((category) => ({
                       value: category.id,
                       label: category.name,
@@ -306,6 +320,7 @@ export function TransactionsPage(): React.JSX.Element {
                     label={t("transactions.service")}
                     placeholder={t("transactions.servicePlaceholder")}
                     clearable
+                    value={serviceKey}
                     data={activeServices.map((service) => ({
                       value: service.key,
                       label: service.name,
@@ -323,6 +338,7 @@ export function TransactionsPage(): React.JSX.Element {
                       label={t("transactions.capability")}
                       placeholder={t("transactions.capabilityPlaceholder")}
                       clearable
+                      value={capabilityKey}
                       data={capabilities.map((capability) => ({
                         value: capability.key,
                         label: t(
@@ -339,11 +355,13 @@ export function TransactionsPage(): React.JSX.Element {
               )}
               <NumberInput
                 label={t("transactions.amount")}
+                placeholder={t("transactions.amountPlaceholder")}
                 min={0}
                 required
+                value={amount ?? ""}
                 error={errors.amount?.message}
                 onChange={(value) =>
-                  setValue("amount", typeof value === "number" ? value : 0)
+                  setValue("amount", typeof value === "number" ? value : null)
                 }
               />
               <TextInput
