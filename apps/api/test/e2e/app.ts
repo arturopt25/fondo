@@ -9,6 +9,7 @@ import {
   createFastifyAdapter,
 } from "../../src/core/config/http-hardening.js";
 import { ApiErrorFilter } from "../../src/core/errors/api-error.filter.js";
+import { parseWebOrigins } from "../../src/core/config/app-config.js";
 
 export async function createTestApp(): Promise<NestFastifyApplication> {
   const moduleRef = await Test.createTestingModule({
@@ -20,11 +21,18 @@ export async function createTestApp(): Promise<NestFastifyApplication> {
   );
 
   app.setGlobalPrefix("api/v1");
-  await applyHttpHardening(app);
+  const webOrigins = parseWebOrigins(
+    process.env.WEB_ORIGIN ?? "http://localhost:5173",
+  );
+  await applyHttpHardening(app, webOrigins);
   app.useGlobalFilters(new ApiErrorFilter());
 
   const auth = app.get<BetterAuthInstance>("BETTER_AUTH");
-  await registerBetterAuth(app.getHttpAdapter().getInstance(), auth);
+  await registerBetterAuth(
+    app.getHttpAdapter().getInstance(),
+    auth,
+    webOrigins,
+  );
 
   await app.init();
   await app.getHttpAdapter().getInstance().ready();

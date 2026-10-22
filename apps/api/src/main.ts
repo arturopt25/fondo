@@ -15,7 +15,7 @@ import {
 import { ApiErrorFilter } from "./core/errors/api-error.filter.js";
 
 async function bootstrap(): Promise<void> {
-  loadAppConfig();
+  const config = loadAppConfig();
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
@@ -23,11 +23,15 @@ async function bootstrap(): Promise<void> {
   );
 
   app.setGlobalPrefix("api/v1");
-  await applyHttpHardening(app);
+  await applyHttpHardening(app, config.webOrigins);
   app.useGlobalFilters(new ApiErrorFilter());
 
   const auth = app.get<BetterAuthInstance>("BETTER_AUTH");
-  await registerBetterAuth(app.getHttpAdapter().getInstance(), auth);
+  await registerBetterAuth(
+    app.getHttpAdapter().getInstance(),
+    auth,
+    config.webOrigins,
+  );
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle("Fondo API")

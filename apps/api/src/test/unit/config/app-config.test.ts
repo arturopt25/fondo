@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { loadAppConfig } from "../../../core/config/app-config.js";
+import {
+  loadAppConfig,
+  parseWebOrigins,
+} from "../../../core/config/app-config.js";
 
 const REQUIRED = {
   DATABASE_URL: "postgresql://localhost/fondo",
@@ -41,7 +44,30 @@ describe("loadAppConfig", () => {
     expect(config.appDatabaseUrl).toBe(
       "postgresql://fondo_app@localhost/fondo",
     );
-    expect(config.webOrigin).toBe("http://localhost:5173");
+    expect(config.webOrigins).toEqual(["http://localhost:5173"]);
+  });
+
+  it("parses and deduplicates comma-separated origins", () => {
+    setEnv({
+      WEB_ORIGIN:
+        "https://app.example.com, http://localhost:5173, https://app.example.com",
+    });
+
+    expect(loadAppConfig().webOrigins).toEqual([
+      "https://app.example.com",
+      "http://localhost:5173",
+    ]);
+  });
+
+  it.each([
+    "*",
+    "https://*.example.com",
+    "localhost:5173",
+    "https://app.example.com/",
+    "https://app.example.com/dashboard",
+    "https://app.example.com?token=secret",
+  ])("rejects invalid web origin %s", (origin) => {
+    expect(() => parseWebOrigins(origin)).toThrow(/WEB_ORIGIN/);
   });
 
   it("fails fast when a required variable is missing", () => {

@@ -5,15 +5,22 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { BetterAuthInstance } from "./better-auth.config.js";
 
 const authPathPrefix = "/api/v1/auth";
-const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:5173";
 
 interface AuthRawRequest extends IncomingMessage {
   baseUrl?: string;
   originalUrl?: string;
 }
 
-function applyCorsHeaders(res: ServerResponse): void {
-  res.setHeader("Access-Control-Allow-Origin", webOrigin);
+function applyCorsHeaders(
+  res: ServerResponse,
+  origin: string | undefined,
+  webOrigins: readonly string[],
+): void {
+  if (!origin || !webOrigins.includes(origin)) {
+    return;
+  }
+
+  res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader(
     "Access-Control-Allow-Methods",
@@ -29,6 +36,7 @@ function applyCorsHeaders(res: ServerResponse): void {
 export async function registerBetterAuth(
   app: FastifyInstance,
   auth: BetterAuthInstance,
+  webOrigins: readonly string[],
 ): Promise<void> {
   const handler = toNodeHandler(auth);
 
@@ -42,7 +50,7 @@ export async function registerBetterAuth(
         return;
       }
 
-      applyCorsHeaders(reply.raw);
+      applyCorsHeaders(reply.raw, request.headers.origin, webOrigins);
 
       if (request.method === "OPTIONS") {
         reply.hijack();

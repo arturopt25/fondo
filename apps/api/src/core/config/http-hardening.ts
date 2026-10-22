@@ -10,10 +10,11 @@ export function createFastifyAdapter(): FastifyAdapter {
 
 export async function applyHttpHardening(
   app: NestFastifyApplication,
+  webOrigins: readonly string[],
 ): Promise<void> {
   app.enableCors({
     credentials: true,
-    origin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
+    origin: [...webOrigins],
   });
   await app.register(helmet, {
     contentSecurityPolicy: false,

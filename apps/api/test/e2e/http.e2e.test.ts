@@ -30,6 +30,46 @@ describe("http hardening", () => {
     );
   });
 
+  it("only exposes CORS headers to configured origins", async () => {
+    const allowed = await request(httpServer)
+      .options("/api/v1/health")
+      .set("Origin", "http://localhost:5173")
+      .set("Access-Control-Request-Method", "GET")
+      .expect(204);
+
+    expect(allowed.headers["access-control-allow-origin"]).toBe(
+      "http://localhost:5173",
+    );
+
+    const denied = await request(httpServer)
+      .options("/api/v1/health")
+      .set("Origin", "https://evil.example.com")
+      .set("Access-Control-Request-Method", "GET")
+      .expect(204);
+
+    expect(denied.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+
+  it("uses the same CORS allowlist for Better Auth", async () => {
+    const allowed = await request(httpServer)
+      .options("/api/v1/auth/session")
+      .set("Origin", "http://localhost:5173")
+      .set("Access-Control-Request-Method", "GET")
+      .expect(204);
+
+    expect(allowed.headers["access-control-allow-origin"]).toBe(
+      "http://localhost:5173",
+    );
+
+    const denied = await request(httpServer)
+      .options("/api/v1/auth/session")
+      .set("Origin", "https://evil.example.com")
+      .set("Access-Control-Request-Method", "GET")
+      .expect(204);
+
+    expect(denied.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+
   it("rejects payloads larger than the configured body limit", async () => {
     const oversized = { note: "x".repeat(1_200_000) };
 
