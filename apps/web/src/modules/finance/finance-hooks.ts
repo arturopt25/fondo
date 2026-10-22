@@ -29,7 +29,9 @@ export function useCreateAccountMutation() {
   const { t } = useTranslation();
 
   return useMutation({
-    mutationFn: async (input: CreateAccountInput): Promise<FinancialAccount> => {
+    mutationFn: async (
+      input: CreateAccountInput,
+    ): Promise<FinancialAccount> => {
       const response = await api.post("accounts", { json: input });
       return response.json<FinancialAccount>();
     },

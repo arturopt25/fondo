@@ -1,12 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import type { $Enums, Prisma } from "@fondo/db";
-
-import { PrismaService } from "../../prisma.service.js";
 
 @Injectable()
 export class TransactionsRepository {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
-
   private scope(
     tenantId: string,
     extra: Prisma.TransactionWhereInput = {},
@@ -15,6 +11,7 @@ export class TransactionsRepository {
   }
 
   async list(
+    client: Prisma.TransactionClient,
     tenantId: string,
     options: {
       ledgerId?: string;
@@ -29,20 +26,21 @@ export class TransactionsRepository {
     });
 
     const [items, total] = await Promise.all([
-      this.prisma.client.transaction.findMany({
+      client.transaction.findMany({
         where,
         orderBy: { occurredAt: "desc" },
         include: { entries: true },
         skip: (options.page - 1) * options.pageSize,
         take: options.pageSize,
       }),
-      this.prisma.client.transaction.count({ where }),
+      client.transaction.count({ where }),
     ]);
 
     return { items, total };
   }
 
   async entryBalanceDelta(
+    client: Prisma.TransactionClient,
     tenantId: string,
     accountIds: string[],
   ): Promise<Map<string, number>> {
@@ -50,7 +48,7 @@ export class TransactionsRepository {
       return new Map();
     }
 
-    const rows = await this.prisma.client.transactionEntry.groupBy({
+    const rows = await client.transactionEntry.groupBy({
       by: ["financialAccountId", "direction"],
       where: {
         financialAccountId: { in: accountIds },

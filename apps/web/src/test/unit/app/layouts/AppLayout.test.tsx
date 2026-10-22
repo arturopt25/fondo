@@ -11,7 +11,9 @@ const servicesHooks = vi.hoisted(() => ({ useServicesQuery: vi.fn() }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
-vi.mock("../../../../modules/auth/auth-context", () => ({ useAuth: auth.useAuth }));
+vi.mock("../../../../modules/auth/auth-context", () => ({
+  useAuth: auth.useAuth,
+}));
 vi.mock("../../../../modules/services/services-hooks", () => ({
   useServicesQuery: servicesHooks.useServicesQuery,
 }));

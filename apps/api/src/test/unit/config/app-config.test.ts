@@ -4,6 +4,7 @@ import { loadAppConfig } from "../../../core/config/app-config.js";
 
 const REQUIRED = {
   DATABASE_URL: "postgresql://localhost/fondo",
+  APP_DATABASE_URL: "postgresql://fondo_app@localhost/fondo",
   BETTER_AUTH_SECRET: "a-secret-that-is-at-least-32-characters-long",
   BETTER_AUTH_URL: "http://localhost:3000/api/v1/auth",
 };
@@ -37,6 +38,9 @@ describe("loadAppConfig", () => {
     const config = loadAppConfig();
 
     expect(config.databaseUrl).toBe("postgresql://localhost/fondo");
+    expect(config.appDatabaseUrl).toBe(
+      "postgresql://fondo_app@localhost/fondo",
+    );
     expect(config.webOrigin).toBe("http://localhost:5173");
   });
 

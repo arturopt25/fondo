@@ -9,6 +9,7 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import type { FastifyRequest } from "fastify";
 
 import {
@@ -24,6 +25,7 @@ import { RequestUser } from "../me/request-user.decorator.js";
 import type { CurrentUser } from "../tenant/tenant-context.js";
 import { RequestTenant } from "../tenant/request-tenant.decorator.js";
 import { TransactionsService } from "./transactions.service.js";
+import { API_WRITE_THROTTLE } from "../config/rate-limits.js";
 
 interface TenantParams {
   tenantId: string;
@@ -38,7 +40,11 @@ export class TransactionsController {
   ) {}
 
   @Get()
-  async list(@RequestTenant() tenant: TenantParams, @Query() query: unknown) {
+  async list(
+    @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
+    @Query() query: unknown,
+  ) {
     const parsed = pageQuerySchema.parse(query);
     const ledgerId =
       typeof (query as { ledgerId?: unknown }).ledgerId === "string"
@@ -49,7 +55,7 @@ export class TransactionsController {
         ? (query as { type: string }).type
         : undefined;
 
-    return this.transactions.list(tenant.tenantId, {
+    return this.transactions.list(tenant.tenantId, user.id, {
       ...parsed,
       ...(ledgerId !== undefined ? { ledgerId } : {}),
       ...(type !== undefined ? { type } : {}),
@@ -57,6 +63,7 @@ export class TransactionsController {
   }
 
   @Post("income")
+  @Throttle(API_WRITE_THROTTLE)
   async createIncome(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
@@ -73,6 +80,7 @@ export class TransactionsController {
   }
 
   @Post("expense")
+  @Throttle(API_WRITE_THROTTLE)
   async createExpense(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
@@ -89,6 +97,7 @@ export class TransactionsController {
   }
 
   @Post("transfer")
+  @Throttle(API_WRITE_THROTTLE)
   async createTransfer(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
@@ -105,6 +114,7 @@ export class TransactionsController {
   }
 
   @Post(":id/reverse")
+  @Throttle(API_WRITE_THROTTLE)
   async reverse(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
@@ -127,13 +137,14 @@ export class LedgerController {
   @Get("balance")
   async balance(
     @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
     @Query() query: unknown,
   ) {
     const ledgerId =
       typeof (query as { ledgerId?: unknown }).ledgerId === "string"
         ? (query as { ledgerId: string }).ledgerId
         : undefined;
-    return this.transactions.balance(tenant.tenantId, ledgerId);
+    return this.transactions.balance(tenant.tenantId, user.id, ledgerId);
   }
 }
 

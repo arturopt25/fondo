@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@fondo/db";
+import { randomUUID } from "node:crypto";
 
 import { PrismaService } from "../prisma.service.js";
 import { buildPersonalTenantSlug } from "../auth/better-auth.config.js";
@@ -9,21 +10,27 @@ export class TenantProvisioningService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async provisionForUser(userId: string, displayName: string): Promise<void> {
-    const existing = await this.prisma.client.tenant.findFirst({
-      where: { ownerUserId: userId },
-    });
+    const existingMembership = await this.prisma.withUserContext(
+      userId,
+      async (tx) =>
+        tx.membership.findFirst({
+          where: { userId },
+        }),
+    );
 
-    if (existing) {
+    if (existingMembership) {
       return;
     }
 
     const fallbackName = displayName.trim().slice(0, 40) || "Personal space";
+    const tenantId = randomUUID();
     const slug = buildPersonalTenantSlug(userId, fallbackName);
 
     try {
-      await this.prisma.client.$transaction(async (tx) => {
-        const tenant = await tx.tenant.create({
+      await this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+        await tx.tenant.create({
           data: {
+            id: tenantId,
             name: `${fallbackName}'s space`,
             slug,
             ownerUserId: userId,
@@ -32,7 +39,7 @@ export class TenantProvisioningService {
 
         await tx.membership.create({
           data: {
-            tenantId: tenant.id,
+            tenantId,
             userId,
             role: "ADMIN",
           },
@@ -52,7 +59,7 @@ export class TenantProvisioningService {
         if (personalFinance) {
           await tx.serviceSubscription.create({
             data: {
-              tenantId: tenant.id,
+              tenantId,
               serviceId: personalFinance.id,
               status: "ACTIVE",
               selections: {
@@ -72,7 +79,7 @@ export class TenantProvisioningService {
 
         await tx.category.createMany({
           data: DEFAULT_CATEGORIES.map((category) => ({
-            tenantId: tenant.id,
+            tenantId,
             name: category.name,
             type: category.type,
             isDefault: true,
@@ -80,13 +87,10 @@ export class TenantProvisioningService {
         });
       });
     } catch (error) {
+      // Another request may have created the tenant concurrently. If so, the
+      // membership already exists and it is safe to return.
       if (isDuplicateKeyError(error)) {
-        const retried = await this.prisma.client.tenant.findFirst({
-          where: { ownerUserId: userId },
-        });
-        if (retried) {
-          return;
-        }
+        return;
       }
       throw error;
     }

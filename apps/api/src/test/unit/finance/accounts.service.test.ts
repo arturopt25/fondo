@@ -13,7 +13,12 @@ function createMocks() {
   };
   const ledgers = { personalLedger: vi.fn() };
   const auditLogCreate = vi.fn();
-  const prisma = { client: { auditLog: { create: auditLogCreate } } };
+  const prismaClient = { auditLog: { create: auditLogCreate } };
+  const prisma = {
+    client: prismaClient,
+    withTenantContext: vi.fn(async (_ctx, cb) => cb(prismaClient)),
+    withUserContext: vi.fn(async (_userId, cb) => cb(prismaClient)),
+  };
   const service = new AccountsService(
     repo as never,
     ledgers as never,
@@ -44,7 +49,7 @@ describe("AccountsService", () => {
       total: 1,
     });
 
-    const result = await service.list("tenant-1", {
+    const result = await service.list("tenant-1", "user-1", {
       page: 1,
       pageSize: 20,
     });
@@ -52,6 +57,7 @@ describe("AccountsService", () => {
     expect(result.items[0]?.name).toBe("Savings");
     expect(result.items[0]?.createdAt).toBe("2026-01-01T00:00:00.000Z");
     expect(repo.list).toHaveBeenCalledWith(
+      expect.anything(),
       "tenant-1",
       expect.objectContaining({ orderBy: { createdAt: "asc" } }),
     );
@@ -77,12 +83,17 @@ describe("AccountsService", () => {
       openingBalanceMinor: 0,
     });
 
-    expect(repo.create).toHaveBeenCalledWith("tenant-1", "ledger-1", {
-      name: "Cash",
-      type: "CASH",
-      currency: "USD",
-      openingBalanceMinor: 0,
-    });
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.anything(),
+      "tenant-1",
+      "ledger-1",
+      {
+        name: "Cash",
+        type: "CASH",
+        currency: "USD",
+        openingBalanceMinor: 0,
+      },
+    );
     expect(auditLogCreate).toHaveBeenCalledWith({
       data: {
         tenantId: "tenant-1",

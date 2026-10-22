@@ -18,7 +18,9 @@ afterAll(async () => {
 
 describe("http hardening", () => {
   it("sends security headers on every response", async () => {
-    const response = await request(httpServer).get("/api/v1/health").expect(200);
+    const response = await request(httpServer)
+      .get("/api/v1/health")
+      .expect(200);
 
     expect(response.headers["x-content-type-options"]).toBe("nosniff");
     expect(response.headers["x-frame-options"]).toBe("SAMEORIGIN");

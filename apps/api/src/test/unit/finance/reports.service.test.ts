@@ -10,13 +10,16 @@ function createContext() {
   const transactions = { entryBalanceDelta: vi.fn() };
   const transactionService = { listRecent: vi.fn() };
   const ledgers = { personalLedger: vi.fn() };
-  const prisma = {
-    client: {
-      ledger: { findFirst: vi.fn() },
-      serviceSubscription: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
+  const prismaClient = {
+    ledger: { findFirst: vi.fn() },
+    serviceSubscription: {
+      findMany: vi.fn().mockResolvedValue([]),
     },
+  };
+  const prisma = {
+    client: prismaClient,
+    withTenantContext: vi.fn(async (_ctx, cb) => cb(prismaClient)),
+    withUserContext: vi.fn(async (_userId, cb) => cb(prismaClient)),
   };
   const service = new ReportsService(
     repo as never,
@@ -25,7 +28,14 @@ function createContext() {
     ledgers as never,
     prisma as never,
   );
-  return { repo, transactions, transactionService, ledgers, prisma, service };
+  return {
+    repo,
+    transactions,
+    transactionService,
+    ledgers,
+    prismaClient,
+    service,
+  };
 }
 
 function row(overrides: Record<string, unknown> = {}) {
@@ -47,8 +57,14 @@ describe("ReportsService", () => {
   });
 
   it("aggregates summary, cash flow and category spend from entries", async () => {
-    const { repo, transactions, transactionService, ledgers, prisma, service } =
-      createContext();
+    const {
+      repo,
+      transactions,
+      transactionService,
+      ledgers,
+      prismaClient,
+      service,
+    } = createContext();
     ledgers.personalLedger.mockResolvedValue({ id: "ledger-1" });
     repo.categoryRows.mockResolvedValue([
       row({
@@ -70,13 +86,13 @@ describe("ReportsService", () => {
     transactions.entryBalanceDelta.mockResolvedValue(
       new Map([["acc-1", 60000]]),
     );
-    prisma.client.ledger.findFirst.mockResolvedValue({
+    prismaClient.ledger.findFirst.mockResolvedValue({
       id: "ledger-1",
       accounts: [{ id: "acc-1", openingBalanceMinor: 1000 }],
     });
     transactionService.listRecent.mockResolvedValue([]);
 
-    const result = await service.dashboard("tenant-1", "UTC", {});
+    const result = await service.dashboard("tenant-1", "user-1", "UTC", {});
 
     expect(result.balanceMinor).toBe(61000);
     expect(result.summary).toEqual({
@@ -95,11 +111,17 @@ describe("ReportsService", () => {
   });
 
   it("cancels income and expenses when movements are reversed", async () => {
-    const { repo, transactions, transactionService, ledgers, prisma, service } =
-      createContext();
+    const {
+      repo,
+      transactions,
+      transactionService,
+      ledgers,
+      prismaClient,
+      service,
+    } = createContext();
     ledgers.personalLedger.mockResolvedValue({ id: "ledger-1" });
     transactions.entryBalanceDelta.mockResolvedValue(new Map());
-    prisma.client.ledger.findFirst.mockResolvedValue({
+    prismaClient.ledger.findFirst.mockResolvedValue({
       id: "ledger-1",
       accounts: [],
     });
@@ -131,7 +153,7 @@ describe("ReportsService", () => {
       }),
     ]);
 
-    const result = await service.dashboard("tenant-1", "UTC", {
+    const result = await service.dashboard("tenant-1", "user-1", "UTC", {
       from: "2026-09-01T00:00:00.000Z",
       to: "2026-09-30T23:59:59.000Z",
     });
@@ -159,7 +181,7 @@ describe("ReportsService", () => {
       }),
     ]);
 
-    const result = await service.cashFlow("tenant-1", "UTC", {
+    const result = await service.cashFlow("tenant-1", "user-1", "UTC", {
       from: "2026-07-01T00:00:00.000Z",
       to: "2026-09-30T23:59:59.000Z",
     });
@@ -175,13 +197,14 @@ describe("ReportsService", () => {
     ledgers.personalLedger.mockResolvedValue({ id: "ledger-1" });
     repo.categoryRows.mockResolvedValue([]);
 
-    await service.cashFlow("tenant-1", "UTC", {
+    await service.cashFlow("tenant-1", "user-1", "UTC", {
       from: "2026-09-01T00:00:00.000Z",
       to: "2026-09-30T23:59:59.000Z",
       serviceKey: "PERSONAL_FINANCE",
     });
 
     expect(repo.categoryRows).toHaveBeenCalledWith(
+      expect.anything(),
       "tenant-1",
       expect.objectContaining({
         serviceKey: "PERSONAL_FINANCE",
@@ -191,17 +214,23 @@ describe("ReportsService", () => {
   });
 
   it("returns net balances per active capability with zero defaults", async () => {
-    const { repo, transactions, transactionService, ledgers, prisma, service } =
-      createContext();
+    const {
+      repo,
+      transactions,
+      transactionService,
+      ledgers,
+      prismaClient,
+      service,
+    } = createContext();
     ledgers.personalLedger.mockResolvedValue({ id: "ledger-1" });
     repo.categoryRows.mockResolvedValue([]);
     transactions.entryBalanceDelta.mockResolvedValue(new Map());
     transactionService.listRecent.mockResolvedValue([]);
-    prisma.client.ledger.findFirst.mockResolvedValue({
+    prismaClient.ledger.findFirst.mockResolvedValue({
       id: "ledger-1",
       accounts: [],
     });
-    prisma.client.serviceSubscription.findMany.mockResolvedValue([
+    prismaClient.serviceSubscription.findMany.mockResolvedValue([
       {
         service: {
           key: "HOME",
@@ -241,7 +270,7 @@ describe("ReportsService", () => {
       },
     ]);
 
-    const result = await service.dashboard("tenant-1", "UTC", {});
+    const result = await service.dashboard("tenant-1", "user-1", "UTC", {});
 
     expect(result.serviceBalances).toEqual([
       {

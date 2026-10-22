@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 
 import { budgetQuerySchema, upsertBudgetSchema } from "@fondo/shared-types";
 
@@ -17,6 +18,7 @@ import type { CurrentUser } from "../tenant/tenant-context.js";
 import { RequestTenant } from "../tenant/request-tenant.decorator.js";
 import { SessionAuthGuard } from "../tenant/session-auth.guard.js";
 import { BudgetsService } from "./budgets.service.js";
+import { API_WRITE_THROTTLE } from "../config/rate-limits.js";
 
 interface TenantParams {
   tenantId: string;
@@ -30,11 +32,20 @@ export class BudgetsController {
   ) {}
 
   @Get()
-  async list(@RequestTenant() tenant: TenantParams, @Query() query: unknown) {
-    return this.budgets.list(tenant.tenantId, budgetQuerySchema.parse(query));
+  async list(
+    @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
+    @Query() query: unknown,
+  ) {
+    return this.budgets.list(
+      tenant.tenantId,
+      user.id,
+      budgetQuerySchema.parse(query),
+    );
   }
 
   @Put()
+  @Throttle(API_WRITE_THROTTLE)
   async upsert(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
@@ -48,6 +59,7 @@ export class BudgetsController {
   }
 
   @Delete(":id")
+  @Throttle(API_WRITE_THROTTLE)
   async remove(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,

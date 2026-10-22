@@ -7,6 +7,8 @@ import type {
   UpdateAccountInput,
 } from "@fondo/shared-types";
 
+import type { Prisma } from "@fondo/db";
+
 import { PrismaService } from "../prisma.service.js";
 import { LedgerService } from "./ledger.service.js";
 import { AccountsRepository } from "./repositories/accounts.repository.js";
@@ -23,93 +25,104 @@ export class AccountsService {
 
   async list(
     tenantId: string,
+    userId: string,
     query: { page: number; pageSize: number; sort?: string },
   ): Promise<AccountListResponse> {
-    const orderBy = ALLOWED_SORTS.has(query.sort ?? "")
-      ? { [query.sort as string]: "asc" }
-      : { createdAt: "asc" as const };
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const orderBy = ALLOWED_SORTS.has(query.sort ?? "")
+        ? { [query.sort as string]: "asc" }
+        : { createdAt: "asc" as const };
 
-    const { items, total } = await this.accounts.list(tenantId, {
-      page: query.page,
-      pageSize: query.pageSize,
-      orderBy,
+      const { items, total } = await this.accounts.list(tx, tenantId, {
+        page: query.page,
+        pageSize: query.pageSize,
+        orderBy,
+      });
+
+      return {
+        items: items.map(toAccount),
+        total,
+        page: query.page,
+        pageSize: query.pageSize,
+      };
     });
-
-    return {
-      items: items.map(toAccount),
-      total,
-      page: query.page,
-      pageSize: query.pageSize,
-    };
   }
 
   async create(
     tenantId: string,
-    actorId: string,
+    userId: string,
     input: CreateAccountInput,
   ): Promise<FinancialAccount> {
-    const ledger = await this.ledgers.personalLedger(tenantId);
-    const account = await this.accounts.create(tenantId, ledger.id, {
-      name: input.name,
-      type: input.type,
-      currency: input.currency,
-      openingBalanceMinor: input.openingBalanceMinor,
+    const ledger = await this.ledgers.personalLedger(tenantId, userId);
+
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const account = await this.accounts.create(tx, tenantId, ledger.id, {
+        name: input.name,
+        type: input.type,
+        currency: input.currency,
+        openingBalanceMinor: input.openingBalanceMinor,
+      });
+
+      await this.audit(tx, tenantId, userId, "ACCOUNT_CREATED", account.id);
+
+      return toAccount(account);
     });
-
-    await this.audit(tenantId, actorId, "ACCOUNT_CREATED", account.id);
-
-    return toAccount(account);
   }
 
   async update(
     tenantId: string,
-    actorId: string,
+    userId: string,
     id: string,
     input: UpdateAccountInput,
   ): Promise<FinancialAccount> {
-    const existing = await this.accounts.findById(tenantId, id);
-    if (!existing) {
-      throw new NotFoundException("Account not found");
-    }
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const existing = await this.accounts.findById(tx, tenantId, id);
+      if (!existing) {
+        throw new NotFoundException("Account not found");
+      }
 
-    const result = await this.accounts.update(tenantId, id, {
-      ...(input.name !== undefined ? { name: input.name } : {}),
-      ...(input.type !== undefined ? { type: input.type } : {}),
+      const result = await this.accounts.update(tx, tenantId, id, {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.type !== undefined ? { type: input.type } : {}),
+      });
+
+      if (result.count === 0) {
+        throw new NotFoundException("Account not found");
+      }
+
+      await this.audit(tx, tenantId, userId, "ACCOUNT_UPDATED", id);
+
+      const updated = await this.accounts.findById(tx, tenantId, id);
+      return toAccount(updated as NonNullable<typeof updated>);
     });
-
-    if (result.count === 0) {
-      throw new NotFoundException("Account not found");
-    }
-
-    await this.audit(tenantId, actorId, "ACCOUNT_UPDATED", id);
-
-    const updated = await this.accounts.findById(tenantId, id);
-    return toAccount(updated as NonNullable<typeof updated>);
   }
 
   async archive(
     tenantId: string,
-    actorId: string,
+    userId: string,
     id: string,
   ): Promise<{ id: string }> {
-    const result = await this.accounts.archive(tenantId, id);
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const result = await this.accounts.archive(tx, tenantId, id);
 
-    if (result.count === 0) {
-      throw new NotFoundException("Account not found");
-    }
+      if (result.count === 0) {
+        throw new NotFoundException("Account not found");
+      }
 
-    await this.audit(tenantId, actorId, "ACCOUNT_ARCHIVED", id);
+      await this.audit(tx, tenantId, userId, "ACCOUNT_ARCHIVED", id);
 
-    return { id };
+      return { id };
+    });
   }
 
   private async audit(
+    client: Prisma.TransactionClient,
     tenantId: string,
     actorId: string,
     action: string,
     resource: string,
   ): Promise<void> {
-    await this.prisma.client.auditLog.create({
+    await client.auditLog.create({
       data: {
         tenantId,
         actorId,

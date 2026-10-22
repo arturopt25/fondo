@@ -25,7 +25,7 @@ vi.mock("@mantine/core", async (importOriginal) => {
   }) => {
     const [display, setDisplay] = useState(value ?? "");
     useEffect(() => {
-      setDisplay(value === null ? "" : value ?? "");
+      setDisplay(value === null ? "" : (value ?? ""));
     }, [value]);
 
     return (
@@ -34,7 +34,9 @@ vi.mock("@mantine/core", async (importOriginal) => {
         <select
           data-testid={`select-${String(label)}`}
           data-display={display}
-          data-value-prop={value === null || value === undefined ? "null" : value}
+          data-value-prop={
+            value === null || value === undefined ? "null" : value
+          }
           value={display}
           onChange={(event) => {
             setDisplay(event.currentTarget.value);
@@ -89,7 +91,10 @@ vi.mock("@mantine/core", async (importOriginal) => {
     value,
     onChange,
   }: {
-    readonly data?: ReadonlyArray<{ readonly value: string; readonly label: string }>;
+    readonly data?: ReadonlyArray<{
+      readonly value: string;
+      readonly label: string;
+    }>;
     readonly value?: string;
     readonly onChange?: (value: string) => void;
   }) => (
@@ -358,17 +363,18 @@ describe("TransactionsPage", () => {
       screen.getByTestId("select-transactions.toAccount"),
       "acc-2",
     );
-    await user.type(
-      screen.getByTestId("number-transactions.amount"),
-      "25",
-    );
+    await user.type(screen.getByTestId("number-transactions.amount"), "25");
     await user.click(
       screen.getByRole("button", { name: "transactions.createTransfer" }),
     );
 
     await waitFor(() => expect(createTransfer).toHaveBeenCalled());
     const variables = createTransfer.mock.calls[0]?.[0] as {
-      input: { fromAccountId: string; toAccountId: string; amountMinor: number };
+      input: {
+        fromAccountId: string;
+        toAccountId: string;
+        amountMinor: number;
+      };
       idempotencyKey: string;
     };
     expect(variables.input).toEqual({
@@ -439,10 +445,7 @@ describe("TransactionsPage", () => {
       screen.getByTestId("select-transactions.category"),
       "cat-1",
     );
-    await user.type(
-      screen.getByTestId("number-transactions.amount"),
-      "250",
-    );
+    await user.type(screen.getByTestId("number-transactions.amount"), "250");
     await user.type(
       screen.getByPlaceholderText("transactions.notePlaceholder"),
       "Lunch",
@@ -459,18 +462,22 @@ describe("TransactionsPage", () => {
       options.onSuccess?.();
     });
 
-    expect(
-      screen.getByTestId("select-transactions.account"),
-    ).toHaveAttribute("data-display", "");
-    expect(
-      screen.getByTestId("select-transactions.account"),
-    ).toHaveAttribute("data-value-prop", "null");
-    expect(
-      screen.getByTestId("select-transactions.category"),
-    ).toHaveAttribute("data-display", "");
-    expect(
-      screen.getByTestId("select-transactions.category"),
-    ).toHaveAttribute("data-value-prop", "null");
+    expect(screen.getByTestId("select-transactions.account")).toHaveAttribute(
+      "data-display",
+      "",
+    );
+    expect(screen.getByTestId("select-transactions.account")).toHaveAttribute(
+      "data-value-prop",
+      "null",
+    );
+    expect(screen.getByTestId("select-transactions.category")).toHaveAttribute(
+      "data-display",
+      "",
+    );
+    expect(screen.getByTestId("select-transactions.category")).toHaveAttribute(
+      "data-value-prop",
+      "null",
+    );
     expect(screen.getByTestId("number-transactions.amount")).toHaveAttribute(
       "data-display",
       "",
@@ -493,14 +500,12 @@ describe("TransactionsPage", () => {
       screen.getByTestId("select-transactions.account"),
       "acc-1",
     );
-    await user.type(
-      screen.getByTestId("number-transactions.amount"),
-      "250",
-    );
+    await user.type(screen.getByTestId("number-transactions.amount"), "250");
 
-    expect(
-      screen.getByTestId("select-transactions.account"),
-    ).toHaveAttribute("data-display", "acc-1");
+    expect(screen.getByTestId("select-transactions.account")).toHaveAttribute(
+      "data-display",
+      "acc-1",
+    );
     expect(screen.getByTestId("number-transactions.amount")).toHaveAttribute(
       "data-display",
       "250",

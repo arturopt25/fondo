@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@fondo/db";
+import type { PrismaClient } from "@fondo/db";
 import { createHash } from "node:crypto";
 
 import type {
@@ -20,7 +21,7 @@ import type {
   Transaction,
   TransactionListResponse,
 } from "@fondo/shared-types";
-import type { $Enums, PrismaClient } from "@fondo/db";
+import type { $Enums } from "@fondo/db";
 
 import { PrismaService } from "../prisma.service.js";
 import { LedgerService } from "./ledger.service.js";
@@ -90,35 +91,40 @@ export class TransactionsService {
 
   async list(
     tenantId: string,
+    userId: string,
     query: { ledgerId?: string; type?: string; page: number; pageSize: number },
   ): Promise<TransactionListResponse> {
-    const ledgerId =
-      query.ledgerId ?? (await this.ledgers.personalLedger(tenantId)).id;
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const ledgerId =
+        query.ledgerId ??
+        (await this.ledgers.personalLedger(tenantId, userId)).id;
 
-    const rawType = query.type;
-    const type = isMovementType(rawType) ? rawType : undefined;
+      const rawType = query.type;
+      const type = isMovementType(rawType) ? rawType : undefined;
 
-    const { items, total } = await this.transactions.list(tenantId, {
-      ...(ledgerId ? { ledgerId } : {}),
-      ...(type !== undefined ? { type } : {}),
-      page: query.page,
-      pageSize: query.pageSize,
+      const { items, total } = await this.transactions.list(tx, tenantId, {
+        ...(ledgerId ? { ledgerId } : {}),
+        ...(type !== undefined ? { type } : {}),
+        page: query.page,
+        pageSize: query.pageSize,
+      });
+
+      return {
+        items: items.map(toTransaction),
+        total,
+        page: query.page,
+        pageSize: query.pageSize,
+      };
     });
-
-    return {
-      items: items.map(toTransaction),
-      total,
-      page: query.page,
-      pageSize: query.pageSize,
-    };
   }
 
   async listRecent(
+    client: Prisma.TransactionClient,
     tenantId: string,
     ledgerId: string,
     limit: number,
   ): Promise<Transaction[]> {
-    const { items } = await this.transactions.list(tenantId, {
+    const { items } = await this.transactions.list(client, tenantId, {
       ledgerId,
       page: 1,
       pageSize: limit,
@@ -134,69 +140,75 @@ export class TransactionsService {
   ): Promise<Transaction> {
     const payloadHash = hashPayload(input);
 
-    return this.runCommit(tenantId, idempotencyKey, payloadHash, async (tx) => {
-      const replay = await this.replayOrNull(
-        tx,
-        tenantId,
-        idempotencyKey,
-        payloadHash,
-      );
-      if (replay) {
-        return replay;
-      }
+    return this.runCommit(
+      tenantId,
+      actorId,
+      idempotencyKey,
+      payloadHash,
+      async (tx) => {
+        const replay = await this.replayOrNull(
+          tx,
+          tenantId,
+          idempotencyKey,
+          payloadHash,
+        );
+        if (replay) {
+          return replay;
+        }
 
-      const account = await this.requireActiveAccount(
-        tx,
-        tenantId,
-        input.accountId,
-      );
-      const category = await this.requireCategory(
-        tx,
-        tenantId,
-        input.categoryId,
-        "INCOME",
-      );
-      await this.requireActiveService(tx, tenantId, input.serviceKey);
-      await this.requireActiveServiceCapability(
-        tx,
-        tenantId,
-        input.serviceKey,
-        input.capabilityKey,
-      );
+        const account = await this.requireActiveAccount(
+          tx,
+          tenantId,
+          input.accountId,
+        );
+        const category = await this.requireCategory(
+          tx,
+          tenantId,
+          input.categoryId,
+          "INCOME",
+        );
+        await this.requireActiveService(tx, tenantId, input.serviceKey);
+        await this.requireActiveServiceCapability(
+          tx,
+          tenantId,
+          input.serviceKey,
+          input.capabilityKey,
+        );
 
-      const entries: readonly EntryInput[] = [
-        {
-          financialAccountId: account.id,
-          direction: "DEBIT",
+        const entries: readonly EntryInput[] = [
+          {
+            financialAccountId: account.id,
+            direction: "DEBIT",
+            amountMinor: input.amountMinor,
+          },
+          {
+            categoryId: category.id,
+            direction: "CREDIT",
+            amountMinor: input.amountMinor,
+          },
+        ];
+
+        return this.commit(tx, tenantId, actorId, {
+          type: "INCOME",
           amountMinor: input.amountMinor,
-        },
-        {
+          ledgerId: account.ledgerId,
+          accountId: account.id,
           categoryId: category.id,
-          direction: "CREDIT",
-          amountMinor: input.amountMinor,
-        },
-      ];
-
-      return this.commit(tx, tenantId, actorId, {
-        type: "INCOME",
-        amountMinor: input.amountMinor,
-        ledgerId: account.ledgerId,
-        accountId: account.id,
-        categoryId: category.id,
-        serviceKey: input.serviceKey ?? null,
-        capabilityKey: input.capabilityKey ?? null,
-        sourceType: input.sourceType ?? null,
-        sourceId: input.sourceId ?? null,
-        note: input.note ?? null,
-        occurredAt: parseDate(input.occurredAt),
-        entries,
-        accountsForBalance: [account],
-        netChange: netChangeOf(entries),
-        idempotencyKey,
-        idempotencyHash: payloadHash,
-        auditAction: "INCOME_CREATED",
-      });
-    });
+          serviceKey: input.serviceKey ?? null,
+          capabilityKey: input.capabilityKey ?? null,
+          sourceType: input.sourceType ?? null,
+          sourceId: input.sourceId ?? null,
+          note: input.note ?? null,
+          occurredAt: parseDate(input.occurredAt),
+          entries,
+          accountsForBalance: [account],
+          netChange: netChangeOf(entries),
+          idempotencyKey,
+          idempotencyHash: payloadHash,
+          auditAction: "INCOME_CREATED",
+        });
+      },
+    );
   }
 
   async createExpense(
@@ -207,69 +219,75 @@ export class TransactionsService {
   ): Promise<Transaction> {
     const payloadHash = hashPayload(input);
 
-    return this.runCommit(tenantId, idempotencyKey, payloadHash, async (tx) => {
-      const replay = await this.replayOrNull(
-        tx,
-        tenantId,
-        idempotencyKey,
-        payloadHash,
-      );
-      if (replay) {
-        return replay;
-      }
+    return this.runCommit(
+      tenantId,
+      actorId,
+      idempotencyKey,
+      payloadHash,
+      async (tx) => {
+        const replay = await this.replayOrNull(
+          tx,
+          tenantId,
+          idempotencyKey,
+          payloadHash,
+        );
+        if (replay) {
+          return replay;
+        }
 
-      const account = await this.requireActiveAccount(
-        tx,
-        tenantId,
-        input.accountId,
-      );
-      const category = await this.requireCategory(
-        tx,
-        tenantId,
-        input.categoryId,
-        "EXPENSE",
-      );
-      await this.requireActiveService(tx, tenantId, input.serviceKey);
-      await this.requireActiveServiceCapability(
-        tx,
-        tenantId,
-        input.serviceKey,
-        input.capabilityKey,
-      );
+        const account = await this.requireActiveAccount(
+          tx,
+          tenantId,
+          input.accountId,
+        );
+        const category = await this.requireCategory(
+          tx,
+          tenantId,
+          input.categoryId,
+          "EXPENSE",
+        );
+        await this.requireActiveService(tx, tenantId, input.serviceKey);
+        await this.requireActiveServiceCapability(
+          tx,
+          tenantId,
+          input.serviceKey,
+          input.capabilityKey,
+        );
 
-      const entries: readonly EntryInput[] = [
-        {
+        const entries: readonly EntryInput[] = [
+          {
+            categoryId: category.id,
+            direction: "DEBIT",
+            amountMinor: input.amountMinor,
+          },
+          {
+            financialAccountId: account.id,
+            direction: "CREDIT",
+            amountMinor: input.amountMinor,
+          },
+        ];
+
+        return this.commit(tx, tenantId, actorId, {
+          type: "EXPENSE",
+          amountMinor: input.amountMinor,
+          ledgerId: account.ledgerId,
+          accountId: account.id,
           categoryId: category.id,
-          direction: "DEBIT",
-          amountMinor: input.amountMinor,
-        },
-        {
-          financialAccountId: account.id,
-          direction: "CREDIT",
-          amountMinor: input.amountMinor,
-        },
-      ];
-
-      return this.commit(tx, tenantId, actorId, {
-        type: "EXPENSE",
-        amountMinor: input.amountMinor,
-        ledgerId: account.ledgerId,
-        accountId: account.id,
-        categoryId: category.id,
-        serviceKey: input.serviceKey ?? null,
-        capabilityKey: input.capabilityKey ?? null,
-        sourceType: input.sourceType ?? null,
-        sourceId: input.sourceId ?? null,
-        note: input.note ?? null,
-        occurredAt: parseDate(input.occurredAt),
-        entries,
-        accountsForBalance: [account],
-        netChange: netChangeOf(entries),
-        idempotencyKey,
-        idempotencyHash: payloadHash,
-        auditAction: "EXPENSE_CREATED",
-      });
-    });
+          serviceKey: input.serviceKey ?? null,
+          capabilityKey: input.capabilityKey ?? null,
+          sourceType: input.sourceType ?? null,
+          sourceId: input.sourceId ?? null,
+          note: input.note ?? null,
+          occurredAt: parseDate(input.occurredAt),
+          entries,
+          accountsForBalance: [account],
+          netChange: netChangeOf(entries),
+          idempotencyKey,
+          idempotencyHash: payloadHash,
+          auditAction: "EXPENSE_CREATED",
+        });
+      },
+    );
   }
 
   async createTransfer(
@@ -284,63 +302,69 @@ export class TransactionsService {
 
     const payloadHash = hashPayload(input);
 
-    return this.runCommit(tenantId, idempotencyKey, payloadHash, async (tx) => {
-      const replay = await this.replayOrNull(
-        tx,
-        tenantId,
-        idempotencyKey,
-        payloadHash,
-      );
-      if (replay) {
-        return replay;
-      }
-
-      const from = await this.requireActiveAccount(
-        tx,
-        tenantId,
-        input.fromAccountId,
-      );
-      const to = await this.requireActiveAccount(
-        tx,
-        tenantId,
-        input.toAccountId,
-      );
-
-      if (from.ledgerId !== to.ledgerId) {
-        throw new BadRequestException(
-          "Transfers across ledgers are not supported yet",
+    return this.runCommit(
+      tenantId,
+      actorId,
+      idempotencyKey,
+      payloadHash,
+      async (tx) => {
+        const replay = await this.replayOrNull(
+          tx,
+          tenantId,
+          idempotencyKey,
+          payloadHash,
         );
-      }
+        if (replay) {
+          return replay;
+        }
 
-      const entries: readonly EntryInput[] = [
-        {
-          financialAccountId: to.id,
-          direction: "DEBIT",
-          amountMinor: input.amountMinor,
-        },
-        {
-          financialAccountId: from.id,
-          direction: "CREDIT",
-          amountMinor: input.amountMinor,
-        },
-      ];
+        const from = await this.requireActiveAccount(
+          tx,
+          tenantId,
+          input.fromAccountId,
+        );
+        const to = await this.requireActiveAccount(
+          tx,
+          tenantId,
+          input.toAccountId,
+        );
 
-      return this.commit(tx, tenantId, actorId, {
-        type: "TRANSFER",
-        amountMinor: input.amountMinor,
-        ledgerId: from.ledgerId,
-        transferFromId: from.id,
-        transferToId: to.id,
-        note: input.note ?? null,
-        occurredAt: parseDate(input.occurredAt),
-        entries,
-        accountsForBalance: [from, to],
-        netChange: netChangeOf(entries),
-        idempotencyKey,
-        idempotencyHash: payloadHash,
-        auditAction: "TRANSFER_CREATED",
-      });
-    });
+        if (from.ledgerId !== to.ledgerId) {
+          throw new BadRequestException(
+            "Transfers across ledgers are not supported yet",
+          );
+        }
+
+        const entries: readonly EntryInput[] = [
+          {
+            financialAccountId: to.id,
+            direction: "DEBIT",
+            amountMinor: input.amountMinor,
+          },
+          {
+            financialAccountId: from.id,
+            direction: "CREDIT",
+            amountMinor: input.amountMinor,
+          },
+        ];
+
+        return this.commit(tx, tenantId, actorId, {
+          type: "TRANSFER",
+          amountMinor: input.amountMinor,
+          ledgerId: from.ledgerId,
+          transferFromId: from.id,
+          transferToId: to.id,
+          note: input.note ?? null,
+          occurredAt: parseDate(input.occurredAt),
+          entries,
+          accountsForBalance: [from, to],
+          netChange: netChangeOf(entries),
+          idempotencyKey,
+          idempotencyHash: payloadHash,
+          auditAction: "TRANSFER_CREATED",
+        });
+      },
+    );
   }
 
   async reverse(
@@ -349,103 +373,112 @@ export class TransactionsService {
     id: string,
     note?: string,
   ): Promise<Transaction> {
-    return this.prisma.withTransaction(async (tx) => {
-      const existing = await tx.transaction.findFirst({
-        where: { tenantId, id },
-        include: { entries: true },
-      });
+    return this.prisma.withTenantContext(
+      { tenantId, userId: actorId },
+      async (tx) => {
+        const existing = await tx.transaction.findFirst({
+          where: { tenantId, id },
+          include: { entries: true },
+        });
 
-      if (!existing) {
-        throw new NotFoundException("Transaction not found");
-      }
-      if (existing.reversedById) {
-        throw new BadRequestException("Transaction has already been reversed");
-      }
+        if (!existing) {
+          throw new NotFoundException("Transaction not found");
+        }
+        if (existing.reversedById) {
+          throw new BadRequestException(
+            "Transaction has already been reversed",
+          );
+        }
 
-      const accountIds = existing.entries
-        .map((entry) => entry.financialAccountId)
-        .filter((value): value is string => value !== null);
+        const accountIds = existing.entries
+          .map((entry) => entry.financialAccountId)
+          .filter((value): value is string => value !== null);
 
-      const accounts =
-        accountIds.length > 0
-          ? await tx.financialAccount.findMany({
-              where: { tenantId, id: { in: accountIds } },
-              select: { id: true, type: true, openingBalanceMinor: true },
-            })
-          : [];
+        const accounts =
+          accountIds.length > 0
+            ? await tx.financialAccount.findMany({
+                where: { tenantId, id: { in: accountIds } },
+                select: { id: true, type: true, openingBalanceMinor: true },
+              })
+            : [];
 
-      const entries: EntryInput[] = existing.entries.map((entry) => ({
-        financialAccountId: entry.financialAccountId,
-        categoryId: entry.categoryId,
-        direction: entry.direction === "DEBIT" ? "CREDIT" : "DEBIT",
-        amountMinor: entry.amountMinor,
-      }));
+        const entries: EntryInput[] = existing.entries.map((entry) => ({
+          financialAccountId: entry.financialAccountId,
+          categoryId: entry.categoryId,
+          direction: entry.direction === "DEBIT" ? "CREDIT" : "DEBIT",
+          amountMinor: entry.amountMinor,
+        }));
 
-      const reversal = await this.commit(tx, tenantId, actorId, {
-        type: existing.type as $Enums.TransactionType,
-        amountMinor: existing.amountMinor,
-        ledgerId: existing.ledgerId,
-        note: note ?? `Reversal of ${existing.id}`,
-        occurredAt: new Date(),
-        entries,
-        accountsForBalance: accounts,
-        netChange: netChangeOf(entries),
-        reversesId: existing.id,
-        auditAction: "TRANSACTION_REVERSED",
-      });
+        const reversal = await this.commit(tx, tenantId, actorId, {
+          type: existing.type as $Enums.TransactionType,
+          amountMinor: existing.amountMinor,
+          ledgerId: existing.ledgerId,
+          note: note ?? `Reversal of ${existing.id}`,
+          occurredAt: new Date(),
+          entries,
+          accountsForBalance: accounts,
+          netChange: netChangeOf(entries),
+          reversesId: existing.id,
+          auditAction: "TRANSACTION_REVERSED",
+        });
 
-      await tx.transaction.update({
-        where: { id: existing.id },
-        data: { reversedById: reversal.id, updatedById: actorId },
-      });
+        await tx.transaction.update({
+          where: { id: existing.id },
+          data: { reversedById: reversal.id, updatedById: actorId },
+        });
 
-      return reversal;
-    });
+        return reversal;
+      },
+    );
   }
 
   async balance(
     tenantId: string,
+    userId: string,
     ledgerId?: string,
   ): Promise<LedgerBalanceResponse> {
-    const targetLedgerId =
-      ledgerId ?? (await this.ledgers.personalLedger(tenantId)).id;
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const targetLedgerId =
+        ledgerId ?? (await this.ledgers.personalLedger(tenantId, userId)).id;
 
-    const ledger = await this.prisma.client.ledger.findFirst({
-      where: { tenantId, id: targetLedgerId },
-      include: {
-        accounts: { where: { isActive: true }, orderBy: { name: "asc" } },
-      },
-    });
+      const ledger = await tx.ledger.findFirst({
+        where: { tenantId, id: targetLedgerId },
+        include: {
+          accounts: { where: { isActive: true }, orderBy: { name: "asc" } },
+        },
+      });
 
-    if (!ledger) {
-      throw new NotFoundException("Ledger not found");
-    }
+      if (!ledger) {
+        throw new NotFoundException("Ledger not found");
+      }
 
-    const accountIds = ledger.accounts.map((account) => account.id);
-    const deltas = await this.transactions.entryBalanceDelta(
-      tenantId,
-      accountIds,
-    );
+      const accountIds = ledger.accounts.map((account) => account.id);
+      const deltas = await this.transactions.entryBalanceDelta(
+        tx,
+        tenantId,
+        accountIds,
+      );
 
-    const accounts = ledger.accounts.map((account) => {
-      const balanceMinor =
-        account.openingBalanceMinor + (deltas.get(account.id) ?? 0);
+      const accounts = ledger.accounts.map((account) => {
+        const balanceMinor =
+          account.openingBalanceMinor + (deltas.get(account.id) ?? 0);
+        return {
+          id: account.id,
+          name: account.name,
+          balanceMinor,
+        };
+      });
+
       return {
-        id: account.id,
-        name: account.name,
-        balanceMinor,
+        ledgerId: ledger.id,
+        totalMinor: accounts.reduce(
+          (sum, account) => sum + account.balanceMinor,
+          0,
+        ),
+        accounts,
+        exchangeRate: CONFIGURED_EXCHANGE_RATE,
       };
     });
-
-    return {
-      ledgerId: ledger.id,
-      totalMinor: accounts.reduce(
-        (sum, account) => sum + account.balanceMinor,
-        0,
-      ),
-      accounts,
-      exchangeRate: CONFIGURED_EXCHANGE_RATE,
-    };
   }
 
   private async requireActiveAccount(
@@ -544,7 +577,8 @@ export class TransactionsService {
       (subscription?.selections.some(
         (selection) =>
           selection.enabled && selection.capabilityId === capability.id,
-      ) ?? false);
+      ) ??
+        false);
     if (!active) {
       throw new BadRequestException(
         `Capability ${capabilityKey} is not active for service ${serviceKey}`,
@@ -554,19 +588,22 @@ export class TransactionsService {
 
   private async runCommit<T>(
     tenantId: string,
+    actorId: string,
     idempotencyKey: string | undefined,
     payloadHash: string,
     callback: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
     try {
-      return await this.prisma.withTransaction(callback);
+      return await this.prisma.withTenantContext(
+        { tenantId, userId: actorId },
+        callback,
+      );
     } catch (error) {
       if (idempotencyKey && isUniqueViolation(error)) {
-        const replay = await this.replayOrNull(
-          this.prisma.client,
-          tenantId,
-          idempotencyKey,
-          payloadHash,
+        const replay = await this.prisma.withTenantContext(
+          { tenantId, userId: actorId },
+          async (tx) =>
+            this.replayOrNull(tx, tenantId, idempotencyKey, payloadHash),
         );
         if (replay) {
           return replay as T;

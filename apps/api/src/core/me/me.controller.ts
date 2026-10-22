@@ -6,6 +6,7 @@ import {
   Patch,
   UseGuards,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 
 import {
   updateProfileSchema,
@@ -16,6 +17,7 @@ import { SessionAuthGuard } from "../tenant/session-auth.guard.js";
 import type { CurrentUser } from "../tenant/tenant-context.js";
 import { MeService } from "./me.service.js";
 import { RequestUser } from "./request-user.decorator.js";
+import { API_WRITE_THROTTLE } from "../config/rate-limits.js";
 
 @Controller("me")
 @UseGuards(SessionAuthGuard)
@@ -33,6 +35,7 @@ export class MeController {
   }
 
   @Patch("settings")
+  @Throttle(API_WRITE_THROTTLE)
   async updateSettings(
     @RequestUser() user: CurrentUser,
     @Body() body: unknown,
@@ -42,6 +45,7 @@ export class MeController {
   }
 
   @Patch("profile")
+  @Throttle(API_WRITE_THROTTLE)
   async updateProfile(@RequestUser() user: CurrentUser, @Body() body: unknown) {
     const input = updateProfileSchema.parse(body);
     return this.meService.updateProfile(user.id, input);

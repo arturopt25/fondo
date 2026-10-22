@@ -26,7 +26,7 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 | Phase 5: Accounts and Categories            | Done        |
 | Phase 6: Transactions and Ledger            | Mostly done |
 | Phase 7: Dashboard and Reports              | Mostly done |
-| Phase 8: Security and Production Hardening  | Pending     |
+| Phase 8: Security and Production Hardening  | In Progress |
 
 ## Phase 0: Repository Foundation
 
@@ -567,16 +567,16 @@ Declared but not yet consumed:
 
 ## Phase 8: Security and Production Hardening
 
-- TD-086: Implement PostgreSQL RLS. Pending. Requires a dedicated non-superuser app role (`NOBYPASSRLS`) connected by the runtime in dev/CI/e2e (the current `fondo` role is superuser and bypasses RLS), plus wrapping every tenant-scoped read in a tenant transaction. App-layer isolation and cross-tenant tests already cover current releases; RLS remains the defense-in-depth milestone before production.
-- TD-087: Verify `SET LOCAL` inside transactions. Pending. `set_config('app.tenant_id', ..., true)` must be set as the first statement of each tenant-scoped transaction; verify rollback restores it.
-- TD-088: Add cross-tenant tests. Pending. Prove an under-scoped query returns nothing under the restricted role; the existing cross-tenant e2e suite must keep passing on the app role.
-- TD-089: Apply per-endpoint rate limiting. Pending.
+- TD-086: Implement PostgreSQL RLS. Done. Added the `fondo_app` role with `NOBYPASSRLS`, RLS policies for tenant-scoped tables, separate owner/app database URLs, and tenant-context wrapping for runtime reads and writes.
+- TD-087: Verify `SET LOCAL` inside transactions. Done. `tenant-context.e2e.test.ts` verifies both transaction-local settings and restoration to empty settings after a rolled-back transaction.
+- TD-088: Add cross-tenant tests. Done. E2e finance and services isolation tests run through the restricted application role and pass against the RLS-enabled test database.
+- TD-089: Apply per-endpoint rate limiting. Done. Registered `ThrottlerGuard` globally with a configurable 100 requests/minute read default and a configurable 10 requests/minute mutation override; added e2e coverage.
 - TD-090: Complete payload size limits. Done. Fastify is configured with an explicit 1 MB `bodyLimit` shared between the runtime and the e2e app via `http-hardening.ts`; e2e asserts oversized bodies return `413`. Auth routes are handled by Better Auth's `onRequest` hook and bypass the Fastify body parser, so the limit applies to NestJS routes.
 - TD-116: Register security headers. Done. `@fastify/helmet` is registered on both the runtime and the e2e app (CSP disabled for Swagger, `cross-origin` CORP so the web origin can fetch); e2e asserts `X-Content-Type-Options`, `X-Frame-Options`, `X-Download-Options` and `Cross-Origin-Resource-Policy`.
 - TD-091: Review production CORS. Pending.
 - TD-092: Add basic observability. Pending.
 - TD-093: Run dependency audit. Partially done. osv-scanner findings: `fastify` unified to 5.12.5 via `pnpm-workspace.yaml` `overrides` (pinned by `@nestjs/platform-fastify@11.2.3`), resolving CVE-2026-16732 / CVE-2026-18504. Remaining: CVE-2026-84373 (`vitest@3.2.7`) requires a major 3→4/5 upgrade, and CVE-2026-40345 (`deepmerge-ts@7.1.5`, transitive via `prisma`) requires a major Prisma 6→7 upgrade — both are dedicated migrations with breaking changes.
-- TD-094: Complete E2E tests. Pending.
+- TD-094: Complete E2E tests. Done. Auth, HTTP hardening, services, finance/RLS isolation and rate-limit coverage pass against a dedicated test database.
 - TD-095: Review accessibility and performance. Pending.
 
 ### TD-097: Enforce explicit session policy and revalidate client sessions
@@ -615,6 +615,8 @@ At the end of every phase:
 6. Update the changelog below.
 
 ## Changelog
+
+- 2026-10-22: Phase 8 hardening continued. Completed PostgreSQL RLS/app-role enforcement (TD-086, TD-087, TD-088), registered configurable per-endpoint API throttling with mutation overrides (TD-089), made the Prisma singleton lazy so tests and setup files do not require database configuration at import time, fixed deterministic budget e2e dates, and expanded the e2e suite to 45 passing tests. TD-091, TD-092, TD-093 and TD-095 remain pending.
 
 - 2026-09-28: Fixed the movement form not clearing after a successful save (TD-118). `Select`/`NumberInput` fields are now driven by `value={watch(...)}` and reset to empty on success — previously Mantine kept its own display state, so account/category/service/amount stayed on screen. The `AccountsPage` opening-balance field had the same issue and is now controlled. Added regression tests (fields clear after success; data persists until then) that reproduce the semi-controlled behavior.
 - 2026-09-28: Wave 1 — connect the web client to the ledger. `Idempotency-Key` sent from web mutations (TD-108), transfer creation UI (TD-109), audited reversal UI with a confirmation modal and optional note (TD-110), movement pagination with parameterized query keys (TD-111), unified money formatting on `TransactionsPage` plus a rate guard in `lib/money.ts` so the USD→EUR rate only applies when the display currency is EUR (TD-112), and shared HTTP hardening (`@fastify/helmet` + a 1 MB `bodyLimit`) on both the runtime and the e2e app (TD-116, closes TD-090). Fixed a pre-existing bug where the movement forms never passed validation (TD-117). `LedgerBalanceResponse` now includes `exchangeRate`.

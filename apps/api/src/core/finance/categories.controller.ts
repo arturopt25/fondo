@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 
 import {
   createCategorySchema,
@@ -21,6 +22,7 @@ import { RequestUser } from "../me/request-user.decorator.js";
 import type { CurrentUser } from "../tenant/tenant-context.js";
 import { RequestTenant } from "../tenant/request-tenant.decorator.js";
 import { CategoriesService } from "./categories.service.js";
+import { API_WRITE_THROTTLE } from "../config/rate-limits.js";
 
 interface TenantParams {
   tenantId: string;
@@ -35,13 +37,17 @@ export class CategoriesController {
   ) {}
 
   @Get()
-  async list(@RequestTenant() tenant: TenantParams, @Query() query: unknown) {
+  async list(
+    @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
+    @Query() query: unknown,
+  ) {
     const parsed = pageQuerySchema.parse(query);
     const raw = query as { sort?: unknown; type?: unknown };
     const sort = typeof raw.sort === "string" ? raw.sort : undefined;
     const type = typeof raw.type === "string" ? raw.type : undefined;
 
-    return this.categories.list(tenant.tenantId, {
+    return this.categories.list(tenant.tenantId, user.id, {
       ...parsed,
       ...(sort !== undefined ? { sort } : {}),
       ...(type !== undefined ? { type } : {}),
@@ -49,6 +55,7 @@ export class CategoriesController {
   }
 
   @Post()
+  @Throttle(API_WRITE_THROTTLE)
   async create(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
@@ -59,6 +66,7 @@ export class CategoriesController {
   }
 
   @Patch(":id")
+  @Throttle(API_WRITE_THROTTLE)
   async update(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
@@ -70,6 +78,7 @@ export class CategoriesController {
   }
 
   @Post(":id/archive")
+  @Throttle(API_WRITE_THROTTLE)
   async archive(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,

@@ -4,7 +4,6 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-
 import type {
   ServiceCapability,
   ServiceKey,
@@ -20,102 +19,109 @@ import { PrismaService } from "../prisma.service.js";
 export class ServicesService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async listCatalog(tenantId: string): Promise<ServiceWithCapabilities[]> {
-    const definitions = await this.prisma.client.serviceDefinition.findMany({
-      orderBy: { name: "asc" },
-      include: {
-        capabilities: { orderBy: { sortOrder: "asc" } },
-      },
-    });
-    const subscriptions = await this.prisma.client.serviceSubscription.findMany(
-      {
+  async listCatalog(
+    tenantId: string,
+    userId: string,
+  ): Promise<ServiceWithCapabilities[]> {
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const definitions = await tx.serviceDefinition.findMany({
+        orderBy: { name: "asc" },
+        include: {
+          capabilities: { orderBy: { sortOrder: "asc" } },
+        },
+      });
+      const subscriptions = await tx.serviceSubscription.findMany({
         where: { tenantId },
         include: { selections: true },
-      },
-    );
+      });
 
-    const subscriptionByServiceId = new Map(
-      subscriptions.map((subscription) => [
-        subscription.serviceId,
-        subscription,
-      ]),
-    );
+      const subscriptionByServiceId = new Map(
+        subscriptions.map((subscription) => [
+          subscription.serviceId,
+          subscription,
+        ]),
+      );
 
-    return definitions.map((definition) => {
-      const subscription = subscriptionByServiceId.get(definition.id);
+      return definitions.map((definition) => {
+        const subscription = subscriptionByServiceId.get(definition.id);
 
-      return {
-        key: definition.key as ServiceKey,
-        name: definition.name,
-        description: definition.description,
-        status: (subscription?.status ?? "DISABLED") as ServiceStatus,
-        ledgerMode: (subscription?.ledgerMode ?? "SHARED") as ServiceLedgerMode,
-        capabilities: definition.capabilities.map((capability) => ({
-          key: capability.key,
-          name: capability.name,
-          description: capability.description,
-          required: capability.required,
-          defaultEnabled: capability.defaultEnabled,
-          dependsOn: capability.dependsOn,
-        })),
-        selectedCapabilities: subscription
-          ? subscription.selections
-              .filter((selection) => selection.enabled)
-              .map((selection) => selection.capabilityId)
-              .map(
-                (capabilityId) =>
-                  definition.capabilities.find(
-                    (capability) => capability.id === capabilityId,
-                  )?.key ?? "",
-              )
-              .filter((key) => key !== "")
-          : [],
-      };
+        return {
+          key: definition.key as ServiceKey,
+          name: definition.name,
+          description: definition.description,
+          status: (subscription?.status ?? "DISABLED") as ServiceStatus,
+          ledgerMode: (subscription?.ledgerMode ??
+            "SHARED") as ServiceLedgerMode,
+          capabilities: definition.capabilities.map((capability) => ({
+            key: capability.key,
+            name: capability.name,
+            description: capability.description,
+            required: capability.required,
+            defaultEnabled: capability.defaultEnabled,
+            dependsOn: capability.dependsOn,
+          })),
+          selectedCapabilities: subscription
+            ? subscription.selections
+                .filter((selection) => selection.enabled)
+                .map((selection) => selection.capabilityId)
+                .map(
+                  (capabilityId) =>
+                    definition.capabilities.find(
+                      (capability) => capability.id === capabilityId,
+                    )?.key ?? "",
+                )
+                .filter((key) => key !== "")
+            : [],
+        };
+      });
     });
   }
 
-  async activeServices(tenantId: string): Promise<ServiceKey[]> {
-    const subscriptions = await this.prisma.client.serviceSubscription.findMany(
-      {
+  async activeServices(
+    tenantId: string,
+    userId: string,
+  ): Promise<ServiceKey[]> {
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const subscriptions = await tx.serviceSubscription.findMany({
         where: { tenantId, status: "ACTIVE" },
         include: { service: true },
-      },
-    );
+      });
 
-    return subscriptions.map(
-      (subscription) => subscription.service.key as ServiceKey,
-    );
+      return subscriptions.map(
+        (subscription) => subscription.service.key as ServiceKey,
+      );
+    });
   }
 
   async configure(
     tenantId: string,
-    actorId: string,
+    userId: string,
     key: ServiceKey,
     input: UpdateServiceConfigInput,
   ): Promise<ServiceWithCapabilities> {
-    const definition = await this.prisma.client.serviceDefinition.findUnique({
-      where: { key },
-      include: { capabilities: true },
-    });
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const definition = await tx.serviceDefinition.findUnique({
+        where: { key },
+        include: { capabilities: true },
+      });
 
-    if (!definition) {
-      throw new NotFoundException("Service not found");
-    }
+      if (!definition) {
+        throw new NotFoundException("Service not found");
+      }
 
-    const selected = resolveSelection(definition, input.capabilities);
-    assertDependencies(definition, selected);
+      const selected = resolveSelection(definition, input.capabilities);
+      assertDependencies(definition, selected);
 
-    if (
-      input.ledgerMode === "SEPARATE" &&
-      definition.key !== "ENTREPRENEURSHIP"
-    ) {
-      throw new BadRequestException(
-        "A separate ledger is only available for Entrepreneurship",
-      );
-    }
+      if (
+        input.ledgerMode === "SEPARATE" &&
+        definition.key !== "ENTREPRENEURSHIP"
+      ) {
+        throw new BadRequestException(
+          "A separate ledger is only available for Entrepreneurship",
+        );
+      }
 
-    const subscription = await this.prisma.client.$transaction(async (tx) => {
-      const upserted = await tx.serviceSubscription.upsert({
+      const subscription = await tx.serviceSubscription.upsert({
         where: {
           tenantId_serviceId: { tenantId, serviceId: definition.id },
         },
@@ -134,84 +140,84 @@ export class ServicesService {
       });
 
       await tx.serviceCapabilitySelection.deleteMany({
-        where: { subscriptionId: upserted.id },
+        where: { subscriptionId: subscription.id },
       });
 
       await tx.serviceCapabilitySelection.createMany({
         data: selected.map((capabilityId) => ({
-          subscriptionId: upserted.id,
+          subscriptionId: subscription.id,
           capabilityId,
           enabled: true,
         })),
       });
 
-      return upserted;
-    });
-
-    await this.prisma.client.auditLog.create({
-      data: {
-        tenantId,
-        actorId,
-        action: "SERVICE_CONFIGURED",
-        resource: `service:${key}`,
-        metadata: {
-          service: key,
-          capabilities: selected,
-          ledgerMode: input.ledgerMode ?? "SHARED",
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorId: userId,
+          action: "SERVICE_CONFIGURED",
+          resource: `service:${key}`,
+          metadata: {
+            service: key,
+            capabilities: selected,
+            ledgerMode: input.ledgerMode ?? "SHARED",
+          },
         },
-      },
-    });
+      });
 
-    return this.toServiceWithCapabilities(definition, subscription);
+      return this.toServiceWithCapabilities(definition, subscription);
+    });
   }
 
   async disable(
     tenantId: string,
-    actorId: string,
+    userId: string,
     key: ServiceKey,
   ): Promise<ServiceWithCapabilities> {
-    const definition = await this.prisma.client.serviceDefinition.findUnique({
-      where: { key },
-      include: { capabilities: true },
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const definition = await tx.serviceDefinition.findUnique({
+        where: { key },
+        include: { capabilities: true },
+      });
+
+      if (!definition) {
+        throw new NotFoundException("Service not found");
+      }
+
+      await tx.serviceSubscription.upsert({
+        where: {
+          tenantId_serviceId: { tenantId, serviceId: definition.id },
+        },
+        create: {
+          tenantId,
+          serviceId: definition.id,
+          status: "DISABLED",
+        },
+        update: { status: "DISABLED" },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorId: userId,
+          action: "SERVICE_DISABLED",
+          resource: `service:${key}`,
+          metadata: { service: key },
+        },
+      });
+
+      const current = await tx.serviceSubscription.findUnique({
+        where: {
+          tenantId_serviceId: { tenantId, serviceId: definition.id },
+        },
+        include: { selections: true },
+      });
+
+      return this.toServiceWithCapabilities(
+        definition,
+        current as NonNullable<typeof current>,
+      );
     });
-
-    if (!definition) {
-      throw new NotFoundException("Service not found");
-    }
-
-    await this.prisma.client.serviceSubscription.upsert({
-      where: {
-        tenantId_serviceId: { tenantId, serviceId: definition.id },
-      },
-      create: {
-        tenantId,
-        serviceId: definition.id,
-        status: "DISABLED",
-      },
-      update: { status: "DISABLED" },
-    });
-
-    await this.prisma.client.auditLog.create({
-      data: {
-        tenantId,
-        actorId,
-        action: "SERVICE_DISABLED",
-        resource: `service:${key}`,
-        metadata: { service: key },
-      },
-    });
-
-    const current = await this.prisma.client.serviceSubscription.findUnique({
-      where: {
-        tenantId_serviceId: { tenantId, serviceId: definition.id },
-      },
-      include: { selections: true },
-    });
-
-    return this.toServiceWithCapabilities(
-      definition,
-      current as NonNullable<typeof current>,
-    );
   }
 
   private toServiceWithCapabilities(

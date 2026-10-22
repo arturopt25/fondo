@@ -1,5 +1,5 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { prisma } from "@fondo/db";
+import { adminPrisma } from "./admin-prisma.js";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -14,7 +14,7 @@ function uniqueEmail(): string {
 }
 
 async function truncateAll(): Promise<void> {
-  await prisma.$executeRawUnsafe(
+  await adminPrisma.$executeRawUnsafe(
     'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceDefinition", "ServiceSubscription", "ServiceCapabilityDefinition", "ServiceCapabilitySelection", "AuditLog" RESTART IDENTITY CASCADE',
   );
 }
@@ -37,7 +37,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
-  await prisma.$executeRawUnsafe(
+  await adminPrisma.$executeRawUnsafe(
     `INSERT INTO "ServiceDefinition" ("id", "key", "name", "description", "createdAt", "updatedAt") VALUES
       (gen_random_uuid(), 'PERSONAL_FINANCE', 'Personal Finance', 'PF', now(), now()),
       (gen_random_uuid(), 'VEHICLE', 'Vehicle', 'V', now(), now()),
@@ -48,7 +48,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await adminPrisma.$disconnect();
   await app.close();
 });
 
@@ -90,7 +90,7 @@ describe("services e2e", () => {
     );
     expect(vehicleEnabled.status).toBe("ACTIVE");
 
-    const auditCount = await prisma.auditLog.count({
+    const auditCount = await adminPrisma.auditLog.count({
       where: { action: "SERVICE_CONFIGURED", resource: "service:VEHICLE" },
     });
     expect(auditCount).toBe(1);
@@ -100,7 +100,7 @@ describe("services e2e", () => {
     const email = uniqueEmail();
     const agent = await signUp(email);
 
-    await prisma.membership.updateMany({
+    await adminPrisma.membership.updateMany({
       where: { user: { email } },
       data: { role: "MEMBER" },
     });

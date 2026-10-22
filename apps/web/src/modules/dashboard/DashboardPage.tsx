@@ -480,10 +480,12 @@ function BalanceSheet({
                       {t("dashboard.exchangeRate")}
                     </Text>
                     <Text className="hero-rate">
-                      1 {rateInfo.from} = {rateInfo.rate.toFixed(2)} {rateInfo.to}
+                      1 {rateInfo.from} = {rateInfo.rate.toFixed(2)}{" "}
+                      {rateInfo.to}
                     </Text>
                     <Text c="dimmed" size="xs">
-                      {rateInfo.source} · {formatDate(rateInfo.effectiveAt, locale)}
+                      {rateInfo.source} ·{" "}
+                      {formatDate(rateInfo.effectiveAt, locale)}
                     </Text>
                   </div>
                 ) : null}

@@ -6,19 +6,24 @@ import { PrismaService } from "../prisma.service.js";
 export class LedgerService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async personalLedger(tenantId: string): Promise<{ id: string }> {
-    const existing = await this.prisma.client.ledger.findFirst({
-      where: { tenantId, scope: "PERSONAL" },
+  async personalLedger(
+    tenantId: string,
+    userId: string,
+  ): Promise<{ id: string }> {
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const existing = await tx.ledger.findFirst({
+        where: { tenantId, scope: "PERSONAL" },
+      });
+
+      if (existing) {
+        return { id: existing.id };
+      }
+
+      const created = await tx.ledger.create({
+        data: { tenantId, name: "Personal", scope: "PERSONAL" },
+      });
+
+      return { id: created.id };
     });
-
-    if (existing) {
-      return { id: existing.id };
-    }
-
-    const created = await this.prisma.client.ledger.create({
-      data: { tenantId, name: "Personal", scope: "PERSONAL" },
-    });
-
-    return { id: created.id };
   }
 }

@@ -1,6 +1,5 @@
-import { Inject, Injectable } from "@nestjs/common";
-
-import { PrismaService } from "../../prisma.service.js";
+import { Injectable } from "@nestjs/common";
+import type { Prisma } from "@fondo/db";
 
 export interface BudgetRow {
   readonly id: string;
@@ -12,10 +11,13 @@ export interface BudgetRow {
 
 @Injectable()
 export class BudgetsRepository {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
-
-  async list(tenantId: string, from: Date, to: Date): Promise<BudgetRow[]> {
-    return this.prisma.client.budget.findMany({
+  async list(
+    client: Prisma.TransactionClient,
+    tenantId: string,
+    from: Date,
+    to: Date,
+  ): Promise<BudgetRow[]> {
+    return client.budget.findMany({
       where: {
         tenantId,
         periodStart: { gte: from, lte: to },
@@ -28,19 +30,24 @@ export class BudgetsRepository {
     });
   }
 
-  async findById(tenantId: string, id: string) {
-    return this.prisma.client.budget.findFirst({
+  async findById(
+    client: Prisma.TransactionClient,
+    tenantId: string,
+    id: string,
+  ) {
+    return client.budget.findFirst({
       where: { id, tenantId },
     });
   }
 
   async upsert(
+    client: Prisma.TransactionClient,
     tenantId: string,
     categoryId: string,
     periodStart: Date,
     amountMinor: number,
   ) {
-    return this.prisma.client.budget.upsert({
+    return client.budget.upsert({
       where: {
         tenantId_categoryId_periodStart: {
           tenantId,
@@ -58,8 +65,8 @@ export class BudgetsRepository {
     });
   }
 
-  async delete(tenantId: string, id: string) {
-    return this.prisma.client.budget.deleteMany({
+  async delete(client: Prisma.TransactionClient, tenantId: string, id: string) {
+    return client.budget.deleteMany({
       where: { id, tenantId },
     });
   }

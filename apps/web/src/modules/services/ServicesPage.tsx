@@ -257,10 +257,7 @@ function ServiceConfigModal({
   const [selected, setSelected] = useState<Set<string>>(() => {
     const initial = new Set(service.selectedCapabilities);
     for (const capability of service.capabilities) {
-      if (
-        capability.required ||
-        (isActivating && capability.defaultEnabled)
-      ) {
+      if (capability.required || (isActivating && capability.defaultEnabled)) {
         initial.add(capability.key);
       }
     }

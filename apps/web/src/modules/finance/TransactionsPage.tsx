@@ -122,8 +122,7 @@ export function TransactionsPage(): React.JSX.Element {
 
   const rate = balanceQuery.data?.exchangeRate ?? null;
 
-  const schema =
-    type === "transfer" ? transferFormSchema : movementFormSchema;
+  const schema = type === "transfer" ? transferFormSchema : movementFormSchema;
   const {
     register,
     handleSubmit,
@@ -188,9 +187,7 @@ export function TransactionsPage(): React.JSX.Element {
       amountMinor: Math.round((values.amount ?? 0) * 100),
       ...(values.note ? { note: values.note } : {}),
       ...(values.serviceKey ? { serviceKey: values.serviceKey } : {}),
-      ...(values.capabilityKey
-        ? { capabilityKey: values.capabilityKey }
-        : {}),
+      ...(values.capabilityKey ? { capabilityKey: values.capabilityKey } : {}),
     };
     if (type === "income") {
       createIncome.mutate(
@@ -260,7 +257,10 @@ export function TransactionsPage(): React.JSX.Element {
                 data={[
                   { value: "expense", label: t("transactions.types.EXPENSE") },
                   { value: "income", label: t("transactions.types.INCOME") },
-                  { value: "transfer", label: t("transactions.types.TRANSFER") },
+                  {
+                    value: "transfer",
+                    label: t("transactions.types.TRANSFER"),
+                  },
                 ]}
               />
               {type === "transfer" ? (
@@ -347,7 +347,10 @@ export function TransactionsPage(): React.JSX.Element {
                         ),
                       }))}
                       onChange={(value) =>
-                        setValue("capabilityKey", (value ?? null) as string | null)
+                        setValue(
+                          "capabilityKey",
+                          (value ?? null) as string | null,
+                        )
                       }
                     />
                   ) : null}

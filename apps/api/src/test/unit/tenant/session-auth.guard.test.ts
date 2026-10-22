@@ -11,12 +11,7 @@ import { SessionAuthGuard } from "../../../core/tenant/session-auth.guard.js";
 function buildMembership() {
   return {
     role: "ADMIN",
-    tenant: {
-      id: "tenant-1",
-      name: "Arturo's space",
-      accountingCurrency: "USD",
-      timeZone: "UTC",
-    },
+    tenantId: "tenant-1",
   };
 }
 
@@ -29,12 +24,24 @@ function createGuard({
 }) {
   const getSession = vi.fn().mockResolvedValue(session);
   const membershipFindFirst = vi.fn().mockResolvedValue(membership);
+  const tenantFindUnique = vi.fn().mockResolvedValue({
+    id: "tenant-1",
+    name: "Arturo's space",
+    accountingCurrency: "USD",
+    timeZone: "UTC",
+  });
   const auth = { api: { getSession } };
+  const client = {
+    membership: { findFirst: membershipFindFirst },
+    tenant: { findUnique: tenantFindUnique },
+  };
   const prisma = {
-    client: { membership: { findFirst: membershipFindFirst } },
+    client,
+    withUserContext: vi.fn(async (_userId, cb) => cb(client)),
+    withTenantContext: vi.fn(async (_ctx, cb) => cb(client)),
   };
   const guard = new SessionAuthGuard(auth as never, prisma as never);
-  return { guard, getSession, membershipFindFirst };
+  return { guard, getSession, membershipFindFirst, tenantFindUnique };
 }
 
 function buildContext() {

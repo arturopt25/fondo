@@ -30,9 +30,7 @@ export class ServiceAccessGuard implements CanActivate {
       return true;
     }
 
-    const request = context
-      .switchToHttp()
-      .getRequest<AuthenticatedRequest>();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
 
     const definition = await this.prisma.client.serviceDefinition.findUnique({
       where: { key },
@@ -42,16 +40,15 @@ export class ServiceAccessGuard implements CanActivate {
       return true;
     }
 
-    const subscription = await this.prisma.client.serviceSubscription.findUnique(
-      {
+    const subscription =
+      await this.prisma.client.serviceSubscription.findUnique({
         where: {
           tenantId_serviceId: {
             tenantId: request.tenant.tenantId,
             serviceId: definition.id,
           },
         },
-      },
-    );
+      });
 
     if (!subscription || subscription.status !== "ACTIVE") {
       throw new ForbiddenException("Service is not active");

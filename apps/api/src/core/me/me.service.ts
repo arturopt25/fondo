@@ -21,13 +21,26 @@ export class MeService {
       throw new NotFoundException("User not found");
     }
 
-    const membership = await this.prisma.client.membership.findFirst({
-      where: { userId },
-      include: { tenant: true },
-      orderBy: { createdAt: "asc" },
-    });
+    const membership = await this.prisma.withUserContext(userId, async (tx) =>
+      tx.membership.findFirst({
+        where: { userId },
+        orderBy: { createdAt: "asc" },
+      }),
+    );
 
     if (!membership) {
+      throw new NotFoundException("No personal space found");
+    }
+
+    const tenant = await this.prisma.withTenantContext(
+      { tenantId: membership.tenantId, userId },
+      async (tx) =>
+        tx.tenant.findUnique({
+          where: { id: membership.tenantId },
+        }),
+    );
+
+    if (!tenant) {
       throw new NotFoundException("No personal space found");
     }
 
@@ -41,11 +54,10 @@ export class MeService {
         image: user.image,
       },
       tenant: {
-        id: membership.tenant.id,
-        name: membership.tenant.name,
-        accountingCurrency: membership.tenant.accountingCurrency as
-          "USD" | "EUR",
-        timeZone: membership.tenant.timeZone,
+        id: tenant.id,
+        name: tenant.name,
+        accountingCurrency: tenant.accountingCurrency as "USD" | "EUR",
+        timeZone: tenant.timeZone,
       },
       membership: {
         role: membership.role === "ADMIN" ? "ADMIN" : "MEMBER",

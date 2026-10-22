@@ -21,7 +21,9 @@ vi.mock("../../../../modules/auth/auth-client", () => ({
   signUpWithEmail: authClient.signUpWithEmail,
   signOut: authClient.signOut,
 }));
-vi.mock("../../../../modules/auth/auth-context", () => ({ useAuth: auth.useAuth }));
+vi.mock("../../../../modules/auth/auth-context", () => ({
+  useAuth: auth.useAuth,
+}));
 
 import { LoginPage } from "../../../../modules/auth/LoginPage";
 

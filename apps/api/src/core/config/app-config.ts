@@ -1,5 +1,6 @@
 export interface AppConfig {
   readonly databaseUrl: string;
+  readonly appDatabaseUrl: string;
   readonly betterAuthSecret: string;
   readonly betterAuthUrl: string;
   readonly webOrigin: string;
@@ -7,6 +8,7 @@ export interface AppConfig {
 
 export function loadAppConfig(): AppConfig {
   const databaseUrl = process.env.DATABASE_URL;
+  const appDatabaseUrl = process.env.APP_DATABASE_URL;
   const betterAuthSecret = process.env.BETTER_AUTH_SECRET;
   const betterAuthUrl = process.env.BETTER_AUTH_URL;
   const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:5173";
@@ -15,6 +17,9 @@ export function loadAppConfig(): AppConfig {
 
   if (!databaseUrl) {
     missing.push("DATABASE_URL");
+  }
+  if (!appDatabaseUrl) {
+    missing.push("APP_DATABASE_URL");
   }
   if (!betterAuthSecret) {
     missing.push("BETTER_AUTH_SECRET");
@@ -34,6 +39,7 @@ export function loadAppConfig(): AppConfig {
 
   return {
     databaseUrl: databaseUrl as string,
+    appDatabaseUrl: appDatabaseUrl as string,
     betterAuthSecret: betterAuthSecret as string,
     betterAuthUrl: betterAuthUrl as string,
     webOrigin,

@@ -47,13 +47,28 @@ export class SessionAuthGuard implements CanActivate {
       throw new UnauthorizedException("Session expired");
     }
 
-    const membership = await this.prisma.client.membership.findFirst({
-      where: { userId: session.user.id },
-      include: { tenant: true },
-      orderBy: { createdAt: "asc" },
-    });
+    const membership = await this.prisma.withUserContext(
+      session.user.id,
+      async (tx) =>
+        tx.membership.findFirst({
+          where: { userId: session.user.id },
+          orderBy: { createdAt: "asc" },
+        }),
+    );
 
     if (!membership) {
+      throw new NotFoundException("No personal space found");
+    }
+
+    const tenantRecord = await this.prisma.withTenantContext(
+      { tenantId: membership.tenantId, userId: session.user.id },
+      async (tx) =>
+        tx.tenant.findUnique({
+          where: { id: membership.tenantId },
+        }),
+    );
+
+    if (!tenantRecord) {
       throw new NotFoundException("No personal space found");
     }
 
@@ -66,10 +81,10 @@ export class SessionAuthGuard implements CanActivate {
 
     const tenant: TenantContext = {
       userId: session.user.id,
-      tenantId: membership.tenant.id,
-      tenantName: membership.tenant.name,
-      accountingCurrency: membership.tenant.accountingCurrency as "USD" | "EUR",
-      timeZone: membership.tenant.timeZone,
+      tenantId: tenantRecord.id,
+      tenantName: tenantRecord.name,
+      accountingCurrency: tenantRecord.accountingCurrency as "USD" | "EUR",
+      timeZone: tenantRecord.timeZone,
       role: membership.role === "ADMIN" ? "ADMIN" : "MEMBER",
     };
 

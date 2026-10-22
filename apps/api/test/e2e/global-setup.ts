@@ -25,10 +25,20 @@ if (isLocalDevDatabase(testDatabaseUrl)) {
 
 const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
 
-export default function globalSetup(): void {
+export default async function globalSetup(): Promise<void> {
   execSync("pnpm --filter @fondo/db db:deploy", {
     cwd: repoRoot,
     env: { ...process.env, DATABASE_URL: testDatabaseUrl },
     stdio: "inherit",
   });
+
+  // The migration creates the role with a placeholder password. Set the real
+  // password for the test database so the runtime can connect as fondo_app.
+  const { PrismaClient } = await import("@fondo/db");
+  const adminPrisma = new PrismaClient({ datasourceUrl: testDatabaseUrl });
+  const password = new URL(testDatabaseUrl).password.replace(/'/g, "''");
+  await adminPrisma.$executeRawUnsafe(
+    `ALTER ROLE fondo_app WITH PASSWORD '${password}'`,
+  );
+  await adminPrisma.$disconnect();
 }

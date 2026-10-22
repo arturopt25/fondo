@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  convertMinor,
-  formatMinorAmount,
-  rateFor,
-} from "../../../lib/money";
+import { convertMinor, formatMinorAmount, rateFor } from "../../../lib/money";
 
 const rate = {
   from: "USD",
@@ -35,4 +31,3 @@ describe("money helpers", () => {
     expect(formatMinorAmount(10_000, "USD", rate, "en-US")).toBe("$100");
   });
 });
-

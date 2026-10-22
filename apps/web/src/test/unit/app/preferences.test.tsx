@@ -21,7 +21,10 @@ vi.mock("../../../modules/settings/me-hooks", () => ({
   useUpdateSettingsMutation: meHooks.useUpdateSettingsMutation,
 }));
 
-import { AppPreferencesProvider, useAppPreferences } from "../../../app/preferences";
+import {
+  AppPreferencesProvider,
+  useAppPreferences,
+} from "../../../app/preferences";
 
 function PreferencesConsumer() {
   const { theme, displayCurrency, locale, timeZone, setTheme, setLocale } =
