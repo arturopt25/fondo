@@ -12,7 +12,12 @@ function createMocks() {
     archive: vi.fn(),
   };
   const auditLogCreate = vi.fn();
-  const prisma = { client: { auditLog: { create: auditLogCreate } } };
+  const prismaClient = { auditLog: { create: auditLogCreate } };
+  const prisma = {
+    client: prismaClient,
+    withTenantContext: vi.fn(async (_ctx, cb) => cb(prismaClient)),
+    withUserContext: vi.fn(async (_userId, cb) => cb(prismaClient)),
+  };
   const service = new CategoriesService(repo as never, prisma as never);
   return { repo, auditLogCreate, service };
 }
@@ -37,10 +42,14 @@ describe("CategoriesService", () => {
       total: 1,
     });
 
-    const result = await service.list("tenant-1", { page: 1, pageSize: 20 });
+    const result = await service.list("tenant-1", "user-1", {
+      page: 1,
+      pageSize: 20,
+    });
 
     expect(result.items[0]?.name).toBe("Food");
     expect(repo.list).toHaveBeenCalledWith(
+      expect.anything(),
       "tenant-1",
       expect.objectContaining({ orderBy: { createdAt: "asc" } }),
     );
@@ -61,7 +70,7 @@ describe("CategoriesService", () => {
       type: "EXPENSE",
     });
 
-    expect(repo.create).toHaveBeenCalledWith("tenant-1", {
+    expect(repo.create).toHaveBeenCalledWith(expect.anything(), "tenant-1", {
       name: "Travel",
       type: "EXPENSE",
       isDefault: false,

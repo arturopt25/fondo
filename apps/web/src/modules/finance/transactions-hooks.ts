@@ -12,7 +12,10 @@ import type {
 } from "@fondo/shared-types";
 
 import { api } from "../../lib/api";
-import { queryKeys, type TransactionListQueryParams } from "../../lib/query-keys";
+import {
+  queryKeys,
+  type TransactionListQueryParams,
+} from "../../lib/query-keys";
 
 export interface MutationWithIdempotencyInput<TInput> {
   readonly input: TInput;

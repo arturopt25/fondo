@@ -10,7 +10,12 @@ import { ServicesService } from "./services.service.js";
 @Module({
   imports: [AuthModule],
   controllers: [ServicesController],
-  providers: [ServicesService, SessionAuthGuard, AdminOnlyGuard, ServiceAccessGuard],
+  providers: [
+    ServicesService,
+    SessionAuthGuard,
+    AdminOnlyGuard,
+    ServiceAccessGuard,
+  ],
   exports: [ServicesService, ServiceAccessGuard],
 })
 export class ServicesModule {}

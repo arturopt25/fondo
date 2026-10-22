@@ -1,12 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@fondo/db";
-
-import { PrismaService } from "../../prisma.service.js";
 
 @Injectable()
 export class CategoriesRepository {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
-
   private scope(
     tenantId: string,
     extra: Prisma.CategoryWhereInput = {},
@@ -15,6 +11,7 @@ export class CategoriesRepository {
   }
 
   async list(
+    client: Prisma.TransactionClient,
     tenantId: string,
     options: {
       page: number;
@@ -28,39 +25,56 @@ export class CategoriesRepository {
       options.type ? { type: options.type } : {},
     );
     const [items, total] = await Promise.all([
-      this.prisma.client.category.findMany({
+      client.category.findMany({
         where,
         orderBy: options.orderBy,
         skip: (options.page - 1) * options.pageSize,
         take: options.pageSize,
       }),
-      this.prisma.client.category.count({ where }),
+      client.category.count({ where }),
     ]);
 
     return { items, total };
   }
 
-  async findById(tenantId: string, id: string) {
-    return this.prisma.client.category.findFirst({
+  async findById(
+    client: Prisma.TransactionClient,
+    tenantId: string,
+    id: string,
+  ) {
+    return client.category.findFirst({
       where: this.scope(tenantId, { id }),
     });
   }
 
-  async create(tenantId: string, data: Omit<Prisma.CategoryUncheckedCreateInput, "tenantId">) {
-    return this.prisma.client.category.create({
+  async create(
+    client: Prisma.TransactionClient,
+    tenantId: string,
+    data: Omit<Prisma.CategoryUncheckedCreateInput, "tenantId">,
+  ) {
+    return client.category.create({
       data: { ...data, tenantId },
     });
   }
 
-  async update(tenantId: string, id: string, data: Prisma.CategoryUpdateInput) {
-    return this.prisma.client.category.updateMany({
+  async update(
+    client: Prisma.TransactionClient,
+    tenantId: string,
+    id: string,
+    data: Prisma.CategoryUpdateInput,
+  ) {
+    return client.category.updateMany({
       where: this.scope(tenantId, { id }),
       data,
     });
   }
 
-  async archive(tenantId: string, id: string) {
-    return this.prisma.client.category.updateMany({
+  async archive(
+    client: Prisma.TransactionClient,
+    tenantId: string,
+    id: string,
+  ) {
+    return client.category.updateMany({
       where: this.scope(tenantId, { id }),
       data: { isActive: false },
     });

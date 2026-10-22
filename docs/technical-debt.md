@@ -26,7 +26,7 @@ Track work that has been specified in earlier planning rounds but is not yet imp
 | Phase 5: Accounts and Categories            | Done        |
 | Phase 6: Transactions and Ledger            | Mostly done |
 | Phase 7: Dashboard and Reports              | Mostly done |
-| Phase 8: Security and Production Hardening  | Pending     |
+| Phase 8: Security and Production Hardening  | In Progress |
 
 ## Phase 0: Repository Foundation
 
@@ -547,6 +547,7 @@ Declared but not yet consumed:
 - TD-110: Add reversal UI. Done. The movements table shows a reverse action for reversible rows (hidden when already reversed or when the row is itself a reversal), with a confirmation modal and an optional note wired to `POST /transactions/:id/reverse`. Reverted rows render a `Reversed` badge and reversal rows a `Reversal` badge.
 - TD-111: Surface transaction pagination. Done. `queryKeys.transactions` is now a parameterized factory and `useTransactionsQuery` sends `page`/`pageSize`; the page renders a Mantine `Pagination` control driven by the server `total`.
 - TD-117: Fix transactions form validation mismatch. Done. The RHF forms validated against the shared create schemas (`amountMinor`) while the form manages `amount` (major units) and null service/capability keys, so submit never passed validation. The page now uses form-level schemas derived from the shared contracts with an `amount` field and nullable service/capability; amount errors render on the input.
+- TD-118: Reset controlled fields after a successful movement. Done. The movement form fields (`Select`/`NumberInput`) were semi-controlled — Mantine keeps its own display state, so `reset()` only cleared the RHF-registered note field and the selected account/category/service/amount stayed on screen after recording a movement. All fields are now driven by `value={watch(...)}` and `reset(EMPTY_FORM_VALUES)` runs on success. Mantine `Select` only clears its displayed text when the `value` prop is `null`, so the account/category/from/to selects pass `null` (not `""`) when empty. The `AccountsPage` opening-balance `NumberInput` had the same issue and is now controlled. Regression tests reproduce the semi-controlled behavior and assert the fields clear after success (including that empty selects receive `null`), plus that data persists until then.
 
 ## Phase 7: Dashboard and Reports
 
@@ -566,16 +567,16 @@ Declared but not yet consumed:
 
 ## Phase 8: Security and Production Hardening
 
-- TD-086: Implement PostgreSQL RLS. Pending. Requires a dedicated non-superuser app role (`NOBYPASSRLS`) connected by the runtime in dev/CI/e2e (the current `fondo` role is superuser and bypasses RLS), plus wrapping every tenant-scoped read in a tenant transaction. App-layer isolation and cross-tenant tests already cover current releases; RLS remains the defense-in-depth milestone before production.
-- TD-087: Verify `SET LOCAL` inside transactions. Pending. `set_config('app.tenant_id', ..., true)` must be set as the first statement of each tenant-scoped transaction; verify rollback restores it.
-- TD-088: Add cross-tenant tests. Pending. Prove an under-scoped query returns nothing under the restricted role; the existing cross-tenant e2e suite must keep passing on the app role.
-- TD-089: Apply per-endpoint rate limiting. Pending.
+- TD-086: Implement PostgreSQL RLS. Done. Added the `fondo_app` role with `NOBYPASSRLS`, RLS policies for tenant-scoped tables, separate owner/app database URLs, and tenant-context wrapping for runtime reads and writes.
+- TD-087: Verify `SET LOCAL` inside transactions. Done. `tenant-context.e2e.test.ts` verifies both transaction-local settings and restoration to empty settings after a rolled-back transaction.
+- TD-088: Add cross-tenant tests. Done. E2e finance and services isolation tests run through the restricted application role and pass against the RLS-enabled test database.
+- TD-089: Apply per-endpoint rate limiting. Done. Registered `ThrottlerGuard` globally with a configurable 100 requests/minute read default and a configurable 10 requests/minute mutation override; added e2e coverage.
 - TD-090: Complete payload size limits. Done. Fastify is configured with an explicit 1 MB `bodyLimit` shared between the runtime and the e2e app via `http-hardening.ts`; e2e asserts oversized bodies return `413`. Auth routes are handled by Better Auth's `onRequest` hook and bypass the Fastify body parser, so the limit applies to NestJS routes.
 - TD-116: Register security headers. Done. `@fastify/helmet` is registered on both the runtime and the e2e app (CSP disabled for Swagger, `cross-origin` CORP so the web origin can fetch); e2e asserts `X-Content-Type-Options`, `X-Frame-Options`, `X-Download-Options` and `Cross-Origin-Resource-Policy`.
-- TD-091: Review production CORS. Pending.
-- TD-092: Add basic observability. Pending.
+- TD-091: Review production CORS. Done. `WEB_ORIGIN` accepts a validated comma-separated allowlist shared by Fastify CORS and Better Auth; wildcard, path, query, fragment and malformed origins are rejected, with e2e coverage for allowed and denied preflight requests.
+- TD-092: Add basic observability. Done. Added `nestjs-pino`/Fastify structured request logging with validated `LOG_LEVEL`, UUID request IDs returned in `X-Request-Id`, tenant/user ID bindings, query-string omission and redaction for authorization, cookies and credential tokens; tests run silently by default with `LOG_LEVEL` available for debugging.
 - TD-093: Run dependency audit. Partially done. osv-scanner findings: `fastify` unified to 5.12.5 via `pnpm-workspace.yaml` `overrides` (pinned by `@nestjs/platform-fastify@11.2.3`), resolving CVE-2026-16732 / CVE-2026-18504. Remaining: CVE-2026-84373 (`vitest@3.2.7`) requires a major 3→4/5 upgrade, and CVE-2026-40345 (`deepmerge-ts@7.1.5`, transitive via `prisma`) requires a major Prisma 6→7 upgrade — both are dedicated migrations with breaking changes.
-- TD-094: Complete E2E tests. Pending.
+- TD-094: Complete E2E tests. Done. Auth, HTTP hardening, services, finance/RLS isolation and rate-limit coverage pass against a dedicated test database.
 - TD-095: Review accessibility and performance. Pending.
 
 ### TD-097: Enforce explicit session policy and revalidate client sessions
@@ -615,6 +616,9 @@ At the end of every phase:
 
 ## Changelog
 
+- 2026-10-22: Phase 8 hardening continued. Completed PostgreSQL RLS/app-role enforcement (TD-086, TD-087, TD-088), registered configurable per-endpoint API throttling with mutation overrides (TD-089), made the Prisma singleton lazy so tests and setup files do not require database configuration at import time, fixed deterministic budget e2e dates, completed the production CORS allowlist review (TD-091), added structured request/error logging with request IDs and redaction (TD-092), and expanded the e2e suite to 48 passing tests. TD-093 and TD-095 remain pending.
+
+- 2026-09-28: Fixed the movement form not clearing after a successful save (TD-118). `Select`/`NumberInput` fields are now driven by `value={watch(...)}` and reset to empty on success — previously Mantine kept its own display state, so account/category/service/amount stayed on screen. The `AccountsPage` opening-balance field had the same issue and is now controlled. Added regression tests (fields clear after success; data persists until then) that reproduce the semi-controlled behavior.
 - 2026-09-28: Wave 1 — connect the web client to the ledger. `Idempotency-Key` sent from web mutations (TD-108), transfer creation UI (TD-109), audited reversal UI with a confirmation modal and optional note (TD-110), movement pagination with parameterized query keys (TD-111), unified money formatting on `TransactionsPage` plus a rate guard in `lib/money.ts` so the USD→EUR rate only applies when the display currency is EUR (TD-112), and shared HTTP hardening (`@fastify/helmet` + a 1 MB `bodyLimit`) on both the runtime and the e2e app (TD-116, closes TD-090). Fixed a pre-existing bug where the movement forms never passed validation (TD-117). `LedgerBalanceResponse` now includes `exchangeRate`.
 - 2026-09-25: Added monthly budgets vs. actuals (TD-080). Introduced tenant-scoped `Budget` persistence, shared contracts, CRUD API with audit events, period aggregation, Dashboard progress cards and monthly budget editing/deletion. Added budget e2e coverage for CRUD, aggregation and tenant isolation. Updated dashboard summary layout to embed period metrics in the balance hero and compact active services into a responsive grid.
 - 2026-09-23: Real dashboard and reports + services copy. Added a reporting API (`GET /reports/dashboard|cash-flow|category-spend`) that aggregates from `TransactionEntry` with reversal compensation, tenant-timezone monthly buckets, `serviceKey` filters and an `ExchangeRateView`; migrated Dashboard and Reports off `mock-data.ts` to parameterized query keys with loading/empty/error states; budgets show an empty state until TD-080. Services cards now say `Activate` and the modal uses activation/config copy (i18n ES/EN). Hardened idempotency under concurrency (`FOR UPDATE` + replay on P2002) with concurrency e2e tests (TD-074). Unified `fastify` to 5.12.5 via `pnpm-workspace.yaml` `overrides` (TD-093 partial). TD-008, TD-014–016, TD-075–079, TD-081–083, TD-085, TD-106, TD-107 done.

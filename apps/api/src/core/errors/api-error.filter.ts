@@ -2,13 +2,17 @@ import {
   Catch,
   HttpException,
   HttpStatus,
-  Logger,
+  Inject,
+  Injectable,
   type ArgumentsHost,
   type ExceptionFilter,
 } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { PinoLogger } from "nestjs-pino";
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
+
+import type { AuthenticatedRequest } from "../tenant/tenant-context.js";
 
 interface ErrorBody {
   readonly error: {
@@ -20,16 +24,21 @@ interface ErrorBody {
 }
 
 @Catch()
+@Injectable()
 export class ApiErrorFilter implements ExceptionFilter {
-  private readonly logger = new Logger(ApiErrorFilter.name);
+  constructor(@Inject(PinoLogger) private readonly logger: PinoLogger) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<FastifyReply>();
-    const request = host.switchToHttp().getRequest<FastifyRequest>();
+    const request = host
+      .switchToHttp()
+      .getRequest<
+        FastifyRequest &
+          Partial<Pick<AuthenticatedRequest, "tenant" | "user">>
+      >();
     const requestId =
-      typeof request.headers["x-request-id"] === "string"
-        ? request.headers["x-request-id"]
-        : randomUUID();
+      typeof request.id === "string" ? request.id : randomUUID();
+    response.header("X-Request-Id", requestId);
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let code = "INTERNAL_ERROR";
@@ -54,10 +63,28 @@ export class ApiErrorFilter implements ExceptionFilter {
       code = String((exception as { code: unknown }).code);
     }
 
+    const logContext = {
+      requestId,
+      method: request.method,
+      path: request.url.split("?")[0],
+      ...(request.tenant
+        ? { tenantId: request.tenant.tenantId }
+        : {}),
+      ...(request.user
+        ? { userId: request.user.id }
+        : {}),
+    };
+
     if (status >= 500) {
       this.logger.error(
-        `request ${requestId} failed: ${exception instanceof Error ? exception.stack : String(exception)}`,
+        {
+          ...logContext,
+          ...(exception instanceof Error ? { err: exception } : {}),
+        },
+        "request failed",
       );
+    } else {
+      this.logger.warn(logContext, "request rejected");
     }
 
     const errorBody: ErrorBody = {

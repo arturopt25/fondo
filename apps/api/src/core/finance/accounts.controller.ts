@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 
 import {
   createAccountSchema,
@@ -21,6 +22,7 @@ import { RequestUser } from "../me/request-user.decorator.js";
 import type { CurrentUser } from "../tenant/tenant-context.js";
 import { RequestTenant } from "../tenant/request-tenant.decorator.js";
 import { AccountsService } from "./accounts.service.js";
+import { API_WRITE_THROTTLE } from "../config/rate-limits.js";
 
 interface TenantParams {
   tenantId: string;
@@ -34,19 +36,25 @@ export class AccountsController {
   ) {}
 
   @Get()
-  async list(@RequestTenant() tenant: TenantParams, @Query() query: unknown) {
+  async list(
+    @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
+    @Query() query: unknown,
+  ) {
     const parsed = pageQuerySchema.parse(query);
-    const sort = typeof (query as { sort?: unknown }).sort === "string"
-      ? (query as { sort: string }).sort
-      : undefined;
+    const sort =
+      typeof (query as { sort?: unknown }).sort === "string"
+        ? (query as { sort: string }).sort
+        : undefined;
 
-    return this.accounts.list(tenant.tenantId, {
+    return this.accounts.list(tenant.tenantId, user.id, {
       ...parsed,
       ...(sort !== undefined ? { sort } : {}),
     });
   }
 
   @Post()
+  @Throttle(API_WRITE_THROTTLE)
   async create(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
@@ -57,6 +65,7 @@ export class AccountsController {
   }
 
   @Patch(":id")
+  @Throttle(API_WRITE_THROTTLE)
   async update(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,
@@ -68,6 +77,7 @@ export class AccountsController {
   }
 
   @Post(":id/archive")
+  @Throttle(API_WRITE_THROTTLE)
   async archive(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,

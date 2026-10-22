@@ -9,6 +9,11 @@ export interface PersonalTenantProvisioner {
   provisionForUser(userId: string, name: string): Promise<void>;
 }
 
+export interface BetterAuthOptions {
+  readonly provisioner: PersonalTenantProvisioner;
+  readonly webOrigins: readonly string[];
+}
+
 function slugify(value: string): string {
   const base = value
     .toLowerCase()
@@ -21,7 +26,10 @@ function slugify(value: string): string {
   return base || "personal";
 }
 
-export function createBetterAuth(provisioner: PersonalTenantProvisioner) {
+export function createBetterAuth({
+  provisioner,
+  webOrigins,
+}: BetterAuthOptions) {
   const databaseUrl = process.env.DATABASE_URL;
   const authUrl = process.env.BETTER_AUTH_URL;
 
@@ -37,7 +45,7 @@ export function createBetterAuth(provisioner: PersonalTenantProvisioner) {
     baseURL: authUrl,
     basePath: "/api/v1/auth",
     secret: process.env.BETTER_AUTH_SECRET,
-    trustedOrigins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"],
+    trustedOrigins: [...webOrigins],
     database: prismaAdapter(prisma, {
       provider: "postgresql",
     }),

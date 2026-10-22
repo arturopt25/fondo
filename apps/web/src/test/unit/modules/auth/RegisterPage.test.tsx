@@ -21,7 +21,9 @@ vi.mock("../../../../modules/auth/auth-client", () => ({
   signInWithEmail: authClient.signInWithEmail,
   signOut: authClient.signOut,
 }));
-vi.mock("../../../../modules/auth/auth-context", () => ({ useAuth: auth.useAuth }));
+vi.mock("../../../../modules/auth/auth-context", () => ({
+  useAuth: auth.useAuth,
+}));
 
 import { RegisterPage } from "../../../../modules/auth/RegisterPage";
 

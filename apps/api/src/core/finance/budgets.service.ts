@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import type { Prisma } from "@fondo/db";
 
 import type {
   Budget,
@@ -29,117 +30,130 @@ export class BudgetsService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
   ) {}
 
-  async list(tenantId: string, query: BudgetQuery): Promise<BudgetResponse> {
+  async list(
+    tenantId: string,
+    userId: string,
+    query: BudgetQuery,
+  ): Promise<BudgetResponse> {
     const range = resolveRange(query);
-    const ledgerId = (await this.ledgers.personalLedger(tenantId)).id;
-    const [categories, budgets, rows] = await Promise.all([
-      this.prisma.client.category.findMany({
-        where: { tenantId, type: "EXPENSE", isActive: true },
-        select: { id: true, name: true },
-        orderBy: { name: "asc" },
-      }),
-      this.budgets.list(tenantId, range.fromDate, range.toDate),
-      this.reports.categoryRows(tenantId, {
-        ledgerId,
-        from: range.fromDate,
-        to: range.toDate,
-      }),
-    ]);
+    const ledgerId = (await this.ledgers.personalLedger(tenantId, userId)).id;
 
-    const actualByCategory = new Map<string, number>();
-    for (const row of rows) {
-      if (row.categoryType !== "EXPENSE") {
-        continue;
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const [categories, budgets, rows] = await Promise.all([
+        tx.category.findMany({
+          where: { tenantId, type: "EXPENSE", isActive: true },
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
+        }),
+        this.budgets.list(tx, tenantId, range.fromDate, range.toDate),
+        this.reports.categoryRows(tx, tenantId, {
+          ledgerId,
+          from: range.fromDate,
+          to: range.toDate,
+        }),
+      ]);
+
+      const actualByCategory = new Map<string, number>();
+      for (const row of rows) {
+        if (row.categoryType !== "EXPENSE") {
+          continue;
+        }
+        const amount =
+          row.direction === "CREDIT" ? -row.amountMinor : row.amountMinor;
+        actualByCategory.set(
+          row.categoryId,
+          (actualByCategory.get(row.categoryId) ?? 0) + amount,
+        );
       }
-      const amount =
-        row.direction === "CREDIT" ? -row.amountMinor : row.amountMinor;
-      actualByCategory.set(
-        row.categoryId,
-        (actualByCategory.get(row.categoryId) ?? 0) + amount,
-      );
-    }
 
-    const budgetsByCategory = groupBudgets(budgets);
-    const singlePeriod = range.from === range.to;
+      const budgetsByCategory = groupBudgets(budgets);
+      const singlePeriod = range.from === range.to;
 
-    return {
-      period: { from: range.from, to: range.to },
-      items: categories.map((category) => {
-        const categoryBudgets = budgetsByCategory.get(category.id) ?? [];
-        const budgetMinor = sumBudgets(categoryBudgets);
-        const actualMinor = actualByCategory.get(category.id) ?? 0;
-        return {
-          categoryId: category.id,
-          categoryName: category.name,
-          budgetId:
-            singlePeriod && categoryBudgets.length === 1
-              ? (categoryBudgets[0]?.id ?? null)
-              : null,
-          budgetMinor,
-          actualMinor,
-          remainingMinor:
-            budgetMinor === null ? null : budgetMinor - actualMinor,
-          utilizationPercent:
-            budgetMinor === null || budgetMinor === 0
-              ? null
-              : roundPercent((actualMinor / budgetMinor) * 100),
-        };
-      }),
-    };
+      return {
+        period: { from: range.from, to: range.to },
+        items: categories.map((category) => {
+          const categoryBudgets = budgetsByCategory.get(category.id) ?? [];
+          const budgetMinor = sumBudgets(categoryBudgets);
+          const actualMinor = actualByCategory.get(category.id) ?? 0;
+          return {
+            categoryId: category.id,
+            categoryName: category.name,
+            budgetId:
+              singlePeriod && categoryBudgets.length === 1
+                ? (categoryBudgets[0]?.id ?? null)
+                : null,
+            budgetMinor,
+            actualMinor,
+            remainingMinor:
+              budgetMinor === null ? null : budgetMinor - actualMinor,
+            utilizationPercent:
+              budgetMinor === null || budgetMinor === 0
+                ? null
+                : roundPercent((actualMinor / budgetMinor) * 100),
+          };
+        }),
+      };
+    });
   }
 
   async upsert(
     tenantId: string,
-    actorId: string,
+    userId: string,
     input: UpsertBudgetInput,
   ): Promise<Budget> {
-    const category = await this.prisma.client.category.findFirst({
-      where: {
-        id: input.categoryId,
-        tenantId,
-        type: "EXPENSE",
-        isActive: true,
-      },
-    });
-    if (!category) {
-      throw new NotFoundException("Expense category not found");
-    }
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const category = await tx.category.findFirst({
+        where: {
+          id: input.categoryId,
+          tenantId,
+          type: "EXPENSE",
+          isActive: true,
+        },
+      });
+      if (!category) {
+        throw new NotFoundException("Expense category not found");
+      }
 
-    const budget = await this.budgets.upsert(
-      tenantId,
-      input.categoryId,
-      periodStart(input.period),
-      input.amountMinor,
-    );
-    await this.audit(tenantId, actorId, "BUDGET_UPSERTED", budget.id);
-    return toBudget(budget);
+      const budget = await this.budgets.upsert(
+        tx,
+        tenantId,
+        input.categoryId,
+        periodStart(input.period),
+        input.amountMinor,
+      );
+      await this.audit(tx, tenantId, userId, "BUDGET_UPSERTED", budget.id);
+      return toBudget(budget);
+    });
   }
 
   async remove(
     tenantId: string,
-    actorId: string,
+    userId: string,
     id: string,
   ): Promise<{ id: string }> {
-    const existing = await this.budgets.findById(tenantId, id);
-    if (!existing) {
-      throw new NotFoundException("Budget not found");
-    }
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const existing = await this.budgets.findById(tx, tenantId, id);
+      if (!existing) {
+        throw new NotFoundException("Budget not found");
+      }
 
-    const result = await this.budgets.delete(tenantId, id);
-    if (result.count === 0) {
-      throw new NotFoundException("Budget not found");
-    }
-    await this.audit(tenantId, actorId, "BUDGET_DELETED", id);
-    return { id };
+      const result = await this.budgets.delete(tx, tenantId, id);
+      if (result.count === 0) {
+        throw new NotFoundException("Budget not found");
+      }
+      await this.audit(tx, tenantId, userId, "BUDGET_DELETED", id);
+      return { id };
+    });
   }
 
   private async audit(
+    client: Prisma.TransactionClient,
     tenantId: string,
     actorId: string,
     action: string,
     id: string,
   ): Promise<void> {
-    await this.prisma.client.auditLog.create({
+    await client.auditLog.create({
       data: {
         tenantId,
         actorId,

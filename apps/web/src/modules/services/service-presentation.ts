@@ -41,7 +41,6 @@ export function activeCapabilities(
 ): ServiceCapability[] {
   const selected = new Set(service.selectedCapabilities);
   return service.capabilities.filter(
-    (capability) =>
-      capability.required || selected.has(capability.key),
+    (capability) => capability.required || selected.has(capability.key),
   );
 }

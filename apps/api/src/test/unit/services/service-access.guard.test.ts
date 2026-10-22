@@ -16,12 +16,10 @@ function buildContext(role: "ADMIN" | "MEMBER") {
 
 function createGuard(metadataValue: unknown, subscription: unknown) {
   const reflectorGet = vi.fn().mockReturnValue(metadataValue);
-  const serviceDefinitionFindUnique = vi.fn().mockResolvedValue(
-    metadataValue ? { id: "pf", key: metadataValue } : null,
-  );
-  const serviceSubscriptionFindUnique = vi
+  const serviceDefinitionFindUnique = vi
     .fn()
-    .mockResolvedValue(subscription);
+    .mockResolvedValue(metadataValue ? { id: "pf", key: metadataValue } : null);
+  const serviceSubscriptionFindUnique = vi.fn().mockResolvedValue(subscription);
 
   const reflector = { get: reflectorGet };
   const prisma = {
@@ -31,7 +29,12 @@ function createGuard(metadataValue: unknown, subscription: unknown) {
     },
   };
   const guard = new ServiceAccessGuard(reflector as never, prisma as never);
-  return { guard, reflectorGet, serviceDefinitionFindUnique, serviceSubscriptionFindUnique };
+  return {
+    guard,
+    reflectorGet,
+    serviceDefinitionFindUnique,
+    serviceSubscriptionFindUnique,
+  };
 }
 
 describe("ServiceAccessGuard", () => {

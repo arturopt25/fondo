@@ -13,6 +13,7 @@ type Tx = ReturnType<typeof createTx>;
 function createTx() {
   return {
     $queryRaw: vi.fn(),
+    ledger: { findFirst: vi.fn() },
     financialAccount: { findFirst: vi.fn(), findMany: vi.fn() },
     category: { findFirst: vi.fn() },
     serviceSubscription: { findFirst: vi.fn() },
@@ -36,11 +37,12 @@ function createContext() {
   };
   const ledgers = { personalLedger: vi.fn() };
   const prisma = {
-    client: {
-      ledger: { findFirst: vi.fn() },
-    },
-    withTransaction: vi.fn((callback: (client: Tx) => Promise<unknown>) =>
-      callback(tx),
+    client: {},
+    withTenantContext: vi.fn(
+      (_ctx, callback: (client: Tx) => Promise<unknown>) => callback(tx),
+    ),
+    withUserContext: vi.fn(
+      (_userId, callback: (client: Tx) => Promise<unknown>) => callback(tx),
     ),
   };
   const service = new TransactionsService(
@@ -473,9 +475,9 @@ describe("TransactionsService", () => {
   });
 
   it("computes a ledger balance from entry deltas and opening balances", async () => {
-    const { repo, ledgers, prisma, service } = createContext();
+    const { repo, ledgers, tx, service } = createContext();
     ledgers.personalLedger.mockResolvedValue({ id: "ledger-1" });
-    prisma.client.ledger.findFirst.mockResolvedValue({
+    tx.ledger.findFirst.mockResolvedValue({
       id: "ledger-1",
       accounts: [
         { id: "acc-1", name: "Cash", openingBalanceMinor: 1000 },
@@ -489,7 +491,7 @@ describe("TransactionsService", () => {
       ]),
     );
 
-    const result = await service.balance("tenant-1");
+    const result = await service.balance("tenant-1", "user-1");
 
     expect(result.totalMinor).toBe(11000);
     expect(result.exchangeRate).toEqual(

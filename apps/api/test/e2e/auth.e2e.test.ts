@@ -1,5 +1,5 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { prisma } from "@fondo/db";
+import { adminPrisma } from "./admin-prisma.js";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -16,7 +16,7 @@ function uniqueEmail(): string {
 }
 
 async function truncateAll(): Promise<void> {
-  await prisma.$executeRawUnsafe(
+  await adminPrisma.$executeRawUnsafe(
     'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings" RESTART IDENTITY CASCADE',
   );
 }
@@ -38,7 +38,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await adminPrisma.$disconnect();
   await app.close();
 });
 
@@ -55,15 +55,15 @@ describe("auth e2e", () => {
     expect(me.body.settings.theme).toBe("dark");
     expect(me.body.settings.locale).toBe("es");
 
-    const user = await prisma.user.findUniqueOrThrow({ where: { email } });
-    expect(await prisma.tenant.count({ where: { ownerUserId: user.id } })).toBe(
-      1,
-    );
-    expect(await prisma.membership.count({ where: { userId: user.id } })).toBe(
-      1,
-    );
+    const user = await adminPrisma.user.findUniqueOrThrow({ where: { email } });
     expect(
-      await prisma.userSettings.count({ where: { userId: user.id } }),
+      await adminPrisma.tenant.count({ where: { ownerUserId: user.id } }),
+    ).toBe(1);
+    expect(
+      await adminPrisma.membership.count({ where: { userId: user.id } }),
+    ).toBe(1);
+    expect(
+      await adminPrisma.userSettings.count({ where: { userId: user.id } }),
     ).toBe(1);
   });
 
@@ -114,7 +114,7 @@ describe("auth e2e", () => {
       .send({ name: "E2E User", email, password: "password123" });
 
     expect(duplicate.status).toBeGreaterThanOrEqual(400);
-    expect(await prisma.user.count({ where: { email } })).toBe(1);
+    expect(await adminPrisma.user.count({ where: { email } })).toBe(1);
   });
 
   it("returns 404 for a user without membership", async () => {
@@ -122,9 +122,9 @@ describe("auth e2e", () => {
     const email = uniqueEmail();
     await signUp(agent, email);
 
-    const user = await prisma.user.findUniqueOrThrow({ where: { email } });
-    await prisma.tenant.deleteMany({ where: { ownerUserId: user.id } });
-    await prisma.membership.deleteMany({ where: { userId: user.id } });
+    const user = await adminPrisma.user.findUniqueOrThrow({ where: { email } });
+    await adminPrisma.tenant.deleteMany({ where: { ownerUserId: user.id } });
+    await adminPrisma.membership.deleteMany({ where: { userId: user.id } });
 
     await agent.get("/api/v1/me").expect(404);
   });
@@ -133,7 +133,7 @@ describe("auth e2e", () => {
     const agent = request.agent(httpServer);
     await signUp(agent, uniqueEmail());
 
-    await prisma.session.updateMany({
+    await adminPrisma.session.updateMany({
       data: { expiresAt: new Date(Date.now() - 60_000) },
     });
 
@@ -144,7 +144,7 @@ describe("auth e2e", () => {
     const agent = request.agent(httpServer);
     await signUp(agent, uniqueEmail());
 
-    await prisma.session.updateMany({
+    await adminPrisma.session.updateMany({
       data: { createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) },
     });
 
@@ -159,8 +159,7 @@ describe("auth e2e", () => {
       .expect(200);
 
     const setCookie = signUpResponse.headers["set-cookie"] as
-      | string[]
-      | undefined;
+      string[] | undefined;
     const sessionCookie = (setCookie ?? []).find((cookie) =>
       cookie.startsWith("better-auth.session_token="),
     );
@@ -189,11 +188,10 @@ describe("auth e2e", () => {
     ]);
 
     const succeeded = results.filter(
-      (result) =>
-        result.status === "fulfilled" && result.value.status === 200,
+      (result) => result.status === "fulfilled" && result.value.status === 200,
     );
     expect(succeeded.length).toBeGreaterThanOrEqual(1);
-    expect(await prisma.user.count({ where: { email } })).toBe(1);
+    expect(await adminPrisma.user.count({ where: { email } })).toBe(1);
   });
 
   it("signs in with existing credentials", async () => {
@@ -253,16 +251,15 @@ describe("auth e2e", () => {
     const token = sessions.body[0]?.token as string | undefined;
     expect(token).toBeTruthy();
 
-    await agent
-      .post("/api/v1/auth/revoke-session")
-      .send({ token })
-      .expect(200);
+    await agent.post("/api/v1/auth/revoke-session").send({ token }).expect(200);
 
     await agent.get("/api/v1/me").expect(401);
   });
 
   it("reports database health through Terminus", async () => {
-    const response = await request(httpServer).get("/api/v1/health").expect(200);
+    const response = await request(httpServer)
+      .get("/api/v1/health")
+      .expect(200);
 
     expect(response.body.status).toBe("ok");
     expect(response.body.details.database.status).toBe("up");
@@ -295,14 +292,16 @@ describe("auth session persistence across API restarts", () => {
       .expect(200);
 
     const setCookie = signUpResponse.headers["set-cookie"] as
-      | string[]
-      | undefined;
+      string[] | undefined;
     const sessionCookie = (setCookie ?? []).find((cookie) =>
       cookie.startsWith("better-auth.session_token="),
     );
     expect(sessionCookie).toBeTruthy();
 
-    await request(firstServer).get("/api/v1/me").set("Cookie", sessionCookie).expect(200);
+    await request(firstServer)
+      .get("/api/v1/me")
+      .set("Cookie", sessionCookie)
+      .expect(200);
     await firstApp.close();
 
     const secondApp = await createTestApp();

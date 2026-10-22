@@ -1,8 +1,7 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import type { ServiceKey } from "@fondo/shared-types";
-
-import { PrismaService } from "../../prisma.service.js";
+import type { Prisma } from "@fondo/db";
 
 export interface CategoryRow {
   readonly direction: string;
@@ -16,9 +15,8 @@ export interface CategoryRow {
 
 @Injectable()
 export class ReportsRepository {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
-
   async categoryRows(
+    client: Prisma.TransactionClient,
     tenantId: string,
     options: {
       ledgerId: string;
@@ -27,7 +25,7 @@ export class ReportsRepository {
       serviceKey?: ServiceKey | undefined;
     },
   ): Promise<CategoryRow[]> {
-    const rows = await this.prisma.client.transactionEntry.findMany({
+    const rows = await client.transactionEntry.findMany({
       where: {
         transaction: {
           tenantId,
@@ -71,6 +69,7 @@ export class ReportsRepository {
   }
 
   async serviceMovements(
+    client: Prisma.TransactionClient,
     tenantId: string,
   ): Promise<
     {
@@ -81,7 +80,7 @@ export class ReportsRepository {
       readonly amountMinor: number;
     }[]
   > {
-    const rows = await this.prisma.client.transactionEntry.findMany({
+    const rows = await client.transactionEntry.findMany({
       where: {
         transaction: {
           tenantId,

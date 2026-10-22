@@ -43,8 +43,12 @@ export function DateRangeSelector({
           type="range"
           value={resolvedRange}
           onChange={(nextRange) => {
-            const raw = (nextRange ?? [null, null]) as readonly (Date | string | null)[];
-            const toDate = (value: Date | string | null | undefined): Date | null =>
+            const raw = (nextRange ?? [null, null]) as readonly (
+              Date | string | null
+            )[];
+            const toDate = (
+              value: Date | string | null | undefined,
+            ): Date | null =>
               typeof value === "string" ? new Date(value) : (value ?? null);
             const next: DateRange = [toDate(raw[0]), toDate(raw[1])];
             if (range) {

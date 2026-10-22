@@ -6,24 +6,35 @@ import { MeService } from "../../../core/me/me.service.js";
 function createMockPrisma() {
   const userFindUnique = vi.fn();
   const membershipFindFirst = vi.fn();
+  const tenantFindUnique = vi.fn();
   const settingsFindUnique = vi.fn();
   const settingsCreate = vi.fn();
   const settingsUpdate = vi.fn();
   const userUpdate = vi.fn();
 
-  return {
-    client: {
-      user: { findUnique: userFindUnique, update: userUpdate },
-      membership: { findFirst: membershipFindFirst },
-      userSettings: {
-        findUnique: settingsFindUnique,
-        create: settingsCreate,
-        update: settingsUpdate,
-      },
+  const client = {
+    user: { findUnique: userFindUnique, update: userUpdate },
+    membership: { findFirst: membershipFindFirst },
+    tenant: { findUnique: tenantFindUnique },
+    userSettings: {
+      findUnique: settingsFindUnique,
+      create: settingsCreate,
+      update: settingsUpdate,
     },
+  };
+  const prisma = {
+    client,
+    withUserContext: vi.fn(async (_userId, cb) => cb(client)),
+    withTenantContext: vi.fn(async (_ctx, cb) => cb(client)),
+  };
+
+  return {
+    client,
+    prisma,
     fns: {
       userFindUnique,
       membershipFindFirst,
+      tenantFindUnique,
       settingsFindUnique,
       settingsCreate,
       settingsUpdate,
@@ -38,7 +49,7 @@ describe("MeService", () => {
   });
 
   it("returns the user with their tenant, role and settings", async () => {
-    const { client, fns } = createMockPrisma();
+    const { prisma, fns } = createMockPrisma();
     fns.userFindUnique.mockResolvedValue({
       id: "user-1",
       name: "Arturo",
@@ -47,12 +58,13 @@ describe("MeService", () => {
     });
     fns.membershipFindFirst.mockResolvedValue({
       role: "ADMIN",
-      tenant: {
-        id: "tenant-1",
-        name: "Arturo's space",
-        accountingCurrency: "USD",
-        timeZone: "UTC",
-      },
+      tenantId: "tenant-1",
+    });
+    fns.tenantFindUnique.mockResolvedValue({
+      id: "tenant-1",
+      name: "Arturo's space",
+      accountingCurrency: "USD",
+      timeZone: "UTC",
     });
     fns.settingsFindUnique.mockResolvedValue({
       id: "settings-1",
@@ -61,7 +73,7 @@ describe("MeService", () => {
       displayCurrency: "USD",
       timeZone: "UTC",
     });
-    const service = new MeService({ client } as never);
+    const service = new MeService(prisma as never);
 
     const result = await service.getMe("user-1");
 
@@ -72,9 +84,9 @@ describe("MeService", () => {
   });
 
   it("throws when the user does not exist", async () => {
-    const { client, fns } = createMockPrisma();
+    const { prisma, fns } = createMockPrisma();
     fns.userFindUnique.mockResolvedValue(null);
-    const service = new MeService({ client } as never);
+    const service = new MeService(prisma as never);
 
     await expect(service.getMe("missing")).rejects.toBeInstanceOf(
       NotFoundException,
@@ -82,7 +94,7 @@ describe("MeService", () => {
   });
 
   it("throws when the user has no membership", async () => {
-    const { client, fns } = createMockPrisma();
+    const { prisma, fns } = createMockPrisma();
     fns.userFindUnique.mockResolvedValue({
       id: "user-1",
       name: "A",
@@ -90,7 +102,7 @@ describe("MeService", () => {
       image: null,
     });
     fns.membershipFindFirst.mockResolvedValue(null);
-    const service = new MeService({ client } as never);
+    const service = new MeService(prisma as never);
 
     await expect(service.getMe("user-1")).rejects.toBeInstanceOf(
       NotFoundException,
@@ -98,7 +110,7 @@ describe("MeService", () => {
   });
 
   it("coerces unknown setting values to safe defaults", async () => {
-    const { client, fns } = createMockPrisma();
+    const { prisma, fns } = createMockPrisma();
     fns.userFindUnique.mockResolvedValue({
       id: "user-1",
       name: "A",
@@ -107,12 +119,13 @@ describe("MeService", () => {
     });
     fns.membershipFindFirst.mockResolvedValue({
       role: "MEMBER",
-      tenant: {
-        id: "tenant-1",
-        name: "S",
-        accountingCurrency: "EUR",
-        timeZone: "UTC",
-      },
+      tenantId: "tenant-1",
+    });
+    fns.tenantFindUnique.mockResolvedValue({
+      id: "tenant-1",
+      name: "S",
+      accountingCurrency: "EUR",
+      timeZone: "UTC",
     });
     fns.settingsFindUnique.mockResolvedValue({
       id: "settings-1",
@@ -121,7 +134,7 @@ describe("MeService", () => {
       displayCurrency: "GBP",
       timeZone: "UTC",
     });
-    const service = new MeService({ client } as never);
+    const service = new MeService(prisma as never);
 
     const result = await service.getMe("user-1");
 

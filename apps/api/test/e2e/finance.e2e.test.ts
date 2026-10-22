@@ -1,5 +1,5 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { prisma } from "@fondo/db";
+import { adminPrisma } from "./admin-prisma.js";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -14,10 +14,10 @@ function uniqueEmail(): string {
 }
 
 async function truncateAll(): Promise<void> {
-  await prisma.$executeRawUnsafe(
+  await adminPrisma.$executeRawUnsafe(
     'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceDefinition", "ServiceSubscription", "AuditLog", "FinancialAccount", "Category", "Budget", "Ledger", "Transaction", "TransactionEntry" RESTART IDENTITY CASCADE',
   );
-  await prisma.$executeRawUnsafe(
+  await adminPrisma.$executeRawUnsafe(
     `INSERT INTO "ServiceDefinition" ("id", "key", "name", "description", "createdAt", "updatedAt") VALUES
       (gen_random_uuid(), 'PERSONAL_FINANCE', 'Personal Finance', 'PF', now(), now()),
       (gen_random_uuid(), 'VEHICLE', 'Vehicle', 'V', now(), now()),
@@ -48,7 +48,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await adminPrisma.$disconnect();
   await app.close();
 });
 
@@ -93,7 +93,7 @@ describe("finance e2e", () => {
     const archived = await agent.get("/api/v1/accounts").expect(200);
     expect(archived.body.items[0].isActive).toBe(false);
 
-    const auditCount = await prisma.auditLog.count({
+    const auditCount = await adminPrisma.auditLog.count({
       where: { action: "ACCOUNT_ARCHIVED", resource: `account:${accountId}` },
     });
     expect(auditCount).toBe(1);
@@ -215,6 +215,7 @@ describe("finance e2e", () => {
         accountId: account.body.id,
         categoryId,
         amountMinor: 25000,
+        occurredAt: "2026-09-15T00:00:00.000Z",
       })
       .expect(201);
 

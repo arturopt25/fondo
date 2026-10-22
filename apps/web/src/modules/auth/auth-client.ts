@@ -124,5 +124,7 @@ export async function revokeOtherSessions(): Promise<void> {
   const sessions = await listSessions();
   const otherSessions = sessions.filter((session) => !session.isCurrent);
 
-  await Promise.all(otherSessions.map((session) => revokeSession(session.token)));
+  await Promise.all(
+    otherSessions.map((session) => revokeSession(session.token)),
+  );
 }

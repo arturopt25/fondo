@@ -24,7 +24,17 @@ function createMockPrisma() {
       callback(client),
     ),
   };
-  const prisma = { client };
+  const prisma = {
+    client,
+    withTenantContext: vi.fn(
+      async (_ctx, callback: (tx: typeof client) => unknown) =>
+        callback(client),
+    ),
+    withUserContext: vi.fn(
+      async (_userId, callback: (tx: typeof client) => unknown) =>
+        callback(client),
+    ),
+  };
   return { prisma, fns: client };
 }
 
@@ -85,7 +95,7 @@ describe("ServicesService", () => {
     ]);
     const service = new ServicesService(prisma as never);
 
-    const result = await service.listCatalog("tenant-1");
+    const result = await service.listCatalog("tenant-1", "user-1");
 
     expect(result[0]).toMatchObject({
       key: "PERSONAL_FINANCE",
@@ -104,7 +114,7 @@ describe("ServicesService", () => {
     ]);
     const service = new ServicesService(prisma as never);
 
-    const result = await service.activeServices("tenant-1");
+    const result = await service.activeServices("tenant-1", "user-1");
 
     expect(result).toEqual(["PERSONAL_FINANCE"]);
     expect(fns.serviceSubscription.findMany).toHaveBeenCalledWith({

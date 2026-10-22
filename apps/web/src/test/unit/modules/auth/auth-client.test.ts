@@ -56,7 +56,12 @@ describe("listSessions", () => {
   it("maps sessions and marks the current one", async () => {
     mocks.listSessions.mockResolvedValue({
       data: [
-        activeSession({ id: "s1", token: "current-token", ipAddress: "1.2.3.4", userAgent: "Chrome" }),
+        activeSession({
+          id: "s1",
+          token: "current-token",
+          ipAddress: "1.2.3.4",
+          userAgent: "Chrome",
+        }),
         activeSession({ id: "s2", token: "other-token", ipAddress: "" }),
       ],
       error: null,
@@ -92,7 +97,9 @@ describe("changePassword", () => {
       error: null,
     });
 
-    await expect(changePassword("old-password", "new-password")).resolves.toBeUndefined();
+    await expect(
+      changePassword("old-password", "new-password"),
+    ).resolves.toBeUndefined();
     expect(mocks.changePassword).toHaveBeenCalledWith({
       currentPassword: "old-password",
       newPassword: "new-password",
@@ -106,15 +113,18 @@ describe("changePassword", () => {
       error: { message: "incorrect password" },
     });
 
-    await expect(
-      changePassword("wrong", "new-password"),
-    ).rejects.toThrow("incorrect password");
+    await expect(changePassword("wrong", "new-password")).rejects.toThrow(
+      "incorrect password",
+    );
   });
 });
 
 describe("revokeSession", () => {
   it("revokes a session by token", async () => {
-    mocks.revokeSession.mockResolvedValue({ data: { status: true }, error: null });
+    mocks.revokeSession.mockResolvedValue({
+      data: { status: true },
+      error: null,
+    });
 
     await expect(revokeSession("token-1")).resolves.toBeUndefined();
     expect(mocks.revokeSession).toHaveBeenCalledWith({ token: "token-1" });
@@ -139,7 +149,10 @@ describe("revokeOtherSessions", () => {
       ],
       error: null,
     });
-    mocks.revokeSession.mockResolvedValue({ data: { status: true }, error: null });
+    mocks.revokeSession.mockResolvedValue({
+      data: { status: true },
+      error: null,
+    });
 
     await revokeOtherSessions();
 

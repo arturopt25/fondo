@@ -11,12 +11,7 @@ import { SessionAuthGuard } from "../../../core/tenant/session-auth.guard.js";
 function buildMembership() {
   return {
     role: "ADMIN",
-    tenant: {
-      id: "tenant-1",
-      name: "Arturo's space",
-      accountingCurrency: "USD",
-      timeZone: "UTC",
-    },
+    tenantId: "tenant-1",
   };
 }
 
@@ -29,12 +24,29 @@ function createGuard({
 }) {
   const getSession = vi.fn().mockResolvedValue(session);
   const membershipFindFirst = vi.fn().mockResolvedValue(membership);
+  const tenantFindUnique = vi.fn().mockResolvedValue({
+    id: "tenant-1",
+    name: "Arturo's space",
+    accountingCurrency: "USD",
+    timeZone: "UTC",
+  });
   const auth = { api: { getSession } };
-  const prisma = {
-    client: { membership: { findFirst: membershipFindFirst } },
+  const client = {
+    membership: { findFirst: membershipFindFirst },
+    tenant: { findUnique: tenantFindUnique },
   };
-  const guard = new SessionAuthGuard(auth as never, prisma as never);
-  return { guard, getSession, membershipFindFirst };
+  const prisma = {
+    client,
+    withUserContext: vi.fn(async (_userId, cb) => cb(client)),
+    withTenantContext: vi.fn(async (_ctx, cb) => cb(client)),
+  };
+  const logger = { assign: vi.fn() };
+  const guard = new SessionAuthGuard(
+    auth as never,
+    prisma as never,
+    logger as never,
+  );
+  return { guard, getSession, membershipFindFirst, tenantFindUnique, logger };
 }
 
 function buildContext() {
@@ -53,7 +65,7 @@ describe("SessionAuthGuard", () => {
   });
 
   it("attaches the user and tenant context to the request", async () => {
-    const { guard } = createGuard({
+    const { guard, logger } = createGuard({
       session: {
         session: {
           createdAt: new Date(),
@@ -79,6 +91,10 @@ describe("SessionAuthGuard", () => {
     expect(authenticated.user.id).toBe("user-1");
     expect(authenticated.tenant.tenantId).toBe("tenant-1");
     expect(authenticated.tenant.role).toBe("ADMIN");
+    expect(logger.assign).toHaveBeenCalledWith({
+      tenantId: "tenant-1",
+      userId: "user-1",
+    });
   });
 
   it("rejects requests without a valid session", async () => {

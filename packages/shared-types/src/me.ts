@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-import {
-  displayCurrencySchema,
-  localeSchema,
-  themeSchema,
-} from "./enums.js";
+import { displayCurrencySchema, localeSchema, themeSchema } from "./enums.js";
 import { timeZoneSchema } from "./timezone.js";
 
 export const tenantRoleSchema = z.enum(["ADMIN", "MEMBER"]);

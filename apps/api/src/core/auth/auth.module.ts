@@ -1,6 +1,7 @@
 import { Global, Module } from "@nestjs/common";
 
 import { PrismaModule } from "../prisma.module.js";
+import { parseWebOrigins } from "../config/app-config.js";
 import {
   createBetterAuth,
   type BetterAuthInstance,
@@ -16,7 +17,12 @@ import { TenantProvisioningService } from "./tenant-provisioning.service.js";
       useFactory: (
         provisioning: TenantProvisioningService,
       ): BetterAuthInstance => {
-        return createBetterAuth(provisioning);
+        return createBetterAuth({
+          provisioner: provisioning,
+          webOrigins: parseWebOrigins(
+            process.env.WEB_ORIGIN ?? "http://localhost:5173",
+          ),
+        });
       },
       inject: [TenantProvisioningService],
     },

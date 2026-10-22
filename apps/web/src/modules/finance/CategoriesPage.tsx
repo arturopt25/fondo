@@ -179,11 +179,17 @@ function CategoryCard({
             <Text fw={600}>{category.name}</Text>
             <Text size="xs" c="dimmed">
               {t(`finance.categoryTypes.${category.type}`)}
-              {category.isDefault ? ` · ${t("finance.categories.default")}` : ""}
+              {category.isDefault
+                ? ` · ${t("finance.categories.default")}`
+                : ""}
             </Text>
           </Stack>
         </Group>
-        <Badge color={category.isActive ? "teal" : "gray"} variant="light" size="sm">
+        <Badge
+          color={category.isActive ? "teal" : "gray"}
+          variant="light"
+          size="sm"
+        >
           {category.isActive
             ? t("finance.categories.active")
             : t("finance.categories.archived")}

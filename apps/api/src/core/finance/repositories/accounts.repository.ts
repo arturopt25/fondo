@@ -1,12 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@fondo/db";
-
-import { PrismaService } from "../../prisma.service.js";
 
 @Injectable()
 export class AccountsRepository {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
-
   private scope(
     tenantId: string,
     extra: Prisma.FinancialAccountWhereInput = {},
@@ -15,6 +11,7 @@ export class AccountsRepository {
   }
 
   async list(
+    client: Prisma.TransactionClient,
     tenantId: string,
     options: {
       page: number;
@@ -23,13 +20,13 @@ export class AccountsRepository {
     },
   ) {
     const [items, total] = await Promise.all([
-      this.prisma.client.financialAccount.findMany({
+      client.financialAccount.findMany({
         where: this.scope(tenantId),
         orderBy: options.orderBy,
         skip: (options.page - 1) * options.pageSize,
         take: options.pageSize,
       }),
-      this.prisma.client.financialAccount.count({
+      client.financialAccount.count({
         where: this.scope(tenantId),
       }),
     ]);
@@ -37,13 +34,18 @@ export class AccountsRepository {
     return { items, total };
   }
 
-  async findById(tenantId: string, id: string) {
-    return this.prisma.client.financialAccount.findFirst({
+  async findById(
+    client: Prisma.TransactionClient,
+    tenantId: string,
+    id: string,
+  ) {
+    return client.financialAccount.findFirst({
       where: this.scope(tenantId, { id }),
     });
   }
 
   async create(
+    client: Prisma.TransactionClient,
     tenantId: string,
     ledgerId: string,
     data: Omit<
@@ -51,24 +53,29 @@ export class AccountsRepository {
       "tenantId" | "ledgerId"
     >,
   ) {
-    return this.prisma.client.financialAccount.create({
+    return client.financialAccount.create({
       data: { ...data, tenantId, ledgerId },
     });
   }
 
   async update(
+    client: Prisma.TransactionClient,
     tenantId: string,
     id: string,
     data: Prisma.FinancialAccountUpdateInput,
   ) {
-    return this.prisma.client.financialAccount.updateMany({
+    return client.financialAccount.updateMany({
       where: this.scope(tenantId, { id }),
       data,
     });
   }
 
-  async archive(tenantId: string, id: string) {
-    return this.prisma.client.financialAccount.updateMany({
+  async archive(
+    client: Prisma.TransactionClient,
+    tenantId: string,
+    id: string,
+  ) {
+    return client.financialAccount.updateMany({
       where: this.scope(tenantId, { id }),
       data: { isActive: false },
     });

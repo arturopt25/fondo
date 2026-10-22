@@ -25,6 +25,7 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://fondo:fondo-ci-password@localhost:5432/fondo
+      APP_DATABASE_URL: postgresql://fondo_app:fondo-ci-password@localhost:5432/fondo
       BETTER_AUTH_SECRET: ci-only-secret-that-is-at-least-32-characters
       BETTER_AUTH_URL: http://localhost:3000
       VITE_API_URL: http://localhost:3000/api/v1
@@ -54,6 +55,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @fondo/db db:generate
       - run: pnpm --filter @fondo/db db:deploy
+      - name: Set application role password
+        env:
+          PGPASSWORD: fondo-ci-password
+        run: |
+          docker run --rm \
+            --network host \
+            -e PGPASSWORD="$PGPASSWORD" \
+            postgres:17-alpine \
+            psql \
+              --host=127.0.0.1 \
+              --port=5432 \
+              --username=fondo \
+              --dbname=fondo \
+              --command="ALTER ROLE fondo_app WITH PASSWORD 'fondo-ci-password';"
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test

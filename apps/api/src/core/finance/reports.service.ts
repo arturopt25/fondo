@@ -1,4 +1,5 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import type { Prisma } from "@fondo/db";
 
 import type {
   CashFlowResponse,
@@ -34,75 +35,93 @@ export class ReportsService {
 
   async dashboard(
     tenantId: string,
+    userId: string,
     timeZone: string,
     query: PeriodQuery,
   ): Promise<DashboardReport> {
-    const { ledgerId, from, to, serviceKey } = await this.resolveScope(
-      tenantId,
-      query,
-    );
-    const rows = await this.reports.categoryRows(tenantId, {
-      ledgerId,
-      from,
-      to,
-      serviceKey,
-    });
-    const { incomeMinor, expenseMinor } = aggregateMovements(rows);
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const { ledgerId, from, to, serviceKey } = await this.resolveScope(
+        tenantId,
+        userId,
+        query,
+      );
+      const rows = await this.reports.categoryRows(tx, tenantId, {
+        ledgerId,
+        from,
+        to,
+        serviceKey,
+      });
+      const { incomeMinor, expenseMinor } = aggregateMovements(rows);
 
-    return {
-      period: { from: from.toISOString(), to: to.toISOString() },
-      balanceMinor: await this.ledgerBalance(tenantId, ledgerId),
-      summary: {
-        incomeMinor,
-        expenseMinor,
-        savingsMinor: incomeMinor - expenseMinor,
-        savingsRate: savingsRate(incomeMinor, expenseMinor),
-      },
-      cashFlow: bucketByMonth(rows, timeZone),
-      categorySpend: categorySpendOf(rows),
-      recent: await this.transactionService.listRecent(tenantId, ledgerId, 5),
-      exchangeRate: CONFIGURED_EXCHANGE_RATE,
-      serviceBalances: await this.serviceBalances(tenantId),
-    };
+      return {
+        period: { from: from.toISOString(), to: to.toISOString() },
+        balanceMinor: await this.ledgerBalance(tx, tenantId, ledgerId),
+        summary: {
+          incomeMinor,
+          expenseMinor,
+          savingsMinor: incomeMinor - expenseMinor,
+          savingsRate: savingsRate(incomeMinor, expenseMinor),
+        },
+        cashFlow: bucketByMonth(rows, timeZone),
+        categorySpend: categorySpendOf(rows),
+        recent: await this.transactionService.listRecent(
+          tx,
+          tenantId,
+          ledgerId,
+          5,
+        ),
+        exchangeRate: CONFIGURED_EXCHANGE_RATE,
+        serviceBalances: await this.serviceBalances(tx, tenantId),
+      };
+    });
   }
 
   async cashFlow(
     tenantId: string,
+    userId: string,
     timeZone: string,
     query: PeriodQuery,
   ): Promise<CashFlowResponse> {
-    const { ledgerId, from, to, serviceKey } = await this.resolveScope(
-      tenantId,
-      query,
-    );
-    const rows = await this.reports.categoryRows(tenantId, {
-      ledgerId,
-      from,
-      to,
-      serviceKey,
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const { ledgerId, from, to, serviceKey } = await this.resolveScope(
+        tenantId,
+        userId,
+        query,
+      );
+      const rows = await this.reports.categoryRows(tx, tenantId, {
+        ledgerId,
+        from,
+        to,
+        serviceKey,
+      });
+      return { items: bucketByMonth(rows, timeZone) };
     });
-    return { items: bucketByMonth(rows, timeZone) };
   }
 
   async categorySpend(
     tenantId: string,
+    userId: string,
     query: PeriodQuery,
   ): Promise<CategorySpendResponse> {
-    const { ledgerId, from, to, serviceKey } = await this.resolveScope(
-      tenantId,
-      query,
-    );
-    const rows = await this.reports.categoryRows(tenantId, {
-      ledgerId,
-      from,
-      to,
-      serviceKey,
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const { ledgerId, from, to, serviceKey } = await this.resolveScope(
+        tenantId,
+        userId,
+        query,
+      );
+      const rows = await this.reports.categoryRows(tx, tenantId, {
+        ledgerId,
+        from,
+        to,
+        serviceKey,
+      });
+      return { items: categorySpendOf(rows) };
     });
-    return { items: categorySpendOf(rows) };
   }
 
   private async resolveScope(
     tenantId: string,
+    userId: string,
     query: PeriodQuery,
   ): Promise<{
     ledgerId: string;
@@ -111,7 +130,8 @@ export class ReportsService {
     serviceKey?: PeriodQuery["serviceKey"];
   }> {
     const ledgerId =
-      query.ledgerId ?? (await this.ledgers.personalLedger(tenantId)).id;
+      query.ledgerId ??
+      (await this.ledgers.personalLedger(tenantId, userId)).id;
     const now = new Date();
     return {
       ledgerId,
@@ -122,10 +142,11 @@ export class ReportsService {
   }
 
   private async ledgerBalance(
+    tx: Prisma.TransactionClient,
     tenantId: string,
     ledgerId: string,
   ): Promise<number> {
-    const ledger = await this.prisma.client.ledger.findFirst({
+    const ledger = await tx.ledger.findFirst({
       where: { tenantId, id: ledgerId },
       include: { accounts: { where: { isActive: true } } },
     });
@@ -134,6 +155,7 @@ export class ReportsService {
     }
     const accountIds = ledger.accounts.map((account) => account.id);
     const deltas = await this.transactions.entryBalanceDelta(
+      tx,
       tenantId,
       accountIds,
     );
@@ -144,16 +166,18 @@ export class ReportsService {
     );
   }
 
-  private async serviceBalances(tenantId: string): Promise<ServiceBalance[]> {
-    const subscriptions =
-      await this.prisma.client.serviceSubscription.findMany({
-        where: { tenantId, status: "ACTIVE" },
-        include: {
-          service: { include: { capabilities: true } },
-          selections: true,
-        },
-      });
-    const movements = await this.reports.serviceMovements(tenantId);
+  private async serviceBalances(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+  ): Promise<ServiceBalance[]> {
+    const subscriptions = await tx.serviceSubscription.findMany({
+      where: { tenantId, status: "ACTIVE" },
+      include: {
+        service: { include: { capabilities: true } },
+        selections: true,
+      },
+    });
+    const movements = await this.reports.serviceMovements(tx, tenantId);
 
     return subscriptions.map((subscription) => {
       const serviceKey = subscription.service.key as ServiceKey;

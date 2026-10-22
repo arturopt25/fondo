@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 
 import {
   serviceKeySchema,
@@ -21,6 +22,7 @@ import type { CurrentUser } from "../tenant/tenant-context.js";
 import { RequestTenant } from "../tenant/request-tenant.decorator.js";
 import { AdminOnlyGuard } from "./admin-only.guard.js";
 import { ServicesService } from "./services.service.js";
+import { API_WRITE_THROTTLE } from "../config/rate-limits.js";
 
 interface TenantParams {
   tenantId: string;
@@ -34,18 +36,25 @@ export class ServicesController {
   ) {}
 
   @Get()
-  async list(@RequestTenant() tenant: TenantParams) {
-    const services = await this.services.listCatalog(tenant.tenantId);
+  async list(
+    @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
+  ) {
+    const services = await this.services.listCatalog(tenant.tenantId, user.id);
     return { services };
   }
 
   @Get("me")
-  async me(@RequestTenant() tenant: TenantParams) {
-    const active = await this.services.activeServices(tenant.tenantId);
+  async me(
+    @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
+  ) {
+    const active = await this.services.activeServices(tenant.tenantId, user.id);
     return { active };
   }
 
   @Post(":key/enable")
+  @Throttle(API_WRITE_THROTTLE)
   @UseGuards(AdminOnlyGuard)
   async enable(
     @RequestTenant() tenant: TenantParams,
@@ -63,6 +72,7 @@ export class ServicesController {
   }
 
   @Patch(":key/config")
+  @Throttle(API_WRITE_THROTTLE)
   @UseGuards(AdminOnlyGuard)
   async updateConfig(
     @RequestTenant() tenant: TenantParams,
@@ -80,6 +90,7 @@ export class ServicesController {
   }
 
   @Post(":key/disable")
+  @Throttle(API_WRITE_THROTTLE)
   @UseGuards(AdminOnlyGuard)
   async disable(
     @RequestTenant() tenant: TenantParams,
