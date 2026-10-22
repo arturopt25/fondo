@@ -3,6 +3,7 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { Logger } from "nestjs-pino";
 
 import { AppModule } from "./app.module.js";
 import { registerBetterAuth } from "./core/auth/fastify-auth.js";
@@ -19,12 +20,14 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    createFastifyAdapter(),
+    createFastifyAdapter(config.logLevel),
+    { bufferLogs: true },
   );
+  app.useLogger(app.get(Logger));
 
   app.setGlobalPrefix("api/v1");
   await applyHttpHardening(app, config.webOrigins);
-  app.useGlobalFilters(new ApiErrorFilter());
+  app.useGlobalFilters(app.get(ApiErrorFilter));
 
   const auth = app.get<BetterAuthInstance>("BETTER_AUTH");
   await registerBetterAuth(

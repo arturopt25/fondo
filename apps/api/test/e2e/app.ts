@@ -1,5 +1,6 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
+import { Logger } from "nestjs-pino";
 
 import { AppModule } from "../../src/app.module.js";
 import { registerBetterAuth } from "../../src/core/auth/fastify-auth.js";
@@ -9,7 +10,10 @@ import {
   createFastifyAdapter,
 } from "../../src/core/config/http-hardening.js";
 import { ApiErrorFilter } from "../../src/core/errors/api-error.filter.js";
-import { parseWebOrigins } from "../../src/core/config/app-config.js";
+import {
+  parseLogLevel,
+  parseWebOrigins,
+} from "../../src/core/config/app-config.js";
 
 export async function createTestApp(): Promise<NestFastifyApplication> {
   const moduleRef = await Test.createTestingModule({
@@ -17,15 +21,17 @@ export async function createTestApp(): Promise<NestFastifyApplication> {
   }).compile();
 
   const app = moduleRef.createNestApplication<NestFastifyApplication>(
-    createFastifyAdapter(),
+    createFastifyAdapter(parseLogLevel(process.env.LOG_LEVEL)),
+    { bufferLogs: true },
   );
+  app.useLogger(app.get(Logger));
 
   app.setGlobalPrefix("api/v1");
   const webOrigins = parseWebOrigins(
     process.env.WEB_ORIGIN ?? "http://localhost:5173",
   );
   await applyHttpHardening(app, webOrigins);
-  app.useGlobalFilters(new ApiErrorFilter());
+  app.useGlobalFilters(app.get(ApiErrorFilter));
 
   const auth = app.get<BetterAuthInstance>("BETTER_AUTH");
   await registerBetterAuth(

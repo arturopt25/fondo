@@ -30,6 +30,26 @@ describe("http hardening", () => {
     );
   });
 
+  it("returns a valid request id and accepts only UUID request ids", async () => {
+    const suppliedRequestId = "123e4567-e89b-12d3-a456-426614174000";
+    const supplied = await request(httpServer)
+      .get("/api/v1/health")
+      .set("X-Request-Id", suppliedRequestId)
+      .expect(200);
+
+    expect(supplied.headers["x-request-id"]).toBe(suppliedRequestId);
+
+    const generated = await request(httpServer)
+      .get("/api/v1/health")
+      .set("X-Request-Id", "not-a-uuid")
+      .expect(200);
+
+    expect(generated.headers["x-request-id"]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(generated.headers["x-request-id"]).not.toBe("not-a-uuid");
+  });
+
   it("only exposes CORS headers to configured origins", async () => {
     const allowed = await request(httpServer)
       .options("/api/v1/health")

@@ -40,8 +40,13 @@ function createGuard({
     withUserContext: vi.fn(async (_userId, cb) => cb(client)),
     withTenantContext: vi.fn(async (_ctx, cb) => cb(client)),
   };
-  const guard = new SessionAuthGuard(auth as never, prisma as never);
-  return { guard, getSession, membershipFindFirst, tenantFindUnique };
+  const logger = { assign: vi.fn() };
+  const guard = new SessionAuthGuard(
+    auth as never,
+    prisma as never,
+    logger as never,
+  );
+  return { guard, getSession, membershipFindFirst, tenantFindUnique, logger };
 }
 
 function buildContext() {
@@ -60,7 +65,7 @@ describe("SessionAuthGuard", () => {
   });
 
   it("attaches the user and tenant context to the request", async () => {
-    const { guard } = createGuard({
+    const { guard, logger } = createGuard({
       session: {
         session: {
           createdAt: new Date(),
@@ -86,6 +91,10 @@ describe("SessionAuthGuard", () => {
     expect(authenticated.user.id).toBe("user-1");
     expect(authenticated.tenant.tenantId).toBe("tenant-1");
     expect(authenticated.tenant.role).toBe("ADMIN");
+    expect(logger.assign).toHaveBeenCalledWith({
+      tenantId: "tenant-1",
+      userId: "user-1",
+    });
   });
 
   it("rejects requests without a valid session", async () => {

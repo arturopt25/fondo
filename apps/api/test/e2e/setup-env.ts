@@ -34,6 +34,7 @@ process.env.BETTER_AUTH_SECRET ??=
   "e2e-secret-that-is-at-least-32-characters-long";
 process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
 process.env.WEB_ORIGIN ??= "http://localhost:5173";
+process.env.LOG_LEVEL ??= "silent";
 
 // The e2e suite creates many users; relax the sign-up limit without touching
 // the sign-in limit (the rate-limit e2e test relies on its default value).

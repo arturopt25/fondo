@@ -4,9 +4,34 @@ export interface AppConfig {
   readonly betterAuthSecret: string;
   readonly betterAuthUrl: string;
   readonly webOrigins: readonly string[];
+  readonly logLevel: LogLevel;
 }
 
 const DEFAULT_WEB_ORIGIN = "http://localhost:5173";
+const DEFAULT_LOG_LEVEL: LogLevel = "info";
+const LOG_LEVELS = [
+  "trace",
+  "debug",
+  "info",
+  "warn",
+  "error",
+  "fatal",
+  "silent",
+] as const;
+
+export type LogLevel = (typeof LOG_LEVELS)[number];
+
+export function parseLogLevel(raw: string | undefined): LogLevel {
+  const level = raw ?? DEFAULT_LOG_LEVEL;
+
+  if (!LOG_LEVELS.includes(level as LogLevel)) {
+    throw new Error(
+      `LOG_LEVEL must be one of: ${LOG_LEVELS.join(", ")}; received ${level}`,
+    );
+  }
+
+  return level as LogLevel;
+}
 
 export function parseWebOrigins(raw: string): readonly string[] {
   const origins = raw
@@ -59,6 +84,7 @@ export function loadAppConfig(): AppConfig {
   const webOrigins = parseWebOrigins(
     process.env.WEB_ORIGIN ?? DEFAULT_WEB_ORIGIN,
   );
+  const logLevel = parseLogLevel(process.env.LOG_LEVEL);
 
   const missing: string[] = [];
 
@@ -90,5 +116,6 @@ export function loadAppConfig(): AppConfig {
     betterAuthSecret: betterAuthSecret as string,
     betterAuthUrl: betterAuthUrl as string,
     webOrigins,
+    logLevel,
   };
 }

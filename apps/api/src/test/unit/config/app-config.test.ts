@@ -27,11 +27,12 @@ function setEnv(overrides: Partial<Record<string, string | undefined>>): void {
   }
 }
 
-afterEach(() => {
+  afterEach(() => {
   for (const key of Object.keys(REQUIRED)) {
     delete process.env[key];
   }
   delete process.env.WEB_ORIGIN;
+  delete process.env.LOG_LEVEL;
 });
 
 describe("loadAppConfig", () => {
@@ -81,5 +82,17 @@ describe("loadAppConfig", () => {
     setEnv({ BETTER_AUTH_SECRET: "short" });
 
     expect(() => loadAppConfig()).toThrow(/at least 32 characters/);
+  });
+
+  it("defaults LOG_LEVEL to info and validates configured levels", () => {
+    setEnv({ LOG_LEVEL: "debug" });
+
+    expect(loadAppConfig().logLevel).toBe("debug");
+  });
+
+  it("rejects an unknown LOG_LEVEL", () => {
+    setEnv({ LOG_LEVEL: "verbose" });
+
+    expect(() => loadAppConfig()).toThrow(/LOG_LEVEL/);
   });
 });

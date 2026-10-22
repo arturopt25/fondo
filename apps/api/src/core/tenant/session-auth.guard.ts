@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyRequest } from "fastify";
+import { PinoLogger } from "nestjs-pino";
 
 import { PrismaService } from "../prisma.service.js";
 import { isWithinAbsoluteSessionLifetime } from "../auth/session-policy.js";
@@ -30,6 +31,8 @@ export class SessionAuthGuard implements CanActivate {
     private readonly auth: BetterAuthInstance,
     @Inject(PrismaService)
     private readonly prisma: PrismaService,
+    @Inject(PinoLogger)
+    private readonly logger: PinoLogger,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -91,6 +94,7 @@ export class SessionAuthGuard implements CanActivate {
     const authenticated = request as AuthenticatedRequest;
     authenticated.user = user;
     authenticated.tenant = tenant;
+    this.logger.assign({ tenantId: tenant.tenantId, userId: user.id });
 
     return true;
   }
