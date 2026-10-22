@@ -12,6 +12,8 @@ import { PinoLogger } from "nestjs-pino";
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 
+import type { AuthenticatedRequest } from "../tenant/tenant-context.js";
+
 interface ErrorBody {
   readonly error: {
     readonly code: string;
@@ -28,7 +30,12 @@ export class ApiErrorFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<FastifyReply>();
-    const request = host.switchToHttp().getRequest<FastifyRequest>();
+    const request = host
+      .switchToHttp()
+      .getRequest<
+        FastifyRequest &
+          Partial<Pick<AuthenticatedRequest, "tenant" | "user">>
+      >();
     const requestId =
       typeof request.id === "string" ? request.id : randomUUID();
     response.header("X-Request-Id", requestId);
@@ -60,10 +67,10 @@ export class ApiErrorFilter implements ExceptionFilter {
       requestId,
       method: request.method,
       path: request.url.split("?")[0],
-      ...("tenant" in request && request.tenant
+      ...(request.tenant
         ? { tenantId: request.tenant.tenantId }
         : {}),
-      ...("user" in request && request.user
+      ...(request.user
         ? { userId: request.user.id }
         : {}),
     };

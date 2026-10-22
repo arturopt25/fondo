@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type {
+  IncomingHttpHeaders,
+  IncomingMessage,
+  ServerResponse,
+} from "node:http";
 
 import type { Params } from "nestjs-pino";
 
@@ -31,9 +35,17 @@ export const LOGGER_REDACT_PATHS = [
   'res.headers["set-cookie"]',
 ] as const;
 
-interface LoggerRequest extends IncomingMessage {
+interface RequestLogShape {
+  readonly headers: IncomingHttpHeaders;
   readonly id?: string | number;
-  readonly body?: unknown;
+  readonly method?: string;
+  readonly url?: string;
+  readonly socket?: {
+    readonly remoteAddress?: string | undefined;
+  };
+}
+
+interface LoggerRequest extends RequestLogShape {
   readonly tenant?: AuthenticatedRequest["tenant"];
   readonly user?: AuthenticatedRequest["user"];
 }
@@ -74,8 +86,10 @@ function requestSerializer(request: LoggerRequest): Record<string, unknown> {
   };
 }
 
-function customRequestProperties(request: LoggerRequest): Record<string, string> {
-  const authenticated = request;
+function customRequestProperties(
+  request: IncomingMessage,
+): Record<string, string> {
+  const authenticated = request as LoggerRequest;
   const properties: Record<string, string> = {};
 
   if (authenticated.tenant?.tenantId) {
@@ -88,10 +102,9 @@ function customRequestProperties(request: LoggerRequest): Record<string, string>
   return properties;
 }
 
-export function createLoggerParams(level: LogLevel): Params<
-  LoggerRequest,
-  ServerResponse
-> {
+export function createLoggerParams(
+  level: LogLevel,
+): Params<IncomingMessage, ServerResponse> {
   return {
     assignResponse: true,
     pinoHttp: {

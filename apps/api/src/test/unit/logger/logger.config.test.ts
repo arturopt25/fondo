@@ -25,6 +25,9 @@ describe("logger configuration", () => {
     });
 
     const pinoHttp = createLoggerParams("info").pinoHttp as Options;
+    if (!pinoHttp.redact || !pinoHttp.serializers) {
+      throw new Error("Expected redaction and serializer configuration");
+    }
     const logger = pino(
       {
         redact: pinoHttp.redact,
