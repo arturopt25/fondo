@@ -384,7 +384,6 @@ model TransactionAttachment {
 
   @@index([tenantId])
   @@index([transactionId])
-  @@map("transaction_attachment")
 }
 
 model TransactionEntry {

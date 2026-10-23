@@ -52,6 +52,15 @@
 6. **Archivo mayor al límite.**
    - Se responde `413 Payload Too Large` con un mensaje claro, nunca `500`.
 
+7. **Nombre de tabla de adjuntos.**
+   - `TransactionAttachment` usa el nombre PascalCase del modelo.
+   - No se usa `@@map`; las tablas propias del dominio siguen el patrón PascalCase.
+   - Solo las tablas de Better Auth (`user`, `session`, `account`, `verification`) usan snake_case.
+
+8. **Payload estricto de perfil.**
+   - `PATCH /me/profile` rechaza campos desconocidos, incluido `image`, con `400`.
+   - `SettingsPage.tsx` y `packages/shared-types/src/me.ts` no envían `image` en ese PATCH.
+
 ---
 
 ## Fase 0: Dependencias y configuración local
@@ -309,7 +318,7 @@ aws s3 mb s3://fondo-local-files
 
 ## Fase 6: Tests e2e de seguridad y RLS
 
-**Estado: en progreso**
+**Estado: completada**
 
 ### Principios
 
@@ -343,6 +352,8 @@ aws s3 mb s3://fondo-local-files
 ---
 
 ## Fase 7: Documentación manual de Floci
+
+**Estado: en progreso**
 
 ### Archivos nuevos o que cambian
 

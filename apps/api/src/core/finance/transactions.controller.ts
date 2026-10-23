@@ -4,6 +4,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Inject,
   Param,
   Post,
@@ -189,6 +191,7 @@ export class TransactionsController {
 
   @Delete(":id/attachments/:attachmentId")
   @Throttle(API_UPLOAD_THROTTLE)
+  @HttpCode(HttpStatus.NO_CONTENT)
   async deleteAttachment(
     @RequestTenant() tenant: TenantParams,
     @RequestUser() user: CurrentUser,

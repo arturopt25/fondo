@@ -17,12 +17,21 @@ import {
 } from "../../src/core/config/app-config.js";
 import { loadStorageConfig } from "../../src/core/storage/storage.config.js";
 import { registerStorageMultipart } from "../../src/core/storage/storage.module.js";
+import { StorageService } from "../../src/core/storage/storage.service.js";
 
-export async function createTestApp(): Promise<NestFastifyApplication> {
+export async function createTestApp(
+  storageOverride?: StorageService,
+): Promise<NestFastifyApplication> {
   const appConfig = loadAppConfig();
-  const moduleRef = await Test.createTestingModule({
+  const moduleBuilder = Test.createTestingModule({
     imports: [AppModule],
-  }).compile();
+  });
+  if (storageOverride) {
+    moduleBuilder
+      .overrideProvider(StorageService)
+      .useValue(storageOverride);
+  }
+  const moduleRef = await moduleBuilder.compile();
 
   const app = moduleRef.createNestApplication<NestFastifyApplication>(
     createFastifyAdapter(parseLogLevel(process.env.LOG_LEVEL)),
