@@ -38,7 +38,9 @@
     "settingsErrorTitle": "Algo salio mal",
     "settingsErrorMessage": "No se pudieron guardar tus preferencias.",
     "profileSavedTitle": "Perfil actualizado",
-    "profileSavedMessage": "Tu perfil se guardo."
+    "profileSavedMessage": "Tu perfil se guardo.",
+    "avatarSavedTitle": "Foto actualizada",
+    "avatarSavedMessage": "Tu foto de perfil se guardo."
   },
   "brand": {
     "name": "Fondo",
@@ -214,7 +216,10 @@
       "owner": "Propietario",
       "member": "Miembro",
       "name": "Nombre visible",
-      "email": "Email"
+      "email": "Email",
+      "avatar": "Foto de perfil",
+      "avatarPlaceholder": "Selecciona una imagen",
+      "uploadAvatar": "Subir foto"
     },
     "appearance": {
       "title": "Apariencia",

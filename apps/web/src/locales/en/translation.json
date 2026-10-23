@@ -38,7 +38,9 @@
     "settingsErrorTitle": "Something went wrong",
     "settingsErrorMessage": "Your preferences could not be saved.",
     "profileSavedTitle": "Profile updated",
-    "profileSavedMessage": "Your profile was saved."
+    "profileSavedMessage": "Your profile was saved.",
+    "avatarSavedTitle": "Photo updated",
+    "avatarSavedMessage": "Your profile photo was saved."
   },
   "brand": {
     "name": "Fondo",
@@ -214,7 +216,10 @@
       "owner": "Owner",
       "member": "Member",
       "name": "Display name",
-      "email": "Email"
+      "email": "Email",
+      "avatar": "Profile photo",
+      "avatarPlaceholder": "Select an image",
+      "uploadAvatar": "Upload photo"
     },
     "appearance": {
       "title": "Appearance",

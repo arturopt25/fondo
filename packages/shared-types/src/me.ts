@@ -19,9 +19,13 @@ export type UpdateUserSettingsInput = z.infer<typeof updateUserSettingsSchema>;
 
 export const updateProfileSchema = z.object({
   name: z.string().trim().min(1).max(120),
-  image: z.string().url().max(2048).nullable().optional(),
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+export const uploadAvatarResponseSchema = z.object({
+  imageUrl: z.string().url(),
+});
+export type UploadAvatarResponse = z.infer<typeof uploadAvatarResponseSchema>;
 
 export const meResponseSchema = z.object({
   user: z.object({

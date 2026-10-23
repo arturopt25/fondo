@@ -136,7 +136,7 @@ aws s3 mb s3://fondo-local-files
 
 ## Fase 2: Prueba de concepto `/me/avatar`
 
-**Estado: en progreso**
+**Estado: completada**
 
 ### Backend
 
@@ -190,6 +190,8 @@ aws s3 mb s3://fondo-local-files
 ---
 
 ## Fase 3: `TransactionAttachment` con RLS
+
+**Estado: en progreso**
 
 ### Base de datos
 
