@@ -353,7 +353,7 @@ aws s3 mb s3://fondo-local-files
 
 ## Fase 7: Documentación manual de Floci
 
-**Estado: en progreso**
+**Estado: completada**
 
 ### Archivos nuevos o que cambian
 
