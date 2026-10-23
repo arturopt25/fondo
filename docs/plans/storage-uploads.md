@@ -191,7 +191,7 @@ aws s3 mb s3://fondo-local-files
 
 ## Fase 3: `TransactionAttachment` con RLS
 
-**Estado: en progreso**
+**Estado: completada**
 
 ### Base de datos
 
@@ -237,6 +237,8 @@ aws s3 mb s3://fondo-local-files
 ---
 
 ## Fase 4: Endpoints de adjuntos de transacción
+
+**Estado: en progreso**
 
 ### Backend
 
