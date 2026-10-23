@@ -11,11 +11,15 @@ import {
 } from "../../src/core/config/http-hardening.js";
 import { ApiErrorFilter } from "../../src/core/errors/api-error.filter.js";
 import {
+  loadAppConfig,
   parseLogLevel,
   parseWebOrigins,
 } from "../../src/core/config/app-config.js";
+import { loadStorageConfig } from "../../src/core/storage/storage.config.js";
+import { registerStorageMultipart } from "../../src/core/storage/storage.module.js";
 
 export async function createTestApp(): Promise<NestFastifyApplication> {
+  const appConfig = loadAppConfig();
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
@@ -25,6 +29,7 @@ export async function createTestApp(): Promise<NestFastifyApplication> {
     { bufferLogs: true },
   );
   app.useLogger(app.get(Logger));
+  await registerStorageMultipart(app, loadStorageConfig(appConfig));
 
   app.setGlobalPrefix("api/v1");
   const webOrigins = parseWebOrigins(

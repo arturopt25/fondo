@@ -3,7 +3,7 @@
 ## Principios del plan
 
 - Un solo bucket: `fondo-local-files`.
-- Prefijos: `avatars/<userId>/<uuid>` y `tenants/<tenantId>/transactions/<transactionId>/<uuid>`.
+- Prefijos: `avatars/<userId>/<uuid>.<ext>` y `tenants/<tenantId>/transactions/<transactionId>/<uuid>.<ext>`, donde `ext` proviene del magic bytes detectado (`jpg`, `png`, `webp` o `pdf`).
 - Nunca se guardan URLs absolutas en la base de datos; solo la `storageKey`.
 - Las descargas usan URLs presignadas de 5 minutos.
 - `TransactionAttachment` tiene RLS forzada (`ENABLE` + `FORCE`) con política por `tenantId`.
@@ -98,6 +98,8 @@ aws s3 mb s3://fondo-local-files
 
 ## Fase 1: Módulo de almacenamiento
 
+**Estado: completada**
+
 ### Archivos nuevos
 
 - `apps/api/src/core/storage/storage.types.ts`
@@ -133,6 +135,8 @@ aws s3 mb s3://fondo-local-files
 ---
 
 ## Fase 2: Prueba de concepto `/me/avatar`
+
+**Estado: en progreso**
 
 ### Backend
 
