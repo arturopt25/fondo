@@ -36,6 +36,15 @@ function createContext() {
     entryBalanceDelta: vi.fn(),
   };
   const ledgers = { personalLedger: vi.fn() };
+  const storage = {
+    maxFileSizeBytes: 5 * 1024 * 1024,
+    validateFile: vi.fn(),
+    generateKey: vi.fn(),
+    upload: vi.fn(),
+    delete: vi.fn(),
+    getSignedDownloadUrl: vi.fn(),
+  };
+  const logger = { error: vi.fn() };
   const prisma = {
     client: {},
     withTenantContext: vi.fn(
@@ -49,8 +58,10 @@ function createContext() {
     repo as never,
     ledgers as never,
     prisma as never,
+    storage as never,
+    logger as never,
   );
-  return { tx, repo, ledgers, prisma, service };
+  return { tx, repo, ledgers, prisma, storage, logger, service };
 }
 
 function account(

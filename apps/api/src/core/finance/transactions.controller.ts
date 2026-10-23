@@ -1,10 +1,13 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Param,
   Post,
+  PayloadTooLargeException,
   Query,
   Req,
   UseGuards,
@@ -26,6 +29,9 @@ import type { CurrentUser } from "../tenant/tenant-context.js";
 import { RequestTenant } from "../tenant/request-tenant.decorator.js";
 import { TransactionsService } from "./transactions.service.js";
 import { API_WRITE_THROTTLE } from "../config/rate-limits.js";
+import { API_UPLOAD_THROTTLE } from "../config/rate-limits.js";
+import { StorageService } from "../storage/storage.service.js";
+import type { FastifyRequest } from "fastify";
 
 interface TenantParams {
   tenantId: string;
@@ -37,6 +43,8 @@ export class TransactionsController {
   constructor(
     @Inject(TransactionsService)
     private readonly transactions: TransactionsService,
+    @Inject(StorageService)
+    private readonly storage: StorageService,
   ) {}
 
   @Get()
@@ -124,6 +132,84 @@ export class TransactionsController {
     const input = reverseTransactionSchema.parse(body ?? {});
     return this.transactions.reverse(tenant.tenantId, user.id, id, input.note);
   }
+
+  @Post(":id/attachments")
+  @Throttle(API_UPLOAD_THROTTLE)
+  async addAttachment(
+    @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
+    @Param("id") transactionId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    const file = await request.file({
+      limits: {
+        fileSize: this.storage.maxFileSizeBytes,
+        files: 1,
+      },
+    });
+
+    if (!file) {
+      throw new BadRequestException("Attachment file is required");
+    }
+
+    let buffer: Buffer;
+    try {
+      buffer = await file.toBuffer();
+    } catch (error) {
+      if (isMultipartFileTooLarge(error)) {
+        throw new PayloadTooLargeException(
+          `Attachment exceeds the maximum allowed size of ${this.storage.maxFileSizeBytes} bytes`,
+        );
+      }
+      throw error;
+    }
+
+    return this.transactions.addAttachment(
+      tenant.tenantId,
+      user.id,
+      transactionId,
+      buffer,
+      file.filename,
+      file.mimetype,
+    );
+  }
+
+  @Get(":id/attachments")
+  async listAttachments(
+    @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
+    @Param("id") transactionId: string,
+  ) {
+    return this.transactions.listAttachments(
+      tenant.tenantId,
+      user.id,
+      transactionId,
+    );
+  }
+
+  @Delete(":id/attachments/:attachmentId")
+  @Throttle(API_UPLOAD_THROTTLE)
+  async deleteAttachment(
+    @RequestTenant() tenant: TenantParams,
+    @RequestUser() user: CurrentUser,
+    @Param("id") transactionId: string,
+    @Param("attachmentId") attachmentId: string,
+  ): Promise<void> {
+    await this.transactions.deleteAttachment(
+      tenant.tenantId,
+      user.id,
+      transactionId,
+      attachmentId,
+    );
+  }
+}
+
+function isMultipartFileTooLarge(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    error.code === "FST_REQ_FILE_TOO_LARGE"
+  );
 }
 
 @Controller("ledger")

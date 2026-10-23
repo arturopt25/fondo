@@ -238,7 +238,7 @@ aws s3 mb s3://fondo-local-files
 
 ## Fase 4: Endpoints de adjuntos de transacción
 
-**Estado: en progreso**
+**Estado: completada**
 
 ### Backend
 
@@ -283,6 +283,8 @@ aws s3 mb s3://fondo-local-files
 ---
 
 ## Fase 5: Frontend de adjuntos
+
+**Estado: en progreso**
 
 ### Archivos que cambian
 
