@@ -122,6 +122,9 @@ const financeHooks = vi.hoisted(() => ({
 const transactionsHooks = vi.hoisted(() => ({
   useTransactionsQuery: vi.fn(),
   useLedgerBalanceQuery: vi.fn(),
+  useTransactionAttachmentsQuery: vi.fn(),
+  useCreateAttachmentMutation: vi.fn(),
+  useDeleteAttachmentMutation: vi.fn(),
   useCreateIncomeMutation: vi.fn(),
   useCreateExpenseMutation: vi.fn(),
   useCreateTransferMutation: vi.fn(),
@@ -147,6 +150,10 @@ vi.mock("../../../../modules/finance/finance-hooks", () => ({
 vi.mock("../../../../modules/finance/transactions-hooks", () => ({
   useTransactionsQuery: transactionsHooks.useTransactionsQuery,
   useLedgerBalanceQuery: transactionsHooks.useLedgerBalanceQuery,
+  useTransactionAttachmentsQuery:
+    transactionsHooks.useTransactionAttachmentsQuery,
+  useCreateAttachmentMutation: transactionsHooks.useCreateAttachmentMutation,
+  useDeleteAttachmentMutation: transactionsHooks.useDeleteAttachmentMutation,
   useCreateIncomeMutation: transactionsHooks.useCreateIncomeMutation,
   useCreateExpenseMutation: transactionsHooks.useCreateExpenseMutation,
   useCreateTransferMutation: transactionsHooks.useCreateTransferMutation,
@@ -296,9 +303,16 @@ describe("TransactionsPage", () => {
       transactionsHooks.useCreateExpenseMutation,
       transactionsHooks.useCreateTransferMutation,
       transactionsHooks.useReverseTransactionMutation,
+      transactionsHooks.useCreateAttachmentMutation,
+      transactionsHooks.useDeleteAttachmentMutation,
     ]) {
       hook.mockReturnValue({ mutate: vi.fn(), isPending: false });
     }
+    transactionsHooks.useTransactionAttachmentsQuery.mockReturnValue({
+      data: { items: [] },
+      isLoading: false,
+      isError: false,
+    });
     servicesHooks.useServicesQuery.mockReturnValue({
       data: { services: [] },
       isLoading: false,

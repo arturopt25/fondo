@@ -6,6 +6,7 @@ import type {
   CreateExpenseInput,
   CreateIncomeInput,
   CreateTransferInput,
+  AttachmentListResponse,
   LedgerBalanceResponse,
   Transaction,
   TransactionListResponse,
@@ -182,6 +183,90 @@ export function useReverseTransactionMutation() {
       notifications.show({
         title: t("notifications.settingsErrorTitle"),
         message: t("transactions.notifications.reverseError"),
+        color: "red",
+      });
+    },
+  });
+}
+
+export function useTransactionAttachmentsQuery(transactionId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.transactionAttachments(transactionId ?? "none"),
+    queryFn: async (): Promise<AttachmentListResponse> => {
+      const response = await api.get(
+        `transactions/${transactionId ?? "none"}/attachments`,
+      );
+      return response.json<AttachmentListResponse>();
+    },
+    enabled: transactionId !== null,
+    retry: false,
+  });
+}
+
+export function useCreateAttachmentMutation() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: async (input: {
+      readonly transactionId: string;
+      readonly file: File;
+    }) => {
+      const formData = new FormData();
+      formData.append("file", input.file);
+      const response = await api.post(
+        `transactions/${input.transactionId}/attachments`,
+        { body: formData },
+      );
+      return response.json();
+    },
+    onSuccess: (_attachment, input) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.transactionAttachments(input.transactionId),
+      });
+      notifications.show({
+        title: t("transactions.notifications.attachmentCreatedTitle"),
+        message: t("transactions.notifications.attachmentCreatedMessage"),
+        color: "signal",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: t("notifications.settingsErrorTitle"),
+        message: t("transactions.notifications.attachmentError"),
+        color: "red",
+      });
+    },
+  });
+}
+
+export function useDeleteAttachmentMutation() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: async (input: {
+      readonly transactionId: string;
+      readonly attachmentId: string;
+    }): Promise<void> => {
+      await api.delete(
+        `transactions/${input.transactionId}/attachments/${input.attachmentId}`,
+      );
+    },
+    onSuccess: (_result, input) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.transactionAttachments(input.transactionId),
+      });
+      notifications.show({
+        title: t("transactions.notifications.attachmentDeletedTitle"),
+        message: t("transactions.notifications.attachmentDeletedMessage"),
+        color: "signal",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: t("notifications.settingsErrorTitle"),
+        message: t("transactions.notifications.attachmentError"),
         color: "red",
       });
     },

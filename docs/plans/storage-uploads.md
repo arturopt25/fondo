@@ -284,7 +284,7 @@ aws s3 mb s3://fondo-local-files
 
 ## Fase 5: Frontend de adjuntos
 
-**Estado: en progreso**
+**Estado: completada**
 
 ### Archivos que cambian
 
@@ -308,6 +308,8 @@ aws s3 mb s3://fondo-local-files
 ---
 
 ## Fase 6: Tests e2e de seguridad y RLS
+
+**Estado: en progreso**
 
 ### Principios
 
