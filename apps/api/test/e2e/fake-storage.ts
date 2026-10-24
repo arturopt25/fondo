@@ -65,6 +65,18 @@ export class FakeStorageService {
     return `https://fake-storage.local/${encodeURIComponent(key)}`;
   }
 
+  async exists(key: string): Promise<boolean> {
+    return this.objects.has(key);
+  }
+
+  async getSignedDownloadUrlOrNull(key: string): Promise<string | null> {
+    if (!(await this.exists(key))) {
+      return null;
+    }
+
+    return this.getSignedDownloadUrl(key);
+  }
+
   sanitizeOriginalName(filename: string): string {
     return basename(filename)
       .replace(/[^a-zA-Z0-9._ -]/g, "_")

@@ -359,14 +359,31 @@ aws s3 mb s3://fondo-local-files
 
 - Sección nueva en `README.md` o archivo `docs/floci.md`:
   - Instalación de `floci` y AWS CLI.
-  - `floci start && eval "$(floci env)"`.
-  - `aws s3 mb s3://fondo-local-files`.
+  - `pnpm floci:start` con persistencia en `~/.floci/data`.
+  - `floci start --persist "$HOME/.floci/data"` como equivalente de
+    `FLOCI_STORAGE_MODE=persistent` y `FLOCI_STORAGE_PERSISTENT_PATH=/app/data`.
+  - `aws s3 mb s3://fondo-local-files` si el bucket no existe.
   - Variables de entorno del API.
   - Cómo ver objetos en Floci UI en `http://localhost:4566/_floci/ui`.
+  - Diferencia entre `floci reset` y el borrado destructivo de
+    `~/.floci/data`.
+  - Verificación después de `floci stop` y `docker kill floci`.
 
 ### Criterios de verificación
 
 - Cualquier persona del equipo puede seguir la guía y ver los archivos subidos en Floci UI.
+
+### Decisiones adicionales
+
+- `scripts/floci-start.sh` es idempotente, usa `~/.floci/data` y acepta `--force`
+  para reiniciar sin confirmación un contenedor que corre sin persistencia.
+- `StorageService.exists()` devuelve `false` únicamente para objetos ausentes
+  (`404`, `NotFound` o `NoSuchKey`); otros errores de S3 se propagan.
+- Las comprobaciones de objetos de una lista de adjuntos se resuelven en
+  paralelo con `Promise.all`.
+- Al reemplazar un avatar, la key anterior se elimina en modo mejor esfuerzo.
+- Un adjunto cuyo objeto ya no existe permanece listado con `downloadUrl: null`
+  y la UI muestra `archivo no disponible`.
 
 ---
 
@@ -409,6 +426,7 @@ aws s3 mb s3://fondo-local-files
 ### Documentación
 
 - `README.md` o `docs/floci.md`
+- `scripts/floci-start.sh`
 
 ---
 

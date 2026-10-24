@@ -181,7 +181,7 @@ export const attachmentSchema = z.object({
   contentType: z.string(),
   sizeBytes: z.number().int().positive(),
   createdAt: z.string(),
-  downloadUrl: z.string().url(),
+  downloadUrl: z.string().url().nullable(),
 });
 export type TransactionAttachment = z.infer<typeof attachmentSchema>;
 

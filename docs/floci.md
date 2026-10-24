@@ -19,12 +19,40 @@ floci version
 aws --version
 ```
 
-## Iniciar Floci
+## Iniciar Floci con persistencia
 
-En una terminal de desarrollo:
+La imagen de Floci usa `memory` por defecto. El flag `--persist` es la opción
+documentada del CLI que activa el equivalente a:
+
+```text
+FLOCI_STORAGE_MODE=persistent
+FLOCI_STORAGE_PERSISTENT_PATH=/app/data
+```
+
+El directorio del host se monta en `/app/data` dentro del contenedor. Fondo
+usa `~/.floci/data` para que los buckets y objetos sobrevivan a `floci stop`,
+reinicios de Docker y apagados de la computadora.
+
+Desde la raíz del proyecto:
 
 ```bash
-floci start
+pnpm floci:start
+```
+
+El script es idempotente: no reinicia un contenedor que ya tiene un montaje
+persistente, y crea `fondo-local-files` solo si no existe. Si detecta que el
+contenedor está corriendo sin persistencia, avisa que los datos en memoria se
+perderán y pide confirmación antes de reiniciarlo. Para omitir la pregunta:
+
+```bash
+pnpm floci:start --force
+```
+
+El script carga las variables AWS para sus propias comprobaciones. Para usar
+AWS CLI o iniciar el API desde otra terminal, cárgalas también en ese shell:
+
+```bash
+floci start --persist "$HOME/.floci/data"
 eval "$(floci env)"
 export AWS_PAGER=""
 ```
@@ -156,13 +184,14 @@ Los tests e2e normales usan un storage falso y no necesitan Floci:
 
 ```bash
 TEST_DATABASE_URL=postgresql://fondo:change-me-locally@localhost:5433/fondo_test \
+  API_WRITE_RATE_LIMIT=1000 API_UPLOAD_RATE_LIMIT=1000 \
   pnpm --filter @fondo/api test:e2e
 ```
 
 La prueba real contra Floci está desactivada por defecto. Para ejecutarla:
 
 ```bash
-floci start
+pnpm floci:start
 export RUN_FLOCI_INTEGRATION=1
 export FLOCI_INTEGRATION_ENDPOINT="${AWS_ENDPOINT_URL:-http://localhost:4566}"
 TEST_DATABASE_URL=postgresql://fondo:change-me-locally@localhost:5433/fondo_test \
@@ -172,6 +201,28 @@ TEST_DATABASE_URL=postgresql://fondo:change-me-locally@localhost:5433/fondo_test
 
 La prueba solo verifica que el endpoint S3 local responde. Los tests de
 comportamiento de Fondo siguen usando el fake para mantenerse deterministas.
+
+## Verificar persistencia
+
+Prueba un reinicio normal:
+
+```bash
+pnpm floci:start
+aws s3 cp README.md s3://fondo-local-files/persist-test.txt
+floci stop
+pnpm floci:start
+aws s3 ls s3://fondo-local-files/persist-test.txt
+```
+
+Prueba también un apagado forzado del contenedor:
+
+```bash
+pnpm floci:start
+aws s3 cp README.md s3://fondo-local-files/force-kill-test.txt
+docker kill floci
+pnpm floci:start
+aws s3 ls s3://fondo-local-files/force-kill-test.txt
+```
 
 ## Detener o limpiar
 
@@ -186,3 +237,15 @@ Limpiar los recursos del emulador sin detenerlo:
 ```bash
 floci reset
 ```
+
+`floci reset` es destructivo para los recursos de Floci, incluyendo buckets y
+objetos, pero no borra el directorio persistente ni detiene el contenedor.
+
+Para borrar completamente el disco persistente, incluyendo todo su estado:
+
+```bash
+rm -rf "$HOME/.floci/data"
+```
+
+Este último comando es destructivo y no se puede deshacer. Detén Floci antes
+de usarlo y luego ejecuta `pnpm floci:start` para crear un estado vacío.

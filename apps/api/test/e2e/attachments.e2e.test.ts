@@ -98,6 +98,30 @@ describe("transaction attachments e2e", () => {
     expect(storage.objects.size).toBe(0);
   });
 
+  it("keeps an attachment listed when its storage object is missing", async () => {
+    const agent = await signUp();
+    const transactionId = await createExpense(agent);
+    const created = await agent
+      .post(`/api/v1/transactions/${transactionId}/attachments`)
+      .attach("file", pdf, { filename: "invoice.pdf", contentType: "application/pdf" })
+      .expect(201);
+    const attachment = await adminPrisma.transactionAttachment.findUniqueOrThrow({
+      where: { id: created.body.id as string },
+    });
+
+    storage.objects.delete(attachment.storageKey);
+
+    const listed = await agent
+      .get(`/api/v1/transactions/${transactionId}/attachments`)
+      .expect(200);
+    expect(listed.body.items).toEqual([
+      expect.objectContaining({
+        originalName: "invoice.pdf",
+        downloadUrl: null,
+      }),
+    ]);
+  });
+
   it("isolates attachment listing and deletion across tenants", async () => {
     const agentA = await signUp();
     const agentB = await signUp();

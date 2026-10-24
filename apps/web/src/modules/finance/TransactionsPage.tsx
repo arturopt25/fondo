@@ -545,16 +545,25 @@ export function TransactionsPage(): React.JSX.Element {
           <Stack gap="xs">
             {attachmentsQuery.data?.items.map((attachment) => (
               <Group key={attachment.id} justify="space-between" wrap="nowrap">
-                <Button
-                  component="a"
-                  href={attachment.downloadUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  variant="subtle"
-                  size="compact-sm"
-                >
-                  {attachment.originalName}
-                </Button>
+                {attachment.downloadUrl ? (
+                  <Button
+                    component="a"
+                    href={attachment.downloadUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    variant="subtle"
+                    size="compact-sm"
+                  >
+                    {attachment.originalName}
+                  </Button>
+                ) : (
+                  <Stack gap={0}>
+                    <Text size="sm">{attachment.originalName}</Text>
+                    <Text size="xs" c="dimmed">
+                      {t("transactions.attachments.unavailable")}
+                    </Text>
+                  </Stack>
+                )}
                 <ActionIcon
                   color="red"
                   variant="subtle"

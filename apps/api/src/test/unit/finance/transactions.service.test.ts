@@ -43,6 +43,7 @@ function createContext() {
     upload: vi.fn(),
     delete: vi.fn(),
     getSignedDownloadUrl: vi.fn(),
+    getSignedDownloadUrlOrNull: vi.fn(),
   };
   const logger = { error: vi.fn() };
   const prisma = {

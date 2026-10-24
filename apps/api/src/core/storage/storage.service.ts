@@ -7,6 +7,7 @@ import {
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -81,6 +82,32 @@ export class StorageService {
       }),
       { expiresIn: expiresInSeconds },
     );
+  }
+
+  async exists(key: string): Promise<boolean> {
+    try {
+      await this.client.send(
+        new HeadObjectCommand({
+          Bucket: this.config.bucketName,
+          Key: key,
+        }),
+      );
+      return true;
+    } catch (error) {
+      if (isMissingObjectError(error)) {
+        return false;
+      }
+
+      throw error;
+    }
+  }
+
+  async getSignedDownloadUrlOrNull(key: string): Promise<string | null> {
+    if (!(await this.exists(key))) {
+      return null;
+    }
+
+    return this.getSignedDownloadUrl(key);
   }
 
   validateFile(
@@ -192,4 +219,24 @@ export class StorageService {
 
     return originalExtension === detectedExtension;
   }
+}
+
+function isMissingObjectError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const candidate = error as {
+    readonly name?: string;
+    readonly Code?: string;
+    readonly $metadata?: { readonly httpStatusCode?: number };
+  };
+
+  return (
+    candidate.$metadata?.httpStatusCode === 404 ||
+    candidate.name === "NotFound" ||
+    candidate.name === "NoSuchKey" ||
+    candidate.Code === "NotFound" ||
+    candidate.Code === "NoSuchKey"
+  );
 }

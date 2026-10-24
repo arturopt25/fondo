@@ -63,6 +63,36 @@ describe("avatar e2e", () => {
     expect(storage.objects.size).toBe(1);
   });
 
+  it("returns no image when the stored avatar object is missing", async () => {
+    const agent = await signUp();
+
+    await adminPrisma.user.updateMany({
+      data: { image: "avatars/missing-user/avatar.png" },
+    });
+
+    const me = await agent.get("/api/v1/me").expect(200);
+    expect(me.body.user.image).toBeNull();
+  });
+
+  it("deletes the previous avatar after replacing it", async () => {
+    const agent = await signUp();
+
+    await agent
+      .post("/api/v1/me/avatar")
+      .attach("file", png, { filename: "first.png", contentType: "image/png" })
+      .expect(201);
+    const previousKey = (await adminPrisma.user.findFirstOrThrow()).image;
+
+    await agent
+      .post("/api/v1/me/avatar")
+      .attach("file", png, { filename: "second.png", contentType: "image/png" })
+      .expect(201);
+
+    expect(previousKey).toBeTruthy();
+    expect(storage.objects.has(previousKey as string)).toBe(false);
+    expect(storage.objects.size).toBe(1);
+  });
+
   it("rejects invalid magic bytes and profile image updates", async () => {
     const agent = await signUp();
 

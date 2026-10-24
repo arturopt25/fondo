@@ -51,6 +51,9 @@ function createMockStorage() {
     upload: vi.fn(),
     delete: vi.fn(),
     getSignedDownloadUrl: vi.fn(async (key: string) => `https://signed.test/${key}`),
+    getSignedDownloadUrlOrNull: vi.fn(
+      async (key: string) => `https://signed.test/${key}`,
+    ),
   };
 }
 
@@ -189,7 +192,7 @@ describe("MeService", () => {
     const external = await service.getMe("user-1");
 
     expect(external.user.image).toBe("https://social.example/avatar.png");
-    expect(storage.getSignedDownloadUrl).not.toHaveBeenCalled();
+    expect(storage.getSignedDownloadUrlOrNull).not.toHaveBeenCalled();
 
     fns.userFindUnique.mockResolvedValue({
       id: "user-1",

@@ -121,6 +121,14 @@ export class MeService {
     filename: string,
     declaredContentType: string,
   ): Promise<UploadAvatarResponse> {
+    const existingUser = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      select: { image: true },
+    });
+    if (!existingUser) {
+      throw new NotFoundException("User not found");
+    }
+
     const validated = await this.storage.validateFile(
       buffer,
       filename,
@@ -145,6 +153,8 @@ export class MeService {
       throw error;
     }
 
+    await this.deletePreviousAvatar(existingUser.image, key);
+
     return { imageUrl: await this.storage.getSignedDownloadUrl(key) };
   }
 
@@ -167,7 +177,18 @@ export class MeService {
       return image;
     }
 
-    return this.storage.getSignedDownloadUrl(image);
+    return this.storage.getSignedDownloadUrlOrNull(image);
+  }
+
+  private async deletePreviousAvatar(
+    image: string | null,
+    replacementKey: string,
+  ): Promise<void> {
+    if (!image?.startsWith("avatars/") || image === replacementKey) {
+      return;
+    }
+
+    await this.storage.delete(image).catch(() => undefined);
   }
 }
 

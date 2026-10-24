@@ -187,7 +187,7 @@ export class TransactionsService {
         items: await Promise.all(
           attachments.map(async (attachment) => ({
             ...this.toAttachment(attachment),
-            downloadUrl: await this.storage.getSignedDownloadUrl(
+            downloadUrl: await this.storage.getSignedDownloadUrlOrNull(
               attachment.storageKey,
             ),
           })),

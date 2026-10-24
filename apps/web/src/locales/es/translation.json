@@ -554,7 +554,8 @@
       "open": "Ver facturas",
       "delete": "Eliminar factura",
       "empty": "No hay facturas adjuntas.",
-      "loadError": "No se pudieron cargar las facturas."
+      "loadError": "No se pudieron cargar las facturas.",
+      "unavailable": "archivo no disponible"
     },
     "reverseModal": {
       "title": "Revertir movimiento",

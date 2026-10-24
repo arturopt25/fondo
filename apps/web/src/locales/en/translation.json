@@ -551,7 +551,8 @@
       "open": "View invoices",
       "delete": "Delete invoice",
       "empty": "No invoices attached.",
-      "loadError": "Invoices could not be loaded."
+      "loadError": "Invoices could not be loaded.",
+      "unavailable": "file unavailable"
     },
     "reverseModal": {
       "title": "Reverse movement",

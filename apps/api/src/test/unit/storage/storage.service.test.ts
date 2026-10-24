@@ -1,5 +1,6 @@
 import { BadRequestException, PayloadTooLargeException } from "@nestjs/common";
-import { describe, expect, it } from "vitest";
+import { S3Client } from "@aws-sdk/client-s3";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { StorageService } from "../../../core/storage/storage.service.js";
 import type { StorageConfig } from "../../../core/storage/storage.types.js";
@@ -27,6 +28,10 @@ const pngBuffer = Buffer.from(
 );
 
 describe("StorageService", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("generates UUID keys with the detected extension", () => {
     const service = new StorageService(config);
 
@@ -88,5 +93,36 @@ describe("StorageService", () => {
         config.avatarMaxFileSizeBytes,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("treats only missing-object responses as absent", async () => {
+    const service = new StorageService(config);
+    const send = vi.spyOn(S3Client.prototype, "send");
+
+    send.mockRejectedValueOnce({
+      name: "NotFound",
+      $metadata: { httpStatusCode: 404 },
+    });
+    await expect(service.exists("missing.pdf")).resolves.toBe(false);
+
+    send.mockRejectedValueOnce(new Error("S3 is unavailable"));
+    await expect(service.exists("unknown.pdf")).rejects.toThrow(
+      "S3 is unavailable",
+    );
+  });
+
+  it("returns a signed URL only when the object exists", async () => {
+    const service = new StorageService(config);
+    const exists = vi.spyOn(service, "exists");
+
+    exists.mockResolvedValueOnce(false);
+    await expect(
+      service.getSignedDownloadUrlOrNull("missing.pdf"),
+    ).resolves.toBeNull();
+
+    exists.mockResolvedValueOnce(true);
+    await expect(
+      service.getSignedDownloadUrlOrNull("invoice.pdf"),
+    ).resolves.toMatch(/^http:\/\/localhost:4566\//);
   });
 });
