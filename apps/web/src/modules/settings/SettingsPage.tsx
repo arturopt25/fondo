@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   Divider,
+  FileInput,
   Group,
   Loader,
   PasswordInput,
@@ -44,6 +45,7 @@ import {
   useRevokeSessionMutation,
   useSessionsQuery,
   useUpdateProfileMutation,
+  useUploadAvatarMutation,
 } from "./me-hooks";
 
 const settingsSections = [
@@ -74,6 +76,7 @@ export function SettingsPage(): React.JSX.Element {
   } = useAppPreferences();
   const meQuery = useMeQuery();
   const updateProfile = useUpdateProfileMutation();
+  const uploadAvatar = useUploadAvatarMutation();
   const changePasswordMutation = useChangePasswordMutation();
   const sessionsQuery = useSessionsQuery();
   const revokeSessionMutation = useRevokeSessionMutation();
@@ -85,6 +88,7 @@ export function SettingsPage(): React.JSX.Element {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [revokingToken, setRevokingToken] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const user = meQuery.data?.user;
   const role = meQuery.data?.membership.role ?? "MEMBER";
@@ -176,6 +180,16 @@ export function SettingsPage(): React.JSX.Element {
     updateProfile.mutate({ name: values.name });
   }
 
+  function handleUploadAvatar(): void {
+    if (!avatarFile) {
+      return;
+    }
+
+    uploadAvatar.mutate(avatarFile, {
+      onSuccess: () => setAvatarFile(null),
+    });
+  }
+
   return (
     <Stack className="page-stack" gap="xl">
       <PageHeader
@@ -225,7 +239,12 @@ export function SettingsPage(): React.JSX.Element {
             <Card padding="xl" radius="lg" withBorder>
               <Group justify="space-between" align="flex-start" mb="xl">
                 <Group gap="md">
-                  <Avatar color="signal" size={58} radius="lg">
+                  <Avatar
+                    color="signal"
+                    size={58}
+                    radius="lg"
+                    src={user?.image ?? undefined}
+                  >
                     AR
                   </Avatar>
                   <Stack gap={4}>
@@ -240,6 +259,24 @@ export function SettingsPage(): React.JSX.Element {
                     ? t("settings.profile.owner")
                     : t("settings.profile.member")}
                 </Badge>
+              </Group>
+              <Group align="flex-end" mb="xl">
+                <FileInput
+                  accept="image/jpeg,image/png,image/webp"
+                  clearable
+                  label={t("settings.profile.avatar")}
+                  placeholder={t("settings.profile.avatarPlaceholder")}
+                  value={avatarFile}
+                  onChange={setAvatarFile}
+                />
+                <Button
+                  color="signal"
+                  onClick={handleUploadAvatar}
+                  loading={uploadAvatar.isPending}
+                  disabled={!avatarFile}
+                >
+                  {t("settings.profile.uploadAvatar")}
+                </Button>
               </Group>
               <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
                 <TextInput

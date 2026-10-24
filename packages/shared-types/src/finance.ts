@@ -175,6 +175,23 @@ export type TransactionListResponse = z.infer<
   typeof transactionListResponseSchema
 >;
 
+export const attachmentSchema = z.object({
+  id: z.string(),
+  originalName: z.string(),
+  contentType: z.string(),
+  sizeBytes: z.number().int().positive(),
+  createdAt: z.string(),
+  downloadUrl: z.string().url().nullable(),
+});
+export type TransactionAttachment = z.infer<typeof attachmentSchema>;
+
+export const attachmentListResponseSchema = z.object({
+  items: z.array(attachmentSchema),
+});
+export type AttachmentListResponse = z.infer<
+  typeof attachmentListResponseSchema
+>;
+
 export const accountBalanceSchema = z.object({
   id: z.string(),
   name: z.string(),

@@ -38,7 +38,9 @@
     "settingsErrorTitle": "Something went wrong",
     "settingsErrorMessage": "Your preferences could not be saved.",
     "profileSavedTitle": "Profile updated",
-    "profileSavedMessage": "Your profile was saved."
+    "profileSavedMessage": "Your profile was saved.",
+    "avatarSavedTitle": "Photo updated",
+    "avatarSavedMessage": "Your profile photo was saved."
   },
   "brand": {
     "name": "Fondo",
@@ -214,7 +216,10 @@
       "owner": "Owner",
       "member": "Member",
       "name": "Display name",
-      "email": "Email"
+      "email": "Email",
+      "avatar": "Profile photo",
+      "avatarPlaceholder": "Select an image",
+      "uploadAvatar": "Upload photo"
     },
     "appearance": {
       "title": "Appearance",
@@ -531,6 +536,8 @@
     "capabilityPlaceholder": "Optional capability",
     "note": "Note",
     "notePlaceholder": "Optional note",
+    "invoice": "Invoice",
+    "invoicePlaceholder": "Select an invoice",
     "createIncome": "Record income",
     "createExpense": "Record expense",
     "createTransfer": "Record transfer",
@@ -539,6 +546,14 @@
     "toAccount": "To account",
     "toAccountPlaceholder": "Select the destination account",
     "reverse": "Reverse",
+    "attachments": {
+      "title": "Attached invoices",
+      "open": "View invoices",
+      "delete": "Delete invoice",
+      "empty": "No invoices attached.",
+      "loadError": "Invoices could not be loaded.",
+      "unavailable": "file unavailable"
+    },
     "reverseModal": {
       "title": "Reverse movement",
       "description": "This creates an audited reversal that cancels the original movement. The original is kept for history.",
@@ -572,7 +587,12 @@
       "actionError": "The movement could not be recorded.",
       "reversedTitle": "Movement reversed",
       "reversedMessage": "An audited reversal was created.",
-      "reverseError": "The movement could not be reversed."
+      "reverseError": "The movement could not be reversed.",
+      "attachmentCreatedTitle": "Invoice attached",
+      "attachmentCreatedMessage": "The invoice was saved with the movement.",
+      "attachmentDeletedTitle": "Invoice deleted",
+      "attachmentDeletedMessage": "The invoice was deleted.",
+      "attachmentError": "The invoice could not be managed."
     }
   },
   "finance": {

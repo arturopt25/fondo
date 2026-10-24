@@ -144,6 +144,7 @@ model Tenant {
   budgets    Budget[]
   ledgers Ledger[]
   transactions Transaction[]
+  attachments TransactionAttachment[]
 
   @@index([accountingCurrency])
 }
@@ -358,6 +359,7 @@ model Transaction {
   entries  TransactionEntry[]
   reverses Transaction?      @relation("TransactionReversal")
   reversedBy Transaction?    @relation("TransactionReversal", fields: [reversedById], references: [id], onDelete: SetNull)
+  attachments TransactionAttachment[]
 
   @@index([tenantId, occurredAt])
   @@index([ledgerId, occurredAt])
@@ -365,6 +367,23 @@ model Transaction {
   @@index([serviceKey])
   @@index([serviceKey, capabilityKey])
   @@unique([tenantId, idempotencyKey])
+}
+
+model TransactionAttachment {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @db.Uuid
+  transactionId String   @db.Uuid
+  storageKey    String   @db.VarChar(512)
+  originalName  String   @db.VarChar(255)
+  contentType   String   @db.VarChar(128)
+  sizeBytes     Int
+  createdAt     DateTime @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([transactionId])
 }
 
 model TransactionEntry {

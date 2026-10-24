@@ -38,7 +38,9 @@
     "settingsErrorTitle": "Algo salio mal",
     "settingsErrorMessage": "No se pudieron guardar tus preferencias.",
     "profileSavedTitle": "Perfil actualizado",
-    "profileSavedMessage": "Tu perfil se guardo."
+    "profileSavedMessage": "Tu perfil se guardo.",
+    "avatarSavedTitle": "Foto actualizada",
+    "avatarSavedMessage": "Tu foto de perfil se guardo."
   },
   "brand": {
     "name": "Fondo",
@@ -214,7 +216,10 @@
       "owner": "Propietario",
       "member": "Miembro",
       "name": "Nombre visible",
-      "email": "Email"
+      "email": "Email",
+      "avatar": "Foto de perfil",
+      "avatarPlaceholder": "Selecciona una imagen",
+      "uploadAvatar": "Subir foto"
     },
     "appearance": {
       "title": "Apariencia",
@@ -534,6 +539,8 @@
     "capabilityPlaceholder": "Capacidad opcional",
     "note": "Nota",
     "notePlaceholder": "Nota opcional",
+    "invoice": "Factura",
+    "invoicePlaceholder": "Selecciona una factura",
     "createIncome": "Registrar ingreso",
     "createExpense": "Registrar gasto",
     "createTransfer": "Registrar transferencia",
@@ -542,6 +549,14 @@
     "toAccount": "Cuenta destino",
     "toAccountPlaceholder": "Selecciona la cuenta destino",
     "reverse": "Revertir",
+    "attachments": {
+      "title": "Facturas adjuntas",
+      "open": "Ver facturas",
+      "delete": "Eliminar factura",
+      "empty": "No hay facturas adjuntas.",
+      "loadError": "No se pudieron cargar las facturas.",
+      "unavailable": "archivo no disponible"
+    },
     "reverseModal": {
       "title": "Revertir movimiento",
       "description": "Esto crea una reversión auditada que cancela el movimiento original. El original se conserva para el historial.",
@@ -575,7 +590,12 @@
       "actionError": "No se pudo registrar el movimiento.",
       "reversedTitle": "Movimiento revertido",
       "reversedMessage": "Se creó una reversión auditada.",
-      "reverseError": "No se pudo revertir el movimiento."
+      "reverseError": "No se pudo revertir el movimiento.",
+      "attachmentCreatedTitle": "Factura adjuntada",
+      "attachmentCreatedMessage": "La factura se guardó con el movimiento.",
+      "attachmentDeletedTitle": "Factura eliminada",
+      "attachmentDeletedMessage": "La factura fue eliminada.",
+      "attachmentError": "No se pudo gestionar la factura."
     }
   },
   "finance": {

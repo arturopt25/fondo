@@ -18,3 +18,10 @@ export const API_WRITE_THROTTLE = {
     ttl: RATE_LIMIT_WINDOW_MS,
   },
 };
+
+export const API_UPLOAD_THROTTLE = {
+  default: {
+    limit: limitFromEnv("API_UPLOAD_RATE_LIMIT", 10),
+    ttl: RATE_LIMIT_WINDOW_MS,
+  },
+};

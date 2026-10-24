@@ -3,6 +3,7 @@ import {
   Badge,
   Button,
   Card,
+  FileInput,
   Group,
   Modal,
   NumberInput,
@@ -17,7 +18,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconArrowBackUp } from "@tabler/icons-react";
+import { IconArrowBackUp, IconPaperclip, IconTrash } from "@tabler/icons-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -35,10 +36,13 @@ import { formatMinorAmount } from "../../lib/money";
 import { useAccountsQuery, useCategoriesQuery } from "./finance-hooks";
 import {
   useCreateExpenseMutation,
+  useCreateAttachmentMutation,
   useCreateIncomeMutation,
   useCreateTransferMutation,
+  useDeleteAttachmentMutation,
   useLedgerBalanceQuery,
   useReverseTransactionMutation,
+  useTransactionAttachmentsQuery,
   useTransactionsQuery,
 } from "./transactions-hooks";
 import { useServicesQuery } from "../services/services-hooks";
@@ -102,7 +106,11 @@ export function TransactionsPage(): React.JSX.Element {
   const [page, setPage] = useState(1);
   const [reversing, setReversing] = useState<Transaction | null>(null);
   const [reverseNote, setReverseNote] = useState("");
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [attachmentsTransaction, setAttachmentsTransaction] =
+    useState<Transaction | null>(null);
   const [reverseModalOpened, reverseModal] = useDisclosure(false);
+  const [attachmentsModalOpened, attachmentsModal] = useDisclosure(false);
   const locale = i18n.language === "en" ? "en-US" : "es-ES";
 
   const accountsQuery = useAccountsQuery();
@@ -118,7 +126,12 @@ export function TransactionsPage(): React.JSX.Element {
   const createIncome = useCreateIncomeMutation();
   const createExpense = useCreateExpenseMutation();
   const createTransfer = useCreateTransferMutation();
+  const createAttachment = useCreateAttachmentMutation();
+  const deleteAttachment = useDeleteAttachmentMutation();
   const reverseTransaction = useReverseTransactionMutation();
+  const attachmentsQuery = useTransactionAttachmentsQuery(
+    attachmentsTransaction?.id ?? null,
+  );
 
   const rate = balanceQuery.data?.exchangeRate ?? null;
 
@@ -162,7 +175,26 @@ export function TransactionsPage(): React.JSX.Element {
   const submitting =
     createIncome.isPending ||
     createExpense.isPending ||
-    createTransfer.isPending;
+    createTransfer.isPending ||
+    createAttachment.isPending;
+
+  function finishMovement(transaction: Transaction): void {
+    if (!invoiceFile) {
+      reset(EMPTY_FORM_VALUES);
+      return;
+    }
+
+    const file = invoiceFile;
+    createAttachment.mutate(
+      { transactionId: transaction.id, file },
+      {
+        onSettled: () => {
+          setInvoiceFile(null);
+          reset(EMPTY_FORM_VALUES);
+        },
+      },
+    );
+  }
 
   async function onSubmit(values: FormValues): Promise<void> {
     const idempotencyKey = crypto.randomUUID();
@@ -177,7 +209,7 @@ export function TransactionsPage(): React.JSX.Element {
           },
           idempotencyKey,
         },
-        { onSuccess: () => reset(EMPTY_FORM_VALUES) },
+         { onSuccess: () => reset(EMPTY_FORM_VALUES) },
       );
       return;
     }
@@ -192,14 +224,19 @@ export function TransactionsPage(): React.JSX.Element {
     if (type === "income") {
       createIncome.mutate(
         { input: base, idempotencyKey },
-        { onSuccess: () => reset(EMPTY_FORM_VALUES) },
+        { onSuccess: finishMovement },
       );
     } else {
       createExpense.mutate(
         { input: base, idempotencyKey },
-        { onSuccess: () => reset(EMPTY_FORM_VALUES) },
+        { onSuccess: finishMovement },
       );
     }
+  }
+
+  function openAttachmentsModal(transaction: Transaction): void {
+    setAttachmentsTransaction(transaction);
+    attachmentsModal.open();
   }
 
   function confirmReverse(): void {
@@ -253,6 +290,9 @@ export function TransactionsPage(): React.JSX.Element {
                   const next = isMovementType(value) ? value : "expense";
                   setType(next);
                   setValue("categoryId", "");
+                  if (next === "transfer") {
+                    setInvoiceFile(null);
+                  }
                 }}
                 data={[
                   { value: "expense", label: t("transactions.types.EXPENSE") },
@@ -372,6 +412,16 @@ export function TransactionsPage(): React.JSX.Element {
                 placeholder={t("transactions.notePlaceholder")}
                 {...register("note")}
               />
+              {type !== "transfer" ? (
+                <FileInput
+                  accept="image/jpeg,image/png,application/pdf"
+                  clearable
+                  label={t("transactions.invoice")}
+                  placeholder={t("transactions.invoicePlaceholder")}
+                  value={invoiceFile}
+                  onChange={setInvoiceFile}
+                />
+              ) : null}
               <Button
                 type="submit"
                 color="signal"
@@ -433,6 +483,7 @@ export function TransactionsPage(): React.JSX.Element {
               transactions={transactions}
               formatMinor={formatMinor}
               onReverse={openReverseModal}
+              onAttachments={openAttachmentsModal}
             />
             {totalPages > 1 ? (
               <Group justify="center">
@@ -476,6 +527,64 @@ export function TransactionsPage(): React.JSX.Element {
           </Group>
         </Stack>
       </Modal>
+
+      <Modal
+        opened={attachmentsModalOpened}
+        onClose={attachmentsModal.close}
+        title={t("transactions.attachments.title")}
+      >
+        {attachmentsQuery.isLoading ? (
+          <LoadingState label={t("common.loading")} />
+        ) : attachmentsQuery.isError ? (
+          <ErrorState title={t("transactions.attachments.loadError")} />
+        ) : (attachmentsQuery.data?.items.length ?? 0) === 0 ? (
+          <Text size="sm" c="dimmed">
+            {t("transactions.attachments.empty")}
+          </Text>
+        ) : (
+          <Stack gap="xs">
+            {attachmentsQuery.data?.items.map((attachment) => (
+              <Group key={attachment.id} justify="space-between" wrap="nowrap">
+                {attachment.downloadUrl ? (
+                  <Button
+                    component="a"
+                    href={attachment.downloadUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    variant="subtle"
+                    size="compact-sm"
+                  >
+                    {attachment.originalName}
+                  </Button>
+                ) : (
+                  <Stack gap={0}>
+                    <Text size="sm">{attachment.originalName}</Text>
+                    <Text size="xs" c="dimmed">
+                      {t("transactions.attachments.unavailable")}
+                    </Text>
+                  </Stack>
+                )}
+                <ActionIcon
+                  color="red"
+                  variant="subtle"
+                  aria-label={t("transactions.attachments.delete")}
+                  onClick={() =>
+                    attachmentsTransaction
+                      ? deleteAttachment.mutate({
+                          transactionId: attachmentsTransaction.id,
+                          attachmentId: attachment.id,
+                        })
+                      : undefined
+                  }
+                  loading={deleteAttachment.isPending}
+                >
+                  <IconTrash size={16} />
+                </ActionIcon>
+              </Group>
+            ))}
+          </Stack>
+        )}
+      </Modal>
     </Stack>
   );
 }
@@ -484,10 +593,12 @@ function TransactionTable({
   transactions,
   formatMinor,
   onReverse,
+  onAttachments,
 }: {
   readonly transactions: readonly Transaction[];
   readonly formatMinor: (amountMinor: number) => string;
   readonly onReverse: (transaction: Transaction) => void;
+  readonly onAttachments: (transaction: Transaction) => void;
 }): React.JSX.Element {
   const { t } = useTranslation();
 
@@ -539,17 +650,28 @@ function TransactionTable({
                 {sign} {formatMinor(transaction.amountMinor)}
               </Table.Td>
               <Table.Td ta="right">
-                {isReversed || isReversal ? null : (
+                <Group justify="flex-end" gap="xs">
                   <ActionIcon
                     variant="subtle"
                     color="gray"
-                    aria-label={t("transactions.reverse")}
-                    title={t("transactions.reverse")}
-                    onClick={() => onReverse(transaction)}
+                    aria-label={t("transactions.attachments.open")}
+                    title={t("transactions.attachments.open")}
+                    onClick={() => onAttachments(transaction)}
                   >
-                    <IconArrowBackUp size={16} />
+                    <IconPaperclip size={16} />
                   </ActionIcon>
-                )}
+                  {isReversed || isReversal ? null : (
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      aria-label={t("transactions.reverse")}
+                      title={t("transactions.reverse")}
+                      onClick={() => onReverse(transaction)}
+                    >
+                      <IconArrowBackUp size={16} />
+                    </ActionIcon>
+                  )}
+                </Group>
               </Table.Td>
             </Table.Tr>
           );
