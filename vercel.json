@@ -1,0 +1,11 @@
+{
+  "buildCommand": "pnpm --filter @fondo/web build",
+  "outputDirectory": "apps/web/dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [{ "key": "X-Frame-Options", "value": "DENY" }]
+    }
+  ]
+}

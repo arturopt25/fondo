@@ -3,6 +3,7 @@ export interface AppConfig {
   readonly appDatabaseUrl: string;
   readonly betterAuthSecret: string;
   readonly betterAuthUrl: string;
+  readonly cookieCrossSite: boolean;
   readonly webOrigins: readonly string[];
   readonly logLevel: LogLevel;
   readonly awsEndpointUrl: string;
@@ -94,6 +95,12 @@ export function parseWebOrigins(raw: string): readonly string[] {
   return uniqueOrigins;
 }
 
+export function parseCookieCrossSite(
+  raw = process.env.COOKIE_CROSS_SITE,
+): boolean {
+  return parseBoolean(raw, false, "COOKIE_CROSS_SITE");
+}
+
 function parsePositiveInteger(
   raw: string | undefined,
   fallback: number,
@@ -133,6 +140,7 @@ export function loadAppConfig(): AppConfig {
   const appDatabaseUrl = process.env.APP_DATABASE_URL;
   const betterAuthSecret = process.env.BETTER_AUTH_SECRET;
   const betterAuthUrl = process.env.BETTER_AUTH_URL;
+  const cookieCrossSite = parseCookieCrossSite();
   const webOrigins = parseWebOrigins(
     process.env.WEB_ORIGIN ?? DEFAULT_WEB_ORIGIN,
   );
@@ -196,6 +204,7 @@ export function loadAppConfig(): AppConfig {
     appDatabaseUrl: appDatabaseUrl as string,
     betterAuthSecret: betterAuthSecret as string,
     betterAuthUrl: betterAuthUrl as string,
+    cookieCrossSite,
     webOrigins,
     logLevel,
     awsEndpointUrl,

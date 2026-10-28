@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   loadAppConfig,
+  parseCookieCrossSite,
   parseWebOrigins,
 } from "../../../core/config/app-config.js";
 
@@ -32,6 +33,7 @@ function setEnv(overrides: Partial<Record<string, string | undefined>>): void {
     delete process.env[key];
   }
   delete process.env.WEB_ORIGIN;
+  delete process.env.COOKIE_CROSS_SITE;
   delete process.env.LOG_LEVEL;
 });
 
@@ -46,6 +48,17 @@ describe("loadAppConfig", () => {
       "postgresql://fondo_app@localhost/fondo",
     );
     expect(config.webOrigins).toEqual(["http://localhost:5173"]);
+    expect(config.cookieCrossSite).toBe(false);
+  });
+
+  it("parses the cross-site cookie setting", () => {
+    setEnv({ COOKIE_CROSS_SITE: "true" });
+    expect(loadAppConfig().cookieCrossSite).toBe(true);
+    expect(parseCookieCrossSite("false")).toBe(false);
+  });
+
+  it("rejects an invalid cross-site cookie setting", () => {
+    expect(() => parseCookieCrossSite("yes")).toThrow(/COOKIE_CROSS_SITE/);
   });
 
   it("parses and deduplicates comma-separated origins", () => {

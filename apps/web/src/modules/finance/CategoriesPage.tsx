@@ -29,6 +29,7 @@ import {
   useCategoriesQuery,
   useCreateCategoryMutation,
 } from "./finance-hooks";
+import { categoryLabel } from "./category-label";
 
 type Filter = "all" | "INCOME" | "EXPENSE";
 type CategoryFormInput = z.input<typeof createCategorySchema>;
@@ -176,7 +177,7 @@ function CategoryCard({
         <Group gap="sm">
           <IconTag size={20} stroke={1.5} />
           <Stack gap={2}>
-            <Text fw={600}>{category.name}</Text>
+            <Text fw={600}>{categoryLabel(category.name, t)}</Text>
             <Text size="xs" c="dimmed">
               {t(`finance.categoryTypes.${category.type}`)}
               {category.isDefault
