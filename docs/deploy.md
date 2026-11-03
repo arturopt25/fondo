@@ -259,8 +259,9 @@ openssl rand -base64 32
 | `VITE_API_URL` | Vercel | `https://<servicio>.onrender.com/api/v1`. |
 | `VITE_AUTH_URL` | Vercel | `https://<servicio>.onrender.com/api/v1/auth`; incluye el `basePath` del backend. |
 
-No poner valores reales en `render.yaml`, `vercel.json`, workflows ni en este
-documento.
+No poner credenciales, contraseñas ni URLs privadas de servicios en
+`render.yaml`, `vercel.json`, workflows ni en este documento. La URL pública del
+repositorio en `render.yaml` sí debe ser la URL canónica del repositorio.
 
 ## Checklist post-deploy
 
