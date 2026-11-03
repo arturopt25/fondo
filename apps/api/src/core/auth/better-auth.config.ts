@@ -12,6 +12,7 @@ export interface PersonalTenantProvisioner {
 export interface BetterAuthOptions {
   readonly provisioner: PersonalTenantProvisioner;
   readonly webOrigins: readonly string[];
+  readonly cookieCrossSite: boolean;
 }
 
 function slugify(value: string): string {
@@ -29,6 +30,7 @@ function slugify(value: string): string {
 export function createBetterAuth({
   provisioner,
   webOrigins,
+  cookieCrossSite,
 }: BetterAuthOptions) {
   const databaseUrl = process.env.DATABASE_URL;
   const authUrl = process.env.BETTER_AUTH_URL;
@@ -49,6 +51,17 @@ export function createBetterAuth({
     database: prismaAdapter(prisma, {
       provider: "postgresql",
     }),
+    ...(cookieCrossSite
+      ? {
+          advanced: {
+            useSecureCookies: true,
+            defaultCookieAttributes: {
+              sameSite: "none" as const,
+              secure: true,
+            },
+          },
+        }
+      : {}),
     user: {
       modelName: "User",
       fields: {

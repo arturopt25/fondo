@@ -33,7 +33,6 @@ import { TransactionsService } from "./transactions.service.js";
 import { API_WRITE_THROTTLE } from "../config/rate-limits.js";
 import { API_UPLOAD_THROTTLE } from "../config/rate-limits.js";
 import { StorageService } from "../storage/storage.service.js";
-import type { FastifyRequest } from "fastify";
 
 interface TenantParams {
   tenantId: string;

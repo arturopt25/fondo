@@ -33,6 +33,7 @@ import {
 } from "../../components/DateRangeSelector";
 import { useAppPreferences } from "../../app/preferences";
 import { formatMinorAmount, rateFor } from "../../lib/money";
+import { categoryLabel } from "../finance/category-label";
 import {
   resolvePeriodRange,
   useCategorySpendQuery,
@@ -116,7 +117,7 @@ function ReportsContent({
     expenses: convert(point.expenseMinor, rate) / 100,
   }));
   const categoryData = categorySpend.map((category, index) => ({
-    category: categoryNameLabel(category.categoryName, t),
+    category: categoryLabel(category.categoryName, t),
     amount: convert(category.amountMinor, rate) / 100,
     color: SPEND_COLORS[index % SPEND_COLORS.length],
   }));
@@ -268,13 +269,4 @@ function ReportsContent({
 
 function convert(amountMinor: number, rate: { rate: number } | null): number {
   return rate ? Math.round(amountMinor * rate.rate) : amountMinor;
-}
-
-function categoryNameLabel(
-  name: string,
-  t: ReturnType<typeof useTranslation>["t"],
-): string {
-  return t(`finance.categories.${name.toLowerCase()}`, {
-    defaultValue: name,
-  });
 }

@@ -33,6 +33,7 @@ import { EmptyState, ErrorState, LoadingState, PageHeader } from "@fondo/ui";
 
 import { useAppPreferences } from "../../app/preferences";
 import { formatMinorAmount } from "../../lib/money";
+import { categoryLabel } from "./category-label";
 import { useAccountsQuery, useCategoriesQuery } from "./finance-hooks";
 import {
   useCreateExpenseMutation,
@@ -351,7 +352,7 @@ export function TransactionsPage(): React.JSX.Element {
                     value={categoryId || null}
                     data={categories.map((category) => ({
                       value: category.id,
-                      label: category.name,
+                      label: categoryLabel(category.name, t),
                     }))}
                     onChange={(value) => setValue("categoryId", value ?? "")}
                     error={errors.categoryId?.message}

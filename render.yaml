@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: fondo-api
+    runtime: docker
+    plan: free
+    # Replace this placeholder with the canonical GitHub repository URL.
+    repo: https://github.com/REPLACE_WITH_GITHUB_OWNER/fondo
+    branch: main
+    autoDeployTrigger: checksPass
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_DATABASE_URL
+        sync: false
+      - key: BETTER_AUTH_SECRET
+        sync: false
+      - key: BETTER_AUTH_URL
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false
+      - key: COOKIE_CROSS_SITE
+        value: "true"
+      - key: AWS_ENDPOINT_URL
+        sync: false
+      - key: AWS_REGION
+        value: auto
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: S3_FORCE_PATH_STYLE
+        value: "true"
+      - key: S3_PRESIGN_EXPIRY_SECONDS
+        value: "300"
+      - key: S3_MAX_FILE_SIZE_BYTES
+        value: "5242880"
+      - key: S3_AVATAR_MAX_FILE_SIZE_BYTES
+        value: "2097152"

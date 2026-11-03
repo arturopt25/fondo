@@ -194,7 +194,7 @@
       "eyebrow": "Extensiones previstas",
       "title": "Mas informes, cuando hagan falta",
       "emptyTitle": "Los servicios futuros tendran sus propios informes",
-      "emptyDescription": "Vehicle, Home, Insurance y Entrepreneurship se conectaran aqui cuando sus modulos esten activos."
+      "emptyDescription": "Vehículos, Hogar, Seguros y Emprendimiento se conectarán aquí cuando sus módulos estén activos."
     }
   },
   "settings": {
@@ -601,27 +601,27 @@
   "finance": {
     "categories": {
       "housing": "Vivienda",
-      "food": "Alimentacion",
+      "food": "Alimentación",
       "transport": "Transporte",
       "leisure": "Ocio",
-      "other": "Otros",
+      "other": "Otro",
       "income": "Ingresos",
-      "eyebrow": "Categorias / 06",
+      "eyebrow": "Categorías / 06",
       "title": "Organiza tus gastos",
-      "description": "Personaliza las categorias que usas en tu espacio.",
-      "newCategory": "Nueva categoria",
+      "description": "Personaliza las categorías que usas en tu espacio.",
+      "newCategory": "Nueva categoría",
       "name": "Nombre",
       "namePlaceholder": "p. ej. Viajes",
       "type": "Tipo",
-      "create": "Crear categoria",
-      "listTitle": "Categorias",
+      "create": "Crear categoría",
+      "listTitle": "Categorías",
       "filterAll": "Todas",
       "default": "Por defecto",
       "active": "Activa",
       "archived": "Archivada",
       "archive": "Archivar",
-      "emptyTitle": "No hay categorias",
-      "emptyDescription": "Anade una categoria personalizada para refinar tu registro."
+      "emptyTitle": "No hay categorías",
+      "emptyDescription": "Añade una categoría personalizada para refinar tu registro."
     },
     "merchants": {
       "coffeeLab": "Coffee Lab",
@@ -663,11 +663,11 @@
       "accountCreatedMessage": "Tu cuenta fue guardada.",
       "accountArchivedTitle": "Cuenta archivada",
       "accountArchivedMessage": "La cuenta fue archivada.",
-      "categoryCreatedTitle": "Categoria creada",
-      "categoryCreatedMessage": "La categoria fue guardada.",
-      "categoryArchivedTitle": "Categoria archivada",
-      "categoryArchivedMessage": "La categoria fue archivada.",
-      "actionError": "No se pudo completar la accion."
+      "categoryCreatedTitle": "Categoría creada",
+      "categoryCreatedMessage": "La categoría fue guardada.",
+      "categoryArchivedTitle": "Categoría archivada",
+      "categoryArchivedMessage": "La categoría fue archivada.",
+      "actionError": "No se pudo completar la acción."
     }
   }
 }

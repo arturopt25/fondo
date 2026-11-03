@@ -7,6 +7,7 @@ import { fondoTheme } from "@fondo/ui";
 
 const auth = vi.hoisted(() => ({ useAuth: vi.fn() }));
 const servicesHooks = vi.hoisted(() => ({ useServicesQuery: vi.fn() }));
+const meHooks = vi.hoisted(() => ({ useMeQuery: vi.fn() }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -16,6 +17,9 @@ vi.mock("../../../../modules/auth/auth-context", () => ({
 }));
 vi.mock("../../../../modules/services/services-hooks", () => ({
   useServicesQuery: servicesHooks.useServicesQuery,
+}));
+vi.mock("../../../../modules/settings/me-hooks", () => ({
+  useMeQuery: meHooks.useMeQuery,
 }));
 
 import { AppLayout } from "../../../../app/layouts/AppLayout";
@@ -42,6 +46,15 @@ describe("AppLayout", () => {
     servicesHooks.useServicesQuery.mockReturnValue({
       data: { services: [{ key: "PERSONAL_FINANCE", status: "ACTIVE" }] },
     });
+    meHooks.useMeQuery.mockReturnValue({
+      data: {
+        user: {
+          name: "Arturo",
+          email: "arturo@example.com",
+          image: null,
+        },
+      },
+    });
   });
 
   it("renders the main navigation and the user", () => {
@@ -53,5 +66,28 @@ describe("AppLayout", () => {
     expect(screen.getByText("navigation.reports")).toBeInTheDocument();
     expect(screen.getByText("navigation.settings")).toBeInTheDocument();
     expect(screen.getAllByText("Arturo").length).toBeGreaterThan(0);
+  });
+
+  it("renders the resolved profile image in the navbar and sidebar", () => {
+    meHooks.useMeQuery.mockReturnValue({
+      data: {
+        user: {
+          name: "Arturo",
+          email: "arturo@example.com",
+          image: "https://storage.example/avatar.png",
+        },
+      },
+    });
+
+    renderLayout();
+
+    const images = screen.getAllByRole("img");
+    expect(images).toHaveLength(2);
+    expect(images).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ src: "https://storage.example/avatar.png" }),
+        expect.objectContaining({ src: "https://storage.example/avatar.png" }),
+      ]),
+    );
   });
 });

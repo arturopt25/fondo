@@ -1,7 +1,10 @@
 import { Global, Module } from "@nestjs/common";
 
 import { PrismaModule } from "../prisma.module.js";
-import { parseWebOrigins } from "../config/app-config.js";
+import {
+  parseCookieCrossSite,
+  parseWebOrigins,
+} from "../config/app-config.js";
 import {
   createBetterAuth,
   type BetterAuthInstance,
@@ -22,6 +25,7 @@ import { TenantProvisioningService } from "./tenant-provisioning.service.js";
           webOrigins: parseWebOrigins(
             process.env.WEB_ORIGIN ?? "http://localhost:5173",
           ),
+          cookieCrossSite: parseCookieCrossSite(),
         });
       },
       inject: [TenantProvisioningService],

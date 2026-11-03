@@ -243,7 +243,7 @@ export function SettingsPage(): React.JSX.Element {
                     color="signal"
                     size={58}
                     radius="lg"
-                    src={user?.image ?? undefined}
+                    src={user?.image ?? null}
                   >
                     AR
                   </Avatar>

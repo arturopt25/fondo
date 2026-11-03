@@ -42,6 +42,7 @@ import type { JSX } from "react";
 import { FondoBrand } from "@fondo/ui";
 import { useAuth } from "../../modules/auth/auth-context";
 import { useServicesQuery } from "../../modules/services/services-hooks";
+import { useMeQuery } from "../../modules/settings/me-hooks";
 
 const navigation = [
   {
@@ -79,6 +80,7 @@ export function AppLayout(): JSX.Element {
   const [opened, { toggle, close }] = useDisclosure(false);
   const { session, signOut } = useAuth();
   const servicesQuery = useServicesQuery();
+  const meQuery = useMeQuery();
   const activeServiceCount =
     servicesQuery.data?.services.filter(
       (service) => service.status === "ACTIVE",
@@ -92,6 +94,7 @@ export function AppLayout(): JSX.Element {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+  const profileImage = meQuery.data?.user.image ?? null;
 
   async function handleSignOut(): Promise<void> {
     await signOut();
@@ -144,10 +147,10 @@ export function AppLayout(): JSX.Element {
             <Menu shadow="md" width={190} position="bottom-end">
               <Menu.Target>
                 <UnstyledUserButton
-                  label={t("shell.userMenu")}
-                  initials={userInitials}
-                  image={session?.user.image ?? null}
-                />
+                   label={t("shell.userMenu")}
+                   initials={userInitials}
+                   image={profileImage}
+                 />
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>
@@ -246,7 +249,12 @@ export function AppLayout(): JSX.Element {
 
         <AppShell.Section>
           <Group className="sidebar-account" gap="sm" wrap="nowrap">
-            <Avatar color="signal" radius="md" size="md">
+            <Avatar
+              color="signal"
+              radius="md"
+              size="md"
+              {...(profileImage ? { src: profileImage } : {})}
+            >
               {userInitials || "F"}
             </Avatar>
             <Stack gap={1} style={{ flex: 1 }}>

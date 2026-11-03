@@ -59,6 +59,7 @@ import {
 } from "../../components/DateRangeSelector";
 import { useAppPreferences } from "../../app/preferences";
 import { formatDate, formatMinorAmount, rateFor } from "../../lib/money";
+import { categoryLabel } from "../finance/category-label";
 import {
   resolvePeriodRange,
   useDashboardReportQuery,
@@ -833,7 +834,7 @@ function BudgetSection({
             label={t("dashboard.budgets.category")}
             data={items.map((item) => ({
               value: item.categoryId,
-              label: item.categoryName,
+              label: categoryLabel(item.categoryName, t),
             }))}
             value={selectedCategoryId}
             onChange={setSelectedCategoryId}
@@ -904,7 +905,7 @@ function BudgetProgressCard({
       <Group justify="space-between" align="flex-start" gap="sm">
         <Stack gap={2} miw={0}>
           <Text fw={700} truncate>
-            {item.categoryName}
+            {categoryLabel(item.categoryName, t)}
           </Text>
           <Text size="xs" c="dimmed">
             {item.budgetMinor === null
@@ -1059,13 +1060,4 @@ function RecentTransactions({
 
 function convert(amountMinor: number, rate: { rate: number } | null): number {
   return rate ? Math.round(amountMinor * rate.rate) : amountMinor;
-}
-
-function categoryLabel(
-  name: string,
-  t: ReturnType<typeof useTranslation>["t"],
-): string {
-  return t(`finance.categories.${name.toLowerCase()}`, {
-    defaultValue: name,
-  });
 }
