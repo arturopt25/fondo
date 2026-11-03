@@ -49,19 +49,69 @@ después eliminar lo antiguo en otra migración.
 ## Neon
 
 1. Crear un proyecto y una base de datos en Neon Free.
-2. Copiar la **URL directa** de Neon para `NEON_DIRECT_URL`. Debe apuntar a la
-   conexión directa, no al endpoint pooler, y terminar con
+2. Identificar el nombre real de la base de datos y el rol propietario que Neon
+   muestra en la conexión directa. Ese rol se reserva para migraciones y
+   administración; no debe usarse como usuario de runtime porque puede tener
+   `BYPASSRLS`.
+3. Crear el rol de runtime antes de ejecutar las migraciones. La migración
+   `20261022000000_rls_app_role` también crea este rol de forma condicional con
+   `DO $$ ... IF NOT EXISTS`; si el rol ya existe, no cambia su contraseña.
+   Ejecuta como propietario de la base:
+
+   ```sql
+   DO $$
+   BEGIN
+     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'fondo_app') THEN
+       CREATE ROLE fondo_app
+         WITH LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '<generated-password>';
+     END IF;
+   END
+   $$;
+
+   DO $$
+   BEGIN
+     EXECUTE format('GRANT CONNECT ON DATABASE %I TO fondo_app', current_database());
+   END
+   $$;
+   GRANT USAGE ON SCHEMA public TO fondo_app;
+   ```
+
+   Sustituye `<generated-password>` por una contraseña aleatoria antes de
+   ejecutar el bloque. Nunca guardes esa contraseña en el repositorio.
+4. Si la migración creó el rol con su password provisional, rótalo
+   inmediatamente después de ejecutar las migraciones:
+
+   ```sql
+   ALTER ROLE fondo_app WITH PASSWORD '<new-generated-password>';
+   ```
+
+   La contraseña `change-me` de la migración nunca debe quedar en producción.
+5. Ejecutar la consulta de verificación:
+
+   ```sql
+   SELECT rolname, rolsuper, rolbypassrls
+   FROM pg_roles
+   WHERE rolname IN ('fondo_app', current_user);
+   ```
+
+   Para `fondo_app`, el resultado esperado es `rolsuper = f` y
+   `rolbypassrls = f`. Si `current_user` es el rol propietario, debe usarse
+   solamente para migraciones, no en `APP_DATABASE_URL`.
+6. Copiar la **URL directa** de Neon para `NEON_DIRECT_URL`. Debe usar el rol
+   propietario, apuntar a la conexión directa (sin `-pooler`) y terminar con
    `sslmode=require`.
-3. Copiar la **URL pooler** para `DATABASE_URL` y `APP_DATABASE_URL` en Render,
-   también con `sslmode=require`. El pooler reduce el riesgo de agotar
-   conexiones desde el servicio gratuito.
-4. No guardar ninguna de estas URLs en el repositorio.
+7. Copiar la **URL pooler** usando el usuario `fondo_app` para
+   `DATABASE_URL` y `APP_DATABASE_URL` en Render, también con
+   `sslmode=require`. El pooler reduce el riesgo de agotar conexiones desde el
+   servicio gratuito.
+8. No guardar ninguna de estas URLs en el repositorio.
 
 La URL directa se usa únicamente para `prisma migrate deploy` en GitHub Actions.
 La aplicación en Render usa `APP_DATABASE_URL` para Prisma en runtime. El código
 también exige `DATABASE_URL` porque Prisma y Better Auth lo validan al iniciar;
-en Render ambas variables deben estar configuradas. Para un entorno simple,
-pueden tener el mismo valor pooler.
+en Render ambas variables deben estar configuradas y deben usar el usuario
+`fondo_app` a través del pooler. Para un entorno simple, pueden tener el mismo
+valor.
 
 ## Cloudflare R2
 
@@ -90,8 +140,8 @@ con URLs presignadas, agregar una política CORS al bucket con:
 
 ## Render
 
-1. Reemplazar en `render.yaml` el placeholder
-   `https://github.com/REPLACE_WITH_GITHUB_OWNER/fondo` por el repositorio real.
+1. Confirmar que `render.yaml` apunta al repositorio
+   `https://github.com/arturopt25/fondo`.
 2. Crear el Blueprint desde el repositorio.
 3. Confirmar el servicio `fondo-api` con:
    - Runtime: Docker.
@@ -124,7 +174,8 @@ configuración queda así:
 - Output directory: `apps/web/dist`.
 - Package construido: `@fondo/web`.
 - `VITE_API_URL`: `https://<servicio>.onrender.com/api/v1`.
-- `VITE_AUTH_URL`: `https://<servicio>.onrender.com/api/v1/auth`.
+- `VITE_AUTH_URL`: `https://<servicio>.onrender.com/api/v1/auth` (el frontend sí
+  incluye el `basePath` de Better Auth).
 
 Las variables `VITE_*` se incorporan durante el build del frontend. Cambiarlas
 requiere un nuevo deploy/build en Vercel; no basta con reiniciar el navegador.
@@ -176,6 +227,8 @@ Cuando se migre a esos subdominios se puede configurar
 
 `BETTER_AUTH_URL` debe ser el origen público de la API, sin el sufijo
 `/api/v1/auth`, porque el código agrega `basePath: /api/v1/auth`.
+Por ejemplo, en Render debe ser `https://fondo-api.onrender.com`. En cambio,
+`VITE_AUTH_URL` sí debe ser `https://fondo-api.onrender.com/api/v1/auth`.
 
 ## Variables de entorno
 
@@ -187,9 +240,9 @@ openssl rand -base64 32
 
 | Variable | Plataforma | Valor o generación |
 |---|---|---|
-| `DATABASE_URL` | Render | URL pooler de Neon con `sslmode=require`. |
-| `APP_DATABASE_URL` | Render | URL pooler de Neon con `sslmode=require`; puede ser igual a `DATABASE_URL`. |
-| `NEON_DIRECT_URL` | GitHub environment `production` | URL directa de Neon con `sslmode=require`. |
+| `DATABASE_URL` | Render | URL pooler de Neon usando el rol `fondo_app`, con `sslmode=require`. |
+| `APP_DATABASE_URL` | Render | URL pooler de Neon usando el rol `fondo_app`, con `sslmode=require`; puede ser igual a `DATABASE_URL`. |
+| `NEON_DIRECT_URL` | GitHub environment `production` | URL directa de Neon usando el rol propietario, con `sslmode=require`; solo para migraciones. |
 | `BETTER_AUTH_SECRET` | Render | Salida de `openssl rand -base64 32`. |
 | `BETTER_AUTH_URL` | Render | Origen de Render, por ejemplo `https://fondo-api.onrender.com`. |
 | `WEB_ORIGIN` | Render | URL exacta de Vercel, sin `/` final; varios orígenes separados por coma. |
@@ -204,10 +257,11 @@ openssl rand -base64 32
 | `S3_MAX_FILE_SIZE_BYTES` | Render | `5242880`. |
 | `S3_AVATAR_MAX_FILE_SIZE_BYTES` | Render | `2097152`. |
 | `VITE_API_URL` | Vercel | `https://<servicio>.onrender.com/api/v1`. |
-| `VITE_AUTH_URL` | Vercel | `https://<servicio>.onrender.com/api/v1/auth`. |
+| `VITE_AUTH_URL` | Vercel | `https://<servicio>.onrender.com/api/v1/auth`; incluye el `basePath` del backend. |
 
-No poner valores reales en `render.yaml`, `vercel.json`, workflows ni en este
-documento.
+No poner credenciales, contraseñas ni URLs privadas de servicios en
+`render.yaml`, `vercel.json`, workflows ni en este documento. La URL pública del
+repositorio en `render.yaml` sí debe ser la URL canónica del repositorio.
 
 ## Checklist post-deploy
 

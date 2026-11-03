@@ -40,15 +40,18 @@ export class ServiceAccessGuard implements CanActivate {
       return true;
     }
 
-    const subscription =
-      await this.prisma.client.serviceSubscription.findUnique({
-        where: {
-          tenantId_serviceId: {
-            tenantId: request.tenant.tenantId,
-            serviceId: definition.id,
+    const subscription = await this.prisma.withTenantContext(
+      { tenantId: request.tenant.tenantId, userId: request.user.id },
+      (tx) =>
+        tx.serviceSubscription.findUnique({
+          where: {
+            tenantId_serviceId: {
+              tenantId: request.tenant.tenantId,
+              serviceId: definition.id,
+            },
           },
-        },
-      });
+        }),
+    );
 
     if (!subscription || subscription.status !== "ACTIVE") {
       throw new ForbiddenException("Service is not active");
