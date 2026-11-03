@@ -115,6 +115,49 @@ en Render ambas variables deben estar configuradas y deben usar el usuario
 `fondo_app` a través del pooler. Para un entorno simple, pueden tener el mismo
 valor.
 
+### Verificar RLS
+
+`FORCE ROW LEVEL SECURITY` no tiene efecto si la tabla no tiene RLS habilitado.
+La migración `20261103120000_enable_rls_policies` habilita RLS en las tablas que
+ya tienen políticas. Si la base se creó antes de esa migración, aplica las
+migraciones con el workflow normal (`Deploy migrations`) o con
+`pnpm --filter @fondo/db db:deploy` usando la URL directa del propietario.
+
+Después, ejecuta en el SQL Editor:
+
+```sql
+SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, count(p.policyname) AS policies
+FROM pg_class c
+LEFT JOIN pg_policies p ON p.tablename = c.relname AND p.schemaname = 'public'
+WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
+GROUP BY 1, 2, 3
+ORDER BY 1;
+```
+
+Resultado esperado: todas las tablas con al menos una política deben mostrar
+`relrowsecurity = true`. `ServiceDefinition`, `ServiceCapabilityDefinition`,
+`UserSettings`, `_prisma_migrations` y las tablas de Better Auth no tienen
+políticas y pueden permanecer con `relrowsecurity = false`.
+
+Si la migración no se aplica por el workflow, el equivalente manual es:
+
+```sql
+ALTER TABLE "AuditLog" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Budget" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Category" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "FinancialAccount" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Ledger" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Membership" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ServiceCapabilitySelection" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ServiceSubscription" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Tenant" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Transaction" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "TransactionEntry" ENABLE ROW LEVEL SECURITY;
+```
+
+Antes de habilitar RLS, confirma que `fondo_app` sigue con
+`rolbypassrls = false`. Si el rol tiene `BYPASSRLS`, RLS no aislará nada.
+
 ## Cloudflare R2
 
 1. Crear un bucket privado, por ejemplo `fondo-prod-files`.
