@@ -53,10 +53,12 @@ después eliminar lo antiguo en otra migración.
    muestra en la conexión directa. Ese rol se reserva para migraciones y
    administración; no debe usarse como usuario de runtime porque puede tener
    `BYPASSRLS`.
-3. Crear el rol de runtime antes de ejecutar las migraciones. La migración
+3. Crear el rol de runtime **por SQL**, antes de ejecutar las migraciones. No
+   crees `fondo_app` con la CLI ni con la consola de Neon: esos canales pueden
+   asignarle `BYPASSRLS`, lo que desactiva el aislamiento RLS. La migración
    `20261022000000_rls_app_role` también crea este rol de forma condicional con
    `DO $$ ... IF NOT EXISTS`; si el rol ya existe, no cambia su contraseña.
-   Ejecuta como propietario de la base:
+   Ejecuta el siguiente bloque en el SQL Editor como propietario de la base:
 
    ```sql
    DO $$
