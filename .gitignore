@@ -10,3 +10,4 @@ coverage/
 .DS_Store
 prisma/dev.db
 .neon
+.neon-secrets.local.md
