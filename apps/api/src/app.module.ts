@@ -9,6 +9,7 @@ import { FinanceModule } from "./core/finance/finance.module.js";
 import { MeModule } from "./core/me/me.module.js";
 import { PrismaModule } from "./core/prisma.module.js";
 import { ServicesModule } from "./core/services/services.module.js";
+import { StorageModule } from "./core/storage/storage.module.js";
 import { API_READ_THROTTLE } from "./core/config/rate-limits.js";
 import { ApiErrorFilter } from "./core/errors/api-error.filter.js";
 import { AppLoggerModule } from "./core/logger/logger.module.js";
@@ -24,6 +25,7 @@ import { AppLoggerModule } from "./core/logger/logger.module.js";
     HealthModule,
     ServicesModule,
     FinanceModule,
+    StorageModule,
   ],
   providers: [
     ApiErrorFilter,

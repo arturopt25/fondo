@@ -26,6 +26,8 @@ export const queryKeys = {
   budgets: (params: BudgetQueryParams) => ["budgets", params] as const,
   transactions: (params: TransactionListQueryParams) =>
     ["transactions", params] as const,
+  transactionAttachments: (transactionId: string) =>
+    ["transactions", transactionId, "attachments"] as const,
   ledgerBalance: ["ledger", "balance"] as const,
   reports: {
     dashboard: (params: ReportQueryParams) =>

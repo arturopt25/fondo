@@ -38,7 +38,9 @@
     "settingsErrorTitle": "Algo salio mal",
     "settingsErrorMessage": "No se pudieron guardar tus preferencias.",
     "profileSavedTitle": "Perfil actualizado",
-    "profileSavedMessage": "Tu perfil se guardo."
+    "profileSavedMessage": "Tu perfil se guardo.",
+    "avatarSavedTitle": "Foto actualizada",
+    "avatarSavedMessage": "Tu foto de perfil se guardo."
   },
   "brand": {
     "name": "Fondo",
@@ -192,7 +194,7 @@
       "eyebrow": "Extensiones previstas",
       "title": "Mas informes, cuando hagan falta",
       "emptyTitle": "Los servicios futuros tendran sus propios informes",
-      "emptyDescription": "Vehicle, Home, Insurance y Entrepreneurship se conectaran aqui cuando sus modulos esten activos."
+      "emptyDescription": "Vehículos, Hogar, Seguros y Emprendimiento se conectarán aquí cuando sus módulos estén activos."
     }
   },
   "settings": {
@@ -214,7 +216,10 @@
       "owner": "Propietario",
       "member": "Miembro",
       "name": "Nombre visible",
-      "email": "Email"
+      "email": "Email",
+      "avatar": "Foto de perfil",
+      "avatarPlaceholder": "Selecciona una imagen",
+      "uploadAvatar": "Subir foto"
     },
     "appearance": {
       "title": "Apariencia",
@@ -534,6 +539,8 @@
     "capabilityPlaceholder": "Capacidad opcional",
     "note": "Nota",
     "notePlaceholder": "Nota opcional",
+    "invoice": "Factura",
+    "invoicePlaceholder": "Selecciona una factura",
     "createIncome": "Registrar ingreso",
     "createExpense": "Registrar gasto",
     "createTransfer": "Registrar transferencia",
@@ -542,6 +549,14 @@
     "toAccount": "Cuenta destino",
     "toAccountPlaceholder": "Selecciona la cuenta destino",
     "reverse": "Revertir",
+    "attachments": {
+      "title": "Facturas adjuntas",
+      "open": "Ver facturas",
+      "delete": "Eliminar factura",
+      "empty": "No hay facturas adjuntas.",
+      "loadError": "No se pudieron cargar las facturas.",
+      "unavailable": "archivo no disponible"
+    },
     "reverseModal": {
       "title": "Revertir movimiento",
       "description": "Esto crea una reversión auditada que cancela el movimiento original. El original se conserva para el historial.",
@@ -575,33 +590,38 @@
       "actionError": "No se pudo registrar el movimiento.",
       "reversedTitle": "Movimiento revertido",
       "reversedMessage": "Se creó una reversión auditada.",
-      "reverseError": "No se pudo revertir el movimiento."
+      "reverseError": "No se pudo revertir el movimiento.",
+      "attachmentCreatedTitle": "Factura adjuntada",
+      "attachmentCreatedMessage": "La factura se guardó con el movimiento.",
+      "attachmentDeletedTitle": "Factura eliminada",
+      "attachmentDeletedMessage": "La factura fue eliminada.",
+      "attachmentError": "No se pudo gestionar la factura."
     }
   },
   "finance": {
     "categories": {
       "housing": "Vivienda",
-      "food": "Alimentacion",
+      "food": "Alimentación",
       "transport": "Transporte",
       "leisure": "Ocio",
-      "other": "Otros",
+      "other": "Otro",
       "income": "Ingresos",
-      "eyebrow": "Categorias / 06",
+      "eyebrow": "Categorías / 06",
       "title": "Organiza tus gastos",
-      "description": "Personaliza las categorias que usas en tu espacio.",
-      "newCategory": "Nueva categoria",
+      "description": "Personaliza las categorías que usas en tu espacio.",
+      "newCategory": "Nueva categoría",
       "name": "Nombre",
       "namePlaceholder": "p. ej. Viajes",
       "type": "Tipo",
-      "create": "Crear categoria",
-      "listTitle": "Categorias",
+      "create": "Crear categoría",
+      "listTitle": "Categorías",
       "filterAll": "Todas",
       "default": "Por defecto",
       "active": "Activa",
       "archived": "Archivada",
       "archive": "Archivar",
-      "emptyTitle": "No hay categorias",
-      "emptyDescription": "Anade una categoria personalizada para refinar tu registro."
+      "emptyTitle": "No hay categorías",
+      "emptyDescription": "Añade una categoría personalizada para refinar tu registro."
     },
     "merchants": {
       "coffeeLab": "Coffee Lab",
@@ -643,11 +663,11 @@
       "accountCreatedMessage": "Tu cuenta fue guardada.",
       "accountArchivedTitle": "Cuenta archivada",
       "accountArchivedMessage": "La cuenta fue archivada.",
-      "categoryCreatedTitle": "Categoria creada",
-      "categoryCreatedMessage": "La categoria fue guardada.",
-      "categoryArchivedTitle": "Categoria archivada",
-      "categoryArchivedMessage": "La categoria fue archivada.",
-      "actionError": "No se pudo completar la accion."
+      "categoryCreatedTitle": "Categoría creada",
+      "categoryCreatedMessage": "La categoría fue guardada.",
+      "categoryArchivedTitle": "Categoría archivada",
+      "categoryArchivedMessage": "La categoría fue archivada.",
+      "actionError": "No se pudo completar la acción."
     }
   }
 }

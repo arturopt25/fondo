@@ -44,6 +44,7 @@ vi.mock("@mantine/core", async (importOriginal) => {
 const meHooks = vi.hoisted(() => ({
   useMeQuery: vi.fn(),
   useUpdateProfileMutation: vi.fn(),
+  useUploadAvatarMutation: vi.fn(),
   useChangePasswordMutation: vi.fn(),
   useSessionsQuery: vi.fn(),
   useRevokeSessionMutation: vi.fn(),
@@ -67,6 +68,7 @@ vi.mock("../../../../modules/auth/auth-context", () => ({
 vi.mock("../../../../modules/settings/me-hooks", () => ({
   useMeQuery: meHooks.useMeQuery,
   useUpdateProfileMutation: meHooks.useUpdateProfileMutation,
+  useUploadAvatarMutation: meHooks.useUploadAvatarMutation,
   useChangePasswordMutation: meHooks.useChangePasswordMutation,
   useSessionsQuery: meHooks.useSessionsQuery,
   useRevokeSessionMutation: meHooks.useRevokeSessionMutation,
@@ -114,6 +116,10 @@ describe("SettingsPage", () => {
       },
     });
     meHooks.useUpdateProfileMutation.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    });
+    meHooks.useUploadAvatarMutation.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
     });

@@ -41,3 +41,4 @@ process.env.LOG_LEVEL ??= "silent";
 process.env.AUTH_SIGNUP_RATE_LIMIT ??= "200";
 process.env.API_READ_RATE_LIMIT ??= "1000";
 process.env.API_WRITE_RATE_LIMIT ??= "1000";
+process.env.API_UPLOAD_RATE_LIMIT ??= "1000";

@@ -14,6 +14,10 @@ import {
   createFastifyAdapter,
 } from "./core/config/http-hardening.js";
 import { ApiErrorFilter } from "./core/errors/api-error.filter.js";
+import { checkRuntimeDatabaseRole } from "./core/config/runtime-database-role.js";
+import { PrismaService } from "./core/prisma.service.js";
+import { loadStorageConfig } from "./core/storage/storage.config.js";
+import { registerStorageMultipart } from "./core/storage/storage.module.js";
 
 async function bootstrap(): Promise<void> {
   const config = loadAppConfig();
@@ -24,6 +28,11 @@ async function bootstrap(): Promise<void> {
     { bufferLogs: true },
   );
   app.useLogger(app.get(Logger));
+  await checkRuntimeDatabaseRole(
+    app.get(PrismaService).client,
+    process.env.NODE_ENV,
+  );
+  await registerStorageMultipart(app, loadStorageConfig(config));
 
   app.setGlobalPrefix("api/v1");
   await applyHttpHardening(app, config.webOrigins);

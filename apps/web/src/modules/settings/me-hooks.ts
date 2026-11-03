@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import type {
   MeResponse,
+  UploadAvatarResponse,
   UpdateProfileInput,
   UpdateUserSettingsInput,
   UserSettings,
@@ -86,6 +87,35 @@ export function useUpdateProfileMutation() {
       notifications.show({
         title: t("notifications.profileSavedTitle"),
         message: t("notifications.profileSavedMessage"),
+        color: "signal",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: t("notifications.settingsErrorTitle"),
+        message: t("notifications.settingsErrorMessage"),
+        color: "red",
+      });
+    },
+  });
+}
+
+export function useUploadAvatarMutation() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: async (file: File): Promise<UploadAvatarResponse> => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await api.post("me/avatar", { body: formData });
+      return response.json<UploadAvatarResponse>();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      notifications.show({
+        title: t("notifications.avatarSavedTitle"),
+        message: t("notifications.avatarSavedMessage"),
         color: "signal",
       });
     },

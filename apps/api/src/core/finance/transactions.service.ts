@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { PinoLogger } from "nestjs-pino";
 import { Prisma } from "@fondo/db";
 import type { PrismaClient } from "@fondo/db";
 import { createHash } from "node:crypto";
@@ -20,6 +21,7 @@ import type {
   ServiceKey,
   Transaction,
   TransactionListResponse,
+  AttachmentListResponse,
 } from "@fondo/shared-types";
 import type { $Enums } from "@fondo/db";
 
@@ -27,6 +29,13 @@ import { PrismaService } from "../prisma.service.js";
 import { LedgerService } from "./ledger.service.js";
 import { CONFIGURED_EXCHANGE_RATE } from "./exchange-rate.js";
 import { TransactionsRepository } from "./repositories/transactions.repository.js";
+import { StorageService } from "../storage/storage.service.js";
+
+const INVOICE_FILE_TYPES = {
+  extensions: ["jpg", "png", "pdf"] as const,
+  mimeTypes: ["image/jpeg", "image/png", "application/pdf"],
+};
+const MAX_TRANSACTION_ATTACHMENTS = 5;
 
 const MOVEMENT_TYPES = ["INCOME", "EXPENSE", "TRANSFER"] as const;
 type MovementType = (typeof MOVEMENT_TYPES)[number];
@@ -87,7 +96,139 @@ export class TransactionsService {
     private readonly transactions: TransactionsRepository,
     @Inject(LedgerService) private readonly ledgers: LedgerService,
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(StorageService) private readonly storage: StorageService,
+    @Inject(PinoLogger) private readonly logger: PinoLogger,
   ) {}
+
+  async addAttachment(
+    tenantId: string,
+    userId: string,
+    transactionId: string,
+    buffer: Buffer,
+    filename: string,
+    declaredContentType: string,
+  ): Promise<AttachmentListResponse["items"][number]> {
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const transaction = await tx.transaction.findFirst({
+        where: { id: transactionId, tenantId, deletedAt: null },
+        select: { id: true },
+      });
+
+      if (!transaction) {
+        throw new NotFoundException("Transaction not found");
+      }
+
+      const attachmentCount = await tx.transactionAttachment.count({
+        where: { tenantId, transactionId },
+      });
+      if (attachmentCount >= MAX_TRANSACTION_ATTACHMENTS) {
+        throw new BadRequestException(
+          `A transaction can have at most ${MAX_TRANSACTION_ATTACHMENTS} attachments`,
+        );
+      }
+
+      const validated = await this.storage.validateFile(
+        buffer,
+        filename,
+        declaredContentType,
+        INVOICE_FILE_TYPES,
+        this.storage.maxFileSizeBytes,
+      );
+      const key = this.storage.generateKey(
+        `tenants/${tenantId}/transactions/${transactionId}`,
+        validated.extension,
+      );
+
+      await this.storage.upload(key, buffer, validated.contentType);
+
+      try {
+        const attachment = await tx.transactionAttachment.create({
+          data: {
+            tenantId,
+            transactionId,
+            storageKey: key,
+            originalName: validated.originalName,
+            contentType: validated.contentType,
+            sizeBytes: validated.sizeBytes,
+          },
+        });
+
+        return {
+          ...this.toAttachment(attachment),
+          downloadUrl: await this.storage.getSignedDownloadUrl(key),
+        };
+      } catch (error) {
+        await this.deleteUploadedObjectAfterInsertFailure(key);
+        throw error;
+      }
+    });
+  }
+
+  async listAttachments(
+    tenantId: string,
+    userId: string,
+    transactionId: string,
+  ): Promise<AttachmentListResponse> {
+    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+      const transaction = await tx.transaction.findFirst({
+        where: { id: transactionId, tenantId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!transaction) {
+        throw new NotFoundException("Transaction not found");
+      }
+
+      const attachments = await tx.transactionAttachment.findMany({
+        where: { tenantId, transactionId },
+        orderBy: { createdAt: "asc" },
+      });
+
+      return {
+        items: await Promise.all(
+          attachments.map(async (attachment) => ({
+            ...this.toAttachment(attachment),
+            downloadUrl: await this.storage.getSignedDownloadUrlOrNull(
+              attachment.storageKey,
+            ),
+          })),
+        ),
+      };
+    });
+  }
+
+  async deleteAttachment(
+    tenantId: string,
+    userId: string,
+    transactionId: string,
+    attachmentId: string,
+  ): Promise<void> {
+    const storageKey = await this.prisma.withTenantContext(
+      { tenantId, userId },
+      async (tx) => {
+        const attachment = await tx.transactionAttachment.findFirst({
+          where: { id: attachmentId, tenantId, transactionId },
+          select: { id: true, storageKey: true },
+        });
+        if (!attachment) {
+          throw new NotFoundException("Attachment not found");
+        }
+
+        await tx.transactionAttachment.delete({
+          where: { id: attachment.id },
+        });
+        return attachment.storageKey;
+      },
+    );
+
+    try {
+      await this.storage.delete(storageKey);
+    } catch (error) {
+      this.logger.error(
+        { err: error, storageKey },
+        "transaction attachment object cleanup failed",
+      );
+    }
+  }
 
   async list(
     tenantId: string,
@@ -740,6 +881,36 @@ export class TransactionsService {
           `Account "${account.id}" would end up with a negative balance`,
         );
       }
+    }
+  }
+
+  private toAttachment(attachment: {
+    id: string;
+    originalName: string;
+    contentType: string;
+    sizeBytes: number;
+    createdAt: Date;
+  }): AttachmentListResponse["items"][number] {
+    return {
+      id: attachment.id,
+      originalName: attachment.originalName,
+      contentType: attachment.contentType,
+      sizeBytes: attachment.sizeBytes,
+      createdAt: attachment.createdAt.toISOString(),
+      downloadUrl: "",
+    };
+  }
+
+  private async deleteUploadedObjectAfterInsertFailure(
+    storageKey: string,
+  ): Promise<void> {
+    try {
+      await this.storage.delete(storageKey);
+    } catch (cleanupError) {
+      this.logger.error(
+        { err: cleanupError, storageKey },
+        "transaction attachment compensation failed",
+      );
     }
   }
 
