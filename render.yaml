@@ -3,8 +3,7 @@ services:
     name: fondo-api
     runtime: docker
     plan: free
-    # Replace this placeholder with the canonical GitHub repository URL.
-    repo: https://github.com/REPLACE_WITH_GITHUB_OWNER/fondo
+    repo: https://github.com/arturopt25/fondo
     branch: main
     autoDeployTrigger: checksPass
     dockerfilePath: ./apps/api/Dockerfile
