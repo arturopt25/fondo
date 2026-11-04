@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 
 import { PrismaService } from "../prisma.service.js";
 import { StorageService } from "../storage/storage.service.js";
+import type { CurrentUser, TenantContext } from "../tenant/tenant-context.js";
 import type {
   MeResponse,
   UploadAvatarResponse,
@@ -22,57 +23,34 @@ export class MeService {
     @Inject(StorageService) private readonly storage: StorageService,
   ) {}
 
-  async getMe(userId: string): Promise<MeResponse> {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
+  async getMe(user: CurrentUser, tenant: TenantContext): Promise<MeResponse> {
+    const record = await this.prisma.client.user.findUnique({
+      where: { id: user.id },
+      include: { settings: true },
     });
 
-    if (!user) {
+    if (!record) {
       throw new NotFoundException("User not found");
     }
 
-    const membership = await this.prisma.withUserContext(userId, async (tx) =>
-      tx.membership.findFirst({
-        where: { userId },
-        orderBy: { createdAt: "asc" },
-      }),
-    );
-
-    if (!membership) {
-      throw new NotFoundException("No personal space found");
-    }
-
-    const tenant = await this.prisma.withTenantContext(
-      { tenantId: membership.tenantId, userId },
-      async (tx) =>
-        tx.tenant.findUnique({
-          where: { id: membership.tenantId },
-        }),
-    );
-
-    if (!tenant) {
-      throw new NotFoundException("No personal space found");
-    }
-
-    const settings = await this.ensureSettings(userId);
-
-    const image = await this.resolveImage(user.image);
+    const settings = record.settings ?? (await this.ensureSettings(user.id));
+    const image = await this.resolveImage(record.image);
 
     return {
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
+        id: record.id,
+        name: record.name,
+        email: record.email,
         image,
       },
       tenant: {
-        id: tenant.id,
-        name: tenant.name,
-        accountingCurrency: tenant.accountingCurrency as "USD" | "EUR",
+        id: tenant.tenantId,
+        name: tenant.tenantName,
+        accountingCurrency: tenant.accountingCurrency,
         timeZone: tenant.timeZone,
       },
       membership: {
-        role: membership.role === "ADMIN" ? "ADMIN" : "MEMBER",
+        role: tenant.role,
       },
       settings: toUserSettings(settings),
     };

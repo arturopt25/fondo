@@ -61,4 +61,26 @@ describe("HealthController", () => {
     await indicator();
     expect(databaseCheck).toHaveBeenCalledWith(1000);
   });
+
+  it("liveness never touches the database", () => {
+    const { controller, check, databaseCheck } = createController();
+
+    expect(controller.live()).toEqual({ status: "ok" });
+    expect(check).not.toHaveBeenCalled();
+    expect(databaseCheck).not.toHaveBeenCalled();
+  });
+
+  it("readiness uses the configured timeout", async () => {
+    const { controller, check, databaseCheck } = createController("2500");
+
+    await controller.ready();
+    const indicator = check.mock.calls[0]?.[0]?.[0] as
+      | (() => Promise<unknown>)
+      | undefined;
+    if (!indicator) {
+      throw new Error("expected a health check callback");
+    }
+    await indicator();
+    expect(databaseCheck).toHaveBeenCalledWith(2500);
+  });
 });

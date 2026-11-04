@@ -14,8 +14,11 @@ function uniqueEmail(): string {
 }
 
 async function truncateAll(): Promise<void> {
+  // Keep the migration-seeded service catalog intact: it is global reference
+  // data, not tenant data. Truncating it would also delete the capability
+  // catalog and leave the database in a state that production never has.
   await adminPrisma.$executeRawUnsafe(
-    'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceDefinition", "ServiceSubscription", "ServiceCapabilityDefinition", "ServiceCapabilitySelection", "AuditLog" RESTART IDENTITY CASCADE',
+    'TRUNCATE "user", "session", "account", "verification", "Tenant", "Membership", "UserSettings", "ServiceSubscription", "ServiceCapabilitySelection", "AuditLog" RESTART IDENTITY CASCADE',
   );
 }
 
@@ -37,14 +40,6 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await truncateAll();
-  await adminPrisma.$executeRawUnsafe(
-    `INSERT INTO "ServiceDefinition" ("id", "key", "name", "description", "createdAt", "updatedAt") VALUES
-      (gen_random_uuid(), 'PERSONAL_FINANCE', 'Personal Finance', 'PF', now(), now()),
-      (gen_random_uuid(), 'VEHICLE', 'Vehicle', 'V', now(), now()),
-      (gen_random_uuid(), 'HOME', 'Home', 'H', now(), now()),
-      (gen_random_uuid(), 'INSURANCE', 'Insurance', 'I', now(), now()),
-      (gen_random_uuid(), 'ENTREPRENEURSHIP', 'Entrepreneurship', 'E', now(), now());`,
-  );
 });
 
 afterAll(async () => {

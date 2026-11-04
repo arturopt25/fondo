@@ -15,6 +15,13 @@ export interface BetterAuthOptions {
   readonly cookieCrossSite: boolean;
 }
 
+function parseTrustedProxies(raw: string | undefined): string[] {
+  return (raw ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
 function slugify(value: string): string {
   const base = value
     .toLowerCase()
@@ -34,6 +41,7 @@ export function createBetterAuth({
 }: BetterAuthOptions) {
   const databaseUrl = process.env.DATABASE_URL;
   const authUrl = process.env.BETTER_AUTH_URL;
+  const trustedProxies = parseTrustedProxies(process.env.TRUSTED_PROXY_CIDRS);
 
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is not set");
@@ -51,17 +59,23 @@ export function createBetterAuth({
     database: prismaAdapter(prisma, {
       provider: "postgresql",
     }),
-    ...(cookieCrossSite
-      ? {
-          advanced: {
+    advanced: {
+      ...(cookieCrossSite
+        ? {
             useSecureCookies: true,
             defaultCookieAttributes: {
               sameSite: "none" as const,
               secure: true,
             },
-          },
-        }
-      : {}),
+          }
+        : {}),
+      ipAddress: {
+        // Cloudflare sets a single cf-connecting-ip; x-forwarded-for is the
+        // fallback when the request does not pass through Cloudflare.
+        ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"],
+        ...(trustedProxies.length > 0 ? { trustedProxies } : {}),
+      },
+    },
     user: {
       modelName: "User",
       fields: {
