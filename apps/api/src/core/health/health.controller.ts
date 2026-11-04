@@ -1,28 +1,25 @@
 import { Controller, Get, Inject } from "@nestjs/common";
-import {
-  HealthCheck,
-  HealthCheckService,
-  PrismaHealthIndicator,
-} from "@nestjs/terminus";
+import { HealthCheck, HealthCheckService } from "@nestjs/terminus";
 
-import { PrismaService } from "../prisma.service.js";
+import { DatabaseHealthIndicator } from "./database-health.indicator.js";
+import { parseHealthDbTimeoutMs } from "./health.config.js";
 
 @Controller("health")
 export class HealthController {
   constructor(
     @Inject(HealthCheckService)
     private readonly health: HealthCheckService,
-    @Inject(PrismaHealthIndicator)
-    private readonly database: PrismaHealthIndicator,
-    @Inject(PrismaService)
-    private readonly prisma: PrismaService,
+    @Inject(DatabaseHealthIndicator)
+    private readonly database: DatabaseHealthIndicator,
   ) {}
 
   @Get()
   @HealthCheck()
   check() {
-    return this.health.check([
-      () => this.database.pingCheck("database", this.prisma.client),
-    ]);
+    const timeoutMs = parseHealthDbTimeoutMs(
+      process.env.HEALTH_DB_TIMEOUT_MS,
+    );
+
+    return this.health.check([() => this.database.check(timeoutMs)]);
   }
 }
