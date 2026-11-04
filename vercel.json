@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @fondo/web build",
+  "buildCommand": "pnpm --filter @fondo/web... build",
   "outputDirectory": "apps/web/dist",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "headers": [
