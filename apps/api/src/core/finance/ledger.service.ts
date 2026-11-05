@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@fondo/db";
 
 import { PrismaService } from "../prisma.service.js";
 
@@ -6,11 +7,17 @@ import { PrismaService } from "../prisma.service.js";
 export class LedgerService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
+  /**
+   * Pass the outer transaction client when the caller is already inside a
+   * tenant transaction. Opening a nested `$transaction` would hold a second
+   * pooled connection and can exhaust the pool under concurrent requests.
+   */
   async personalLedger(
     tenantId: string,
     userId: string,
+    client?: Prisma.TransactionClient,
   ): Promise<{ id: string }> {
-    return this.prisma.withTenantContext({ tenantId, userId }, async (tx) => {
+    const resolve = async (tx: Prisma.TransactionClient) => {
       const existing = await tx.ledger.findFirst({
         where: { tenantId, scope: "PERSONAL" },
       });
@@ -24,6 +31,10 @@ export class LedgerService {
       });
 
       return { id: created.id };
-    });
+    };
+
+    return client
+      ? resolve(client)
+      : this.prisma.withTenantContext({ tenantId, userId }, resolve);
   }
 }

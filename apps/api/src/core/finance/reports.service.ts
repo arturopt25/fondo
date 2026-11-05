@@ -44,6 +44,7 @@ export class ReportsService {
         tenantId,
         userId,
         query,
+        tx,
       );
       const rows = await this.reports.categoryRows(tx, tenantId, {
         ledgerId,
@@ -87,6 +88,7 @@ export class ReportsService {
         tenantId,
         userId,
         query,
+        tx,
       );
       const rows = await this.reports.categoryRows(tx, tenantId, {
         ledgerId,
@@ -108,6 +110,7 @@ export class ReportsService {
         tenantId,
         userId,
         query,
+        tx,
       );
       const rows = await this.reports.categoryRows(tx, tenantId, {
         ledgerId,
@@ -123,6 +126,7 @@ export class ReportsService {
     tenantId: string,
     userId: string,
     query: PeriodQuery,
+    client: Prisma.TransactionClient,
   ): Promise<{
     ledgerId: string;
     from: Date;
@@ -131,7 +135,7 @@ export class ReportsService {
   }> {
     const ledgerId =
       query.ledgerId ??
-      (await this.ledgers.personalLedger(tenantId, userId)).id;
+      (await this.ledgers.personalLedger(tenantId, userId, client)).id;
     const now = new Date();
     return {
       ledgerId,

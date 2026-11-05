@@ -18,7 +18,8 @@ import {
 } from "@fondo/shared-types";
 
 import { SessionAuthGuard } from "../tenant/session-auth.guard.js";
-import type { CurrentUser } from "../tenant/tenant-context.js";
+import type { CurrentUser, TenantContext } from "../tenant/tenant-context.js";
+import { RequestTenant } from "../tenant/request-tenant.decorator.js";
 import { API_UPLOAD_THROTTLE, API_WRITE_THROTTLE } from "../config/rate-limits.js";
 import { MeService } from "./me.service.js";
 import { RequestUser } from "./request-user.decorator.js";
@@ -34,8 +35,11 @@ export class MeController {
   ) {}
 
   @Get()
-  async getMe(@RequestUser() user: CurrentUser) {
-    return this.meService.getMe(user.id);
+  async getMe(
+    @RequestUser() user: CurrentUser,
+    @RequestTenant() tenant: TenantContext,
+  ) {
+    return this.meService.getMe(user, tenant);
   }
 
   @Get("settings")

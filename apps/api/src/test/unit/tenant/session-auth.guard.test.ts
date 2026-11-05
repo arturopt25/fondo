@@ -15,6 +15,15 @@ function buildMembership() {
   };
 }
 
+function buildTenant() {
+  return {
+    id: "tenant-1",
+    name: "Arturo's space",
+    accountingCurrency: "USD",
+    timeZone: "UTC",
+  };
+}
+
 function createGuard({
   session,
   membership,
@@ -23,30 +32,20 @@ function createGuard({
   membership: unknown;
 }) {
   const getSession = vi.fn().mockResolvedValue(session);
-  const membershipFindFirst = vi.fn().mockResolvedValue(membership);
-  const tenantFindUnique = vi.fn().mockResolvedValue({
-    id: "tenant-1",
-    name: "Arturo's space",
-    accountingCurrency: "USD",
-    timeZone: "UTC",
-  });
+  const resolveTenantContext = vi
+    .fn()
+    .mockResolvedValue(
+      membership ? { membership, tenant: buildTenant() } : null,
+    );
   const auth = { api: { getSession } };
-  const client = {
-    membership: { findFirst: membershipFindFirst },
-    tenant: { findUnique: tenantFindUnique },
-  };
-  const prisma = {
-    client,
-    withUserContext: vi.fn(async (_userId, cb) => cb(client)),
-    withTenantContext: vi.fn(async (_ctx, cb) => cb(client)),
-  };
-  const logger = { assign: vi.fn() };
+  const prisma = { resolveTenantContext };
+  const logger = { assign: vi.fn(), debug: vi.fn() };
   const guard = new SessionAuthGuard(
     auth as never,
     prisma as never,
     logger as never,
   );
-  return { guard, getSession, membershipFindFirst, tenantFindUnique, logger };
+  return { guard, getSession, resolveTenantContext, logger };
 }
 
 function buildContext() {
@@ -65,7 +64,7 @@ describe("SessionAuthGuard", () => {
   });
 
   it("attaches the user and tenant context to the request", async () => {
-    const { guard, logger } = createGuard({
+    const { guard, resolveTenantContext, logger } = createGuard({
       session: {
         session: {
           createdAt: new Date(),
@@ -84,13 +83,19 @@ describe("SessionAuthGuard", () => {
     const result = await guard.canActivate(context);
 
     expect(result).toBe(true);
+    expect(resolveTenantContext).toHaveBeenCalledTimes(1);
+    expect(resolveTenantContext).toHaveBeenCalledWith("user-1");
     const authenticated = request as unknown as {
       user: { id: string };
       tenant: { tenantId: string; role: string };
+      timings: { authMs: number; contextMs: number; guardMs: number };
     };
     expect(authenticated.user.id).toBe("user-1");
     expect(authenticated.tenant.tenantId).toBe("tenant-1");
     expect(authenticated.tenant.role).toBe("ADMIN");
+    expect(authenticated.timings.authMs).toBeGreaterThanOrEqual(0);
+    expect(authenticated.timings.contextMs).toBeGreaterThanOrEqual(0);
+    expect(authenticated.timings.guardMs).toBeGreaterThanOrEqual(0);
     expect(logger.assign).toHaveBeenCalledWith({
       tenantId: "tenant-1",
       userId: "user-1",
@@ -98,16 +103,20 @@ describe("SessionAuthGuard", () => {
   });
 
   it("rejects requests without a valid session", async () => {
-    const { guard } = createGuard({ session: null, membership: null });
+    const { guard, resolveTenantContext } = createGuard({
+      session: null,
+      membership: null,
+    });
     const { context } = buildContext();
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+    expect(resolveTenantContext).not.toHaveBeenCalled();
   });
 
   it("rejects sessions older than the absolute lifetime", async () => {
-    const { guard } = createGuard({
+    const { guard, resolveTenantContext } = createGuard({
       session: {
         session: {
           createdAt: new Date(Date.now() - 31 * DAY * 1000),
@@ -121,6 +130,7 @@ describe("SessionAuthGuard", () => {
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+    expect(resolveTenantContext).not.toHaveBeenCalled();
   });
 
   it("rejects users without a membership with 404", async () => {

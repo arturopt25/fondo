@@ -12,6 +12,7 @@ import { PinoLogger } from "nestjs-pino";
 
 import { PrismaService } from "../prisma.service.js";
 import { isWithinAbsoluteSessionLifetime } from "../auth/session-policy.js";
+import type { TimedRequest } from "../observability/request-timing.js";
 
 // Value import required for NestJS decorator metadata (design:paramtypes).
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -36,11 +37,16 @@ export class SessionAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<FastifyRequest>();
+    const request = context
+      .switchToHttp()
+      .getRequest<FastifyRequest & TimedRequest>();
+    const guardStartedAt = performance.now();
 
+    const authStartedAt = performance.now();
     const session = await this.auth.api.getSession({
       headers: fromNodeHeaders(request.headers),
     });
+    const authMs = performance.now() - authStartedAt;
 
     if (!session) {
       throw new UnauthorizedException("Authentication required");
@@ -50,30 +56,15 @@ export class SessionAuthGuard implements CanActivate {
       throw new UnauthorizedException("Session expired");
     }
 
-    const membership = await this.prisma.withUserContext(
-      session.user.id,
-      async (tx) =>
-        tx.membership.findFirst({
-          where: { userId: session.user.id },
-          orderBy: { createdAt: "asc" },
-        }),
-    );
+    const contextStartedAt = performance.now();
+    const resolved = await this.prisma.resolveTenantContext(session.user.id);
+    const contextMs = performance.now() - contextStartedAt;
 
-    if (!membership) {
+    if (!resolved) {
       throw new NotFoundException("No personal space found");
     }
 
-    const tenantRecord = await this.prisma.withTenantContext(
-      { tenantId: membership.tenantId, userId: session.user.id },
-      async (tx) =>
-        tx.tenant.findUnique({
-          where: { id: membership.tenantId },
-        }),
-    );
-
-    if (!tenantRecord) {
-      throw new NotFoundException("No personal space found");
-    }
+    const { membership, tenant: tenantRecord } = resolved;
 
     const user: CurrentUser = {
       id: session.user.id,
@@ -91,10 +82,16 @@ export class SessionAuthGuard implements CanActivate {
       role: membership.role === "ADMIN" ? "ADMIN" : "MEMBER",
     };
 
-    const authenticated = request as AuthenticatedRequest;
+    const authenticated = request as AuthenticatedRequest & TimedRequest;
     authenticated.user = user;
     authenticated.tenant = tenant;
+    authenticated.timings = {
+      authMs,
+      contextMs,
+      guardMs: performance.now() - guardStartedAt,
+    };
     this.logger.assign({ tenantId: tenant.tenantId, userId: user.id });
+    this.logger.debug(authenticated.timings, "session guard timing");
 
     return true;
   }

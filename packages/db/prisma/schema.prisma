@@ -266,6 +266,10 @@ model Ledger {
   accounts     FinancialAccount[]
   transactions Transaction[]
 
+  // A partial unique index on (tenantId) WHERE scope = 'PERSONAL' is created by
+  // migration 20261104120000_ledger_personal_unique. Prisma does not model
+  // partial indexes, so do not run `prisma migrate dev` against databases where
+  // that migration is applied.
   @@unique([tenantId, businessId])
   @@index([tenantId])
 }

@@ -5,4 +5,9 @@ coverage
 .turbo
 .git
 .env
+.env.*
+**/.env
+**/.env.*
+.neon-secrets.local.md
+.r2-secrets.local.md
 *.log

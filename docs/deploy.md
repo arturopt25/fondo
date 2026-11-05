@@ -158,6 +158,14 @@ ALTER TABLE "TransactionEntry" ENABLE ROW LEVEL SECURITY;
 Antes de habilitar RLS, confirma que `fondo_app` sigue con
 `rolbypassrls = false`. Si el rol tiene `BYPASSRLS`, RLS no aislará nada.
 
+### Índice único del ledger personal
+
+La migración `20261104120000_ledger_personal_unique` crea un índice único
+parcial sobre `"Ledger"("tenantId") WHERE "scope" = 'PERSONAL'`. Prisma no
+modela índices parciales en `schema.prisma`, así que este índice se gestiona con
+SQL y `prisma migrate deploy`. No ejecutes `prisma migrate dev` contra bases
+donde ya esté aplicado: Prisma puede detectarlo como drift e intentar eliminarlo.
+
 ## Cloudflare R2
 
 1. Crear un bucket privado, por ejemplo `fondo-prod-files`.
@@ -194,7 +202,8 @@ con URLs presignadas, agregar una política CORS al bucket con:
    - Branch: `main`.
    - Auto deploy: `checksPass`, para esperar los checks de GitHub antes de
      desplegar.
-   - Health check: `/api/v1/health`.
+   - Health check: `/api/v1/health/live` (liveness, sin BD). La readiness real
+     está en `/api/v1/health/ready`; `/api/v1/health` se mantiene como alias.
 4. Completar las variables `sync: false`.
 5. No crear un servicio Postgres de Render. La base de datos es Neon.
 
@@ -205,9 +214,16 @@ valor habitual de Render (`10000`).
 El plan Free puede suspender el servicio después de aproximadamente 15 minutos
 sin tráfico y el primer request posterior puede tardar cerca de un minuto.
 Como alternativa opcional, se puede configurar un monitor externo gratuito como
-UptimeRobot apuntando a `/api/v1/health`. No se incluye un workflow de
-keep-alive de GitHub Actions porque los jobs se redondean a minutos y podrían
-superar el límite mensual de repositorios privados.
+UptimeRobot apuntando a `/api/v1/health/live` (sin BD). No se incluye un
+workflow de keep-alive de GitHub Actions porque los jobs se redondean a minutos
+y podrían superar el límite mensual de repositorios privados.
+
+No apuntes el health check ni un keep-alive a `/api/v1/health/ready` ni a
+`/api/v1/health`: ambos consultan la BD y mantienen despierto el compute de
+Neon. El plan Free incluye 100 CU-hours/mes y el compute mínimo es 0.25 CU, así
+que un keep-alive 24/7 consumiría ~182.5 CU-hours/mes y agotaría la cuota. Si se
+quiere evitar el cold start en horario de uso, limita el keep-alive a una
+ventana de como máximo 12 h/día (~91 CU-hours/mes).
 
 ## Vercel
 
@@ -285,9 +301,11 @@ openssl rand -base64 32
 
 | Variable | Plataforma | Valor o generación |
 |---|---|---|
-| `DATABASE_URL` | Render | URL pooler de Neon usando el rol `fondo_app`, con `sslmode=require`. |
-| `APP_DATABASE_URL` | Render | URL pooler de Neon usando el rol `fondo_app`, con `sslmode=require`; puede ser igual a `DATABASE_URL`. |
-| `NEON_DIRECT_URL` | GitHub environment `production` | URL directa de Neon usando el rol propietario, con `sslmode=require`; solo para migraciones. |
+| `DATABASE_URL` | Render | URL pooler de Neon usando el rol `fondo_app`, con `sslmode=require&pgbouncer=true&connection_limit=5&pool_timeout=15&connect_timeout=15`. Puede ser igual a `APP_DATABASE_URL`. |
+| `APP_DATABASE_URL` | Render | URL pooler de Neon usando el rol `fondo_app`, con los mismos parámetros que `DATABASE_URL`. |
+| `NEON_DIRECT_URL` | GitHub environment `production` | URL **directa** de Neon usando el rol propietario, con `sslmode=require`; solo para migraciones. No debe llevar `-pooler`. |
+| `HEALTH_DB_TIMEOUT_MS` | Render | `3000` (por debajo del timeout de 5 s de Render). |
+| `TRUSTED_PROXY_CIDRS` | Render | Opcional. CIDRs de proxies de confianza separados por coma (por ejemplo, los rangos de Cloudflare). |
 | `BETTER_AUTH_SECRET` | Render | Salida de `openssl rand -base64 32`. |
 | `BETTER_AUTH_URL` | Render | Origen de Render, por ejemplo `https://fondo-api.onrender.com`. |
 | `WEB_ORIGIN` | Render | URL exacta de Vercel, sin `/` final; varios orígenes separados por coma. |
@@ -303,6 +321,12 @@ openssl rand -base64 32
 | `S3_AVATAR_MAX_FILE_SIZE_BYTES` | Render | `2097152`. |
 | `VITE_API_URL` | Vercel | `https://<servicio>.onrender.com/api/v1`. |
 | `VITE_AUTH_URL` | Vercel | `https://<servicio>.onrender.com/api/v1/auth`; incluye el `basePath` del backend. |
+
+`cf-connecting-ip` solo es fiable si el servicio de Render únicamente recibe
+tráfico a través de Cloudflare. Si la URL `onrender.com` es accesible
+directamente, un cliente puede falsificar esa cabecera. En ese caso configura
+`TRUSTED_PROXY_CIDRS` con los rangos de Cloudflare y restringe el acceso directo
+al servicio (por ejemplo, con un dominio propio proxied y reglas de firewall).
 
 No poner credenciales, contraseñas ni URLs privadas de servicios en
 `render.yaml`, `vercel.json`, workflows ni en este documento. La URL pública del

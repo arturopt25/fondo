@@ -7,11 +7,13 @@ import {
   type ArgumentsHost,
   type ExceptionFilter,
 } from "@nestjs/common";
+import { Prisma } from "@fondo/db";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { PinoLogger } from "nestjs-pino";
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 
+import type { TimedRequest } from "../observability/request-timing.js";
 import type { AuthenticatedRequest } from "../tenant/tenant-context.js";
 
 interface ErrorBody {
@@ -34,7 +36,8 @@ export class ApiErrorFilter implements ExceptionFilter {
       .switchToHttp()
       .getRequest<
         FastifyRequest &
-          Partial<Pick<AuthenticatedRequest, "tenant" | "user">>
+          Partial<Pick<AuthenticatedRequest, "tenant" | "user">> &
+          TimedRequest
       >();
     const requestId =
       typeof request.id === "string" ? request.id : randomUUID();
@@ -59,6 +62,11 @@ export class ApiErrorFilter implements ExceptionFilter {
       code = "VALIDATION_ERROR";
       message = "Invalid request body";
       details = exception.issues;
+    } else if (isTransientDatabaseError(exception)) {
+      status = HttpStatus.SERVICE_UNAVAILABLE;
+      code = "DATABASE_UNAVAILABLE";
+      message = "Database temporarily unavailable. Please retry shortly.";
+      response.header("Retry-After", "5");
     } else if (exception instanceof Error && "code" in exception) {
       code = String((exception as { code: unknown }).code);
     }
@@ -73,6 +81,7 @@ export class ApiErrorFilter implements ExceptionFilter {
       ...(request.user
         ? { userId: request.user.id }
         : {}),
+      ...(request.timings ? { timings: request.timings } : {}),
     };
 
     if (status >= 500) {
@@ -98,6 +107,26 @@ export class ApiErrorFilter implements ExceptionFilter {
 
     void response.status(status).send(errorBody);
   }
+}
+
+const TRANSIENT_DATABASE_ERROR_CODES = new Set([
+  "P1001",
+  "P1002",
+  "P1008",
+  "P1017",
+  "P2024",
+  "P2028",
+]);
+
+function isTransientDatabaseError(exception: unknown): boolean {
+  if (exception instanceof Prisma.PrismaClientInitializationError) {
+    return true;
+  }
+
+  return (
+    exception instanceof Prisma.PrismaClientKnownRequestError &&
+    TRANSIENT_DATABASE_ERROR_CODES.has(exception.code)
+  );
 }
 
 function httpStatusToCode(status: number): string {
